@@ -20,6 +20,7 @@ namespace CatalogStore.BackendAPI.Services
                 IdentityResult result = await userManager.CreateAsync(user, request.Password);
                 if (result.Succeeded)
                 {
+                    IdentityResult addRoleResult = await userManager.AddToRoleAsync(user, "AdminIT");
                     return Results.Ok(new { Message = "User registered successfully." });
                 }
                 else

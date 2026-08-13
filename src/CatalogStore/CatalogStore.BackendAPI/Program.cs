@@ -1,9 +1,13 @@
 using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services;
+using CatalogStore.BackendAPI.Services.Auth;
 using CatalogStore.BackendAPI.Services.Status;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +24,23 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
 builder.Services.AddScoped<IStatusServices, StatusServices>();
 
+
+//JWT Services
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -45,6 +66,7 @@ UserServices.MapToEndpoint(app);
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
