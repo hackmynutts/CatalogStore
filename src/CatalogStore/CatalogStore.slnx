@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="CatalogStore.BackendAPI/CatalogStore.BackendAPI.csproj" />
+  <Project Path="CatalogStore.UI/CatalogStore.UI.csproj" Id="d1792557-da99-42f9-9265-13046c0f1a06" />
 </Solution>
