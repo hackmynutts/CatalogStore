@@ -1,10 +1,12 @@
 ﻿using CatalogStore.BackendAPI.Services.Status;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CatalogStore.BackendAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class StatusController : ControllerBase
     {
         private readonly IStatusServices _statusService;
@@ -30,6 +32,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
 
         // POST api/<StatusController>
+        [Authorize(Roles = "Admin,AdminIT")]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] DTO.Status.AddStatusDTO status)
         {
@@ -38,6 +41,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
 
         // PUT api/<StatusController>/5
+        [Authorize(Roles = "Admin,AdminIT")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] DTO.Status.UpdateStatusDTO status)
         {
@@ -49,6 +53,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // DELETE api/<StatusController>/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> Delete(int id)
         {
             var deleted = await _statusService.DeleteAsync(id);

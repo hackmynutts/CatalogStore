@@ -1,6 +1,7 @@
 ﻿using CatalogStore.BackendAPI.Models.Status;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 
 namespace CatalogStore.BackendAPI.Data
@@ -16,10 +17,12 @@ namespace CatalogStore.BackendAPI.Data
             builder.Entity<ApplicationUser>(entity =>
             {
                 entity.Property(e => e.SendNotifications)
-                    .HasDefaultValue(true);
+                    .HasDefaultValue(true); 
                 entity.Property(e => e.FullName)
                     .HasMaxLength(150);
+                
             });
+            builder.Entity<ApplicationUser>().HasIndex(u => u.Email).IsUnique();
             builder.Entity<Status>(entity => 
             {
                 entity.Property(e => e.name)
