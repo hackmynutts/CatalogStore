@@ -16,10 +16,10 @@ namespace CatalogStore.BackendAPI.Services.Auth
         public string GenerateToken(ApplicationUser usuario, IList<string> roles)
         {
             if (usuario.Email == null)
-                throw new ArgumentNullException("El usuario no puede estar sin email.", nameof(usuario));
+                throw new ArgumentNullException(nameof(usuario), "El usuario no puede estar sin email.");
             
             if (roles == null ) 
-                throw new ArgumentNullException("La lista de roles no puede estar vacía.", nameof(roles));
+                throw new ArgumentNullException(nameof(roles), "La lista de roles no puede estar vacía.");
             
             if (roles.Count == 0)
                 throw new ArgumentException("La lista de roles no puede estar vacía.", nameof(roles));

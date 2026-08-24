@@ -28,7 +28,9 @@ namespace CatalogStore.BackendAPI.Services.User
             if (result.Succeeded)
             {
                 IdentityResult addRoleResult = await _userManager.AddToRoleAsync(user, request.Role);
-                return new RegisterResult(true, Enumerable.Empty<string>());
+                if (addRoleResult.Succeeded) 
+                    return new RegisterResult(true, Enumerable.Empty<string>());
+                return new RegisterResult(false, addRoleResult.Errors.Select(e => e.Description));
             }
             else
             {

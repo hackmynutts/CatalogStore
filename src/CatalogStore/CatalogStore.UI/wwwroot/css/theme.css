@@ -1,0 +1,205 @@
+/* ==========================================================================
+   CatalogStore.UI — base theme
+   Variables centralizadas + componentes reutilizables (cards de auth, etc.)
+   ========================================================================== */
+
+:root {
+    --brand-primary: #2f5d50;
+    --brand-primary-dark: #24473d;
+    --brand-primary-light: #e8f0ee;
+    --brand-accent: #c8a24a;
+
+    --text-color: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    --bg-body: #f5f6f8;
+    --bg-card: #ffffff;
+
+    --danger: #dc3545;
+    --danger-bg: #fdecea;
+
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.08);
+    --shadow-card-hover: 0 14px 38px rgba(15, 23, 42, 0.12);
+
+    --font-base: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ---------- Página de autenticación (login/registro) ---------- */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, var(--brand-primary) 0%, var(--brand-primary-dark) 45%, #1a352c 100%);
+    font-family: var(--font-base);
+    padding: 24px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 40px 36px 32px;
+    transition: box-shadow 0.2s ease;
+}
+
+.auth-card:hover {
+    box-shadow: var(--shadow-card-hover);
+}
+
+.auth-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 28px;
+}
+
+.auth-brand-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    background: var(--brand-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: 0.02em;
+    margin-bottom: 14px;
+}
+
+.auth-brand-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.auth-brand-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-align: center;
+}
+
+/* ---------- Formulario ---------- */
+
+.auth-form .form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 6px;
+}
+
+.auth-form .form-control {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    background-color: #fafafa;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.auth-form .form-control:focus {
+    border-color: var(--brand-primary);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px var(--brand-primary-light);
+    outline: none;
+}
+
+.auth-form .form-control.is-invalid {
+    border-color: var(--danger);
+}
+
+.auth-form .field-validation-error,
+.auth-form .text-danger {
+    font-size: 0.8rem;
+    color: var(--danger);
+    display: block;
+    margin-top: 4px;
+}
+
+.auth-input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.auth-toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 38px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 4px 6px;
+}
+
+.auth-toggle-password:hover {
+    color: var(--brand-primary);
+}
+
+/* ---------- Botón ---------- */
+
+.btn-brand {
+    width: 100%;
+    background-color: var(--brand-primary);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 11px 0;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease, transform 0.05s ease;
+}
+
+.btn-brand:hover {
+    background-color: var(--brand-primary-dark);
+    color: #fff;
+}
+
+.btn-brand:active {
+    transform: translateY(1px);
+}
+
+/* ---------- Alertas ---------- */
+
+.auth-alert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+}
+
+/* ---------- Footer de la card ---------- */
+
+.auth-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.auth-footer a {
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,21 @@
+﻿@model List<CatalogStore.UI.Models.Status.StatusViewModel>
+@{
+    ViewData["Title"] = "Estados";
+}
+<h1>Estados</h1>
+<table class="table">
+    <thead>
+        <tr><th>#</th><th>Nombre</th><th>Creado por</th><th>Fecha</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var s in Model)
+        {
+            <tr>
+                <td>@s.StatusID</td>
+                <td>@s.Name</td>
+                <td>@s.CreatedBy</td>
+                <td>@s.CreatedOn.ToString("g")</td>
+            </tr>
+        }
+    </tbody>
+</table>
