@@ -1,8 +1,17 @@
-﻿@model List<CatalogStore.UI.Models.Status.StatusViewModel>
+@model List<CatalogStore.UI.Models.Status.StatusViewModel>
 @{
     ViewData["Title"] = "Estados";
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
 }
-<h1>Estados</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Estados</h1>
+    @if (canManage)
+    {
+        <button type="button" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;" id="btn-new-status"><i class="fa-solid fa-plus"></i> Nuevo estado</button>
+    }
+</div>
+
+<form style="display:none">@Html.AntiForgeryToken()</form>
 
 <div class="app-table-search-wrap">
     <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
@@ -11,7 +20,16 @@
 
 <table id="statusTable" class="table app-table">
     <thead>
-        <tr><th>#</th><th>Nombre</th><th>Creado por</th><th>Fecha</th></tr>
+        <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Creado por</th>
+            <th>Fecha</th>
+            @if (canManage)
+            {
+                <th class="sorter-false filter-false">Acciones</th>
+            }
+        </tr>
     </thead>
     <tbody>
         @foreach (var s in Model)
@@ -21,7 +39,40 @@
                 <td>@s.Name</td>
                 <td>@s.CreatedBy</td>
                 <td>@s.CreatedOn.ToString("g")</td>
+                @if (canManage)
+                {
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-status" title="Editar" data-id="@s.StatusID"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-status" title="Eliminar" data-id="@s.StatusID" data-name="@s.Name"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                }
             </tr>
         }
     </tbody>
 </table>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No hay estados para mostrar.</p>
+}
+
+@if (canManage)
+{
+    <!-- Modal de edición -->
+    <div class="modal fade" id="editStatusModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="editStatusModalContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal de creación -->
+    <div class="modal fade" id="createStatusModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="createStatusModalContent"></div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/status.js" asp-append-version="true"></script>
+}

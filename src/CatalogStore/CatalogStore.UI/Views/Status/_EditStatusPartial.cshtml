@@ -1,0 +1,19 @@
+@model CatalogStore.UI.Models.Status.UpdateStatusViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar estado</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="editStatusForm" data-id="@Model.StatusID">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Nombre</label>
+            <input asp-for="Name" class="form-control" />
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    </div>
+</form>
