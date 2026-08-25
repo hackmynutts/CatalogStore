@@ -28,29 +28,92 @@
     --font-base: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* ---------- Marca de agua global ---------- */
+
+body {
+    background-color: var(--bg-body);
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url('/img/logos/sam_desing-removebg-preview.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 480px auto;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: -1;
+}
+
 /* ---------- Navbar / módulos ---------- */
 
-.navbar {
-    border-bottom: 1px solid var(--border-color) !important;
+.app-navbar {
+    background: linear-gradient(90deg, var(--brand-primary-dark) 0%, var(--brand-primary) 55%, var(--brand-primary-dark) 100%);
     font-family: var(--font-base);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
-.navbar-brand {
+.app-navbar-logo {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+}
+
+.app-navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-weight: 700;
-    color: var(--brand-primary) !important;
+    font-size: 1.1rem;
+    color: #fff !important;
 }
 
-.navbar .nav-link {
+.app-navbar-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+}
+
+.app-navbar .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.app-navbar .navbar-toggler-icon {
+    filter: invert(1) grayscale(100%) brightness(2);
+}
+
+.app-navbar .nav-link {
     font-weight: 500;
-    color: var(--text-color) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    padding: 8px 14px !important;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.navbar .nav-link:hover,
-.navbar .dropdown-toggle:hover {
-    color: var(--brand-primary) !important;
+.app-navbar .nav-link:hover,
+.app-navbar .dropdown-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #fff !important;
 }
 
-.navbar .dropdown-menu {
+.app-navbar .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #fff !important;
+}
+
+.app-navbar .dropdown-menu {
     border: none;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
@@ -58,18 +121,71 @@
     margin-top: 8px;
 }
 
-.navbar .dropdown-item {
+.app-navbar .dropdown-item {
     border-radius: var(--radius-sm);
     padding: 8px 12px;
     font-size: 0.9rem;
     color: var(--text-color);
 }
 
-.navbar .dropdown-item:hover,
-.navbar .dropdown-item:focus {
+.app-navbar .dropdown-item:hover,
+.app-navbar .dropdown-item:focus {
     background-color: var(--brand-primary-light);
     color: var(--brand-primary-dark);
 }
+
+/* ---------- Home ---------- */
+
+.home-hero {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.home-hero-content h1 {
+    color: var(--brand-primary-dark);
+    font-weight: 700;
+}
+
+/* ---------- Página de error / código de estado (404, 403, etc.) ---------- */
+
+.status-page {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.status-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 48px 40px;
+    max-width: 420px;
+}
+
+.status-code {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--brand-primary);
+    line-height: 1;
+    margin-bottom: 12px;
+}
+
+.status-card h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 8px;
+}
+
+.status-card p {
+    margin-bottom: 24px;
+}
+
 
 /* ---------- Página de autenticación (login/registro) ---------- */
 
@@ -245,13 +361,6 @@
 
 .auth-footer a:hover {
     text-decoration: underline;
-}
-
-/* ---------- Íconos dentro de botones ---------- */
-
-.btn i.fa-solid,
-.btn i.fa-regular {
-    margin-right: 6px;
 }
 
 /* ---------- Tablas (.app-table) ---------- */

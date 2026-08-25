@@ -16,6 +16,13 @@ namespace CatalogStore.UI.Controllers
             return View();
         }
 
+        [Route("Home/StatusCode/{code:int}")]
+        public IActionResult StatusCode(int code)
+        {
+            ViewData["StatusCode"] = code;
+            return View();
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
