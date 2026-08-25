@@ -1,6 +1,7 @@
-﻿using CatalogStore.UI.Models;
+﻿using CatalogStore.UI.Models.User;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
@@ -52,7 +53,11 @@ namespace CatalogStore.UI.Controllers
             var principal = new ClaimsPrincipal(identity);
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-            return RedirectToAction("Index", "Home");
+
+            if (result.MustChangePassword)
+                return RedirectToAction("ChangePassword", "Account");
+
+            return RedirectToAction("Index", "Home"); 
         }
 
         [HttpPost]
@@ -61,6 +66,54 @@ namespace CatalogStore.UI.Controllers
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login", "Account");
+        }
+
+        [HttpGet]
+        [Authorize]
+        public ActionResult ChangePassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsJsonAsync("api/User/change-password", new
+            {
+                model.CurrentPassword,
+                model.NewPassword
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                ViewData["ChangePasswordError"] = "No se pudo cambiar la contraseña. Verificá que la actual sea correcta.";
+                return View(model);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<ActionResult> Details()
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync("api/User/me");
+
+            if (!response.IsSuccessStatusCode)
+                return RedirectToAction("Index", "Home");
+
+            var user = await response.Content.ReadFromJsonAsync<UserViewModel>();
+            if (user == null)
+                return RedirectToAction("Index", "Home");
+
+            return View(user);
         }
     }
 }

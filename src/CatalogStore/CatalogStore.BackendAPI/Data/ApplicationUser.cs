@@ -6,5 +6,6 @@ namespace CatalogStore.BackendAPI.Data
     {
         public bool SendNotifications { get; set; }
         public string FullName { get; set; } = string.Empty;
+        public bool MustChangePassword { get; set; }
     }
 }

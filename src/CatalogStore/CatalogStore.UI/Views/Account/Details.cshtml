@@ -1,0 +1,29 @@
+@model CatalogStore.UI.Models.User.UserViewModel
+@{
+    ViewData["Title"] = "Mis datos";
+}
+<h1>Mis datos</h1>
+
+<dl class="row" style="max-width:480px;">
+    <dt class="col-sm-4">Usuario</dt>
+    <dd class="col-sm-8">@Model.UserName</dd>
+
+    <dt class="col-sm-4">Nombre completo</dt>
+    <dd class="col-sm-8">@Model.FullName</dd>
+
+    <dt class="col-sm-4">Email</dt>
+    <dd class="col-sm-8">@Model.Email</dd>
+
+    <dt class="col-sm-4">Rol</dt>
+    <dd class="col-sm-8">
+        @foreach (var role in Model.Roles)
+        {
+            <span class="badge bg-secondary me-1">@role</span>
+        }
+    </dd>
+
+    <dt class="col-sm-4">Notificaciones</dt>
+    <dd class="col-sm-8">@(Model.SendNotifications ? "Sí" : "No")</dd>
+</dl>
+
+<a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-secondary">Cambiar contraseña</a>

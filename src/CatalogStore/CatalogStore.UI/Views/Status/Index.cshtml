@@ -3,7 +3,13 @@
     ViewData["Title"] = "Estados";
 }
 <h1>Estados</h1>
-<table class="table">
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="statusTable" data-column="all" placeholder="Buscar estados..." />
+</div>
+
+<table id="statusTable" class="table app-table">
     <thead>
         <tr><th>#</th><th>Nombre</th><th>Creado por</th><th>Fecha</th></tr>
     </thead>

@@ -1,0 +1,77 @@
+@model List<CatalogStore.UI.Models.User.UserViewModel>
+@{
+    ViewData["Title"] = "Usuarios";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Usuarios</h1>
+    <button type="button" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;" id="btn-new-user"><i class="fa-solid fa-plus"></i> Nuevo usuario</button>
+</div>
+
+<form style="display:none">@Html.AntiForgeryToken()</form>
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="usersTable" data-column="all" placeholder="Buscar usuarios..." />
+</div>
+
+<table id="usersTable" class="table app-table">
+    <thead>
+        <tr>
+            <th>Usuario</th>
+            <th>Email</th>
+            <th>Nombre completo</th>
+            <th>Rol</th>
+            <th>Notificaciones</th>
+            <th class="sorter-false filter-false">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.UserName</td>
+                <td>@u.Email</td>
+                <td>@u.FullName</td>
+                <td>
+                    @foreach (var role in u.Roles)
+                    {
+                        <span class="badge bg-secondary me-1">@role</span>
+                    }
+                </td>
+                <td>@(u.SendNotifications ? "Sí" : "No")</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-user" title="Editar" data-id="@u.Id"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-warning btn-reset-password" title="Restablecer contraseña" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-rotate"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user" title="Eliminar" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No hay usuarios para mostrar.</p>
+}
+
+<!-- Modal de edición -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="editUserModalContent">
+            <!-- el contenido se completa con el partial via fetch -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal de creación -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="createUserModalContent">
+            <!-- el contenido se completa con el partial via fetch -->
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/user.js" asp-append-version="true"></script>
+}

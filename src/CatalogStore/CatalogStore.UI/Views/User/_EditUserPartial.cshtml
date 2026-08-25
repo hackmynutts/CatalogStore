@@ -1,0 +1,41 @@
+@model CatalogStore.UI.Models.User.UserViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar usuario</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="editUserForm" data-id="@Model.Id">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <dl class="row mb-3">
+            <dt class="col-sm-3">Usuario</dt>
+            <dd class="col-sm-9">@Model.UserName</dd>
+            <dt class="col-sm-3">Rol</dt>
+            <dd class="col-sm-9">
+                @foreach (var role in Model.Roles)
+                {
+                    <span class="badge bg-secondary me-1">@role</span>
+                }
+            </dd>
+        </dl>
+
+        <div class="mb-3">
+            <label asp-for="FullName" class="form-label">Nombre completo</label>
+            <input asp-for="FullName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label">Email</label>
+            <input asp-for="Email" type="email" class="form-control" />
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="SendNotifications" class="form-check-input" />
+            <label asp-for="SendNotifications" class="form-check-label">Recibir notificaciones</label>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    </div>
+</form>

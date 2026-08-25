@@ -1,4 +1,5 @@
-﻿using CatalogStore.BackendAPI.Models.Auth;
+﻿using CatalogStore.BackendAPI.DTO.User;
+using CatalogStore.BackendAPI.Models.Auth;
 
 namespace CatalogStore.BackendAPI.Services.User
 {
@@ -6,5 +7,12 @@ namespace CatalogStore.BackendAPI.Services.User
     {
         Task<AuthModels.RegisterResult> RegisterAsync(AuthModels.RegisterRequest request);
         Task<AuthModels.LoginResult> LoginAsync(AuthModels.LoginRequest request);
+        Task<AuthModels.ChangePasswordResult> ChangePasswordAsync(Guid userId, AuthModels.ChangePasswordRequest request);
+        Task<AuthModels.ResetPasswordResult> ResetPasswordAsync(Guid id);
+        Task<UserDTO?> GetUserAsync(Guid id);
+        Task<List<UserDTO>> GetAllUsersAsync();
+        Task<bool> UpdateUserAsync(Guid id, UpdateUserDTO request);
+        Task<bool> ChangeRoleAsync(Guid id, string newRole);
+        Task<bool> DeleteUserAsync(Guid id);
     }
 }

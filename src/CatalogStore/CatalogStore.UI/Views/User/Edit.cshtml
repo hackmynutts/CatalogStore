@@ -1,0 +1,41 @@
+@model CatalogStore.UI.Models.User.UserViewModel
+@{
+    ViewData["Title"] = "Editar usuario";
+}
+<h1>Editar usuario</h1>
+
+<dl class="row mb-4">
+    <dt class="col-sm-2">Usuario</dt>
+    <dd class="col-sm-10">@Model.UserName</dd>
+    <dt class="col-sm-2">Rol</dt>
+    <dd class="col-sm-10">
+        @foreach (var role in Model.Roles)
+        {
+            <span class="badge bg-secondary me-1">@role</span>
+        }
+    </dd>
+</dl>
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<form asp-controller="User" asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label">Nombre completo</label>
+        <input asp-for="FullName" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label">Email</label>
+        <input asp-for="Email" type="email" class="form-control" />
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="SendNotifications" class="form-check-input" />
+        <label asp-for="SendNotifications" class="form-check-label">Recibir notificaciones</label>
+    </div>
+
+    <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    <a asp-controller="User" asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+</form>

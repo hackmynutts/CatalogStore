@@ -1,0 +1,49 @@
+@model CatalogStore.UI.Models.User.RegisterViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">Nuevo usuario</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="createUserForm">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="UserName" class="form-label">Usuario</label>
+            <input asp-for="UserName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="FullName" class="form-label">Nombre completo</label>
+            <input asp-for="FullName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label">Email</label>
+            <input asp-for="Email" type="email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Role" class="form-label">Rol</label>
+            <select asp-for="Role" class="form-select">
+                <option value="">Seleccioná un rol...</option>
+                <option value="AdminIT">AdminIT</option>
+                <option value="Admin">Admin</option>
+                <option value="Vendedor">Vendedor</option>
+                <option value="Cliente">Cliente</option>
+            </select>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="SendNotifications" class="form-check-input" />
+            <label asp-for="SendNotifications" class="form-check-label">Recibir notificaciones</label>
+        </div>
+
+        <p class="text-muted small mb-0">
+            Se va a generar una contraseña temporal automáticamente — se muestra una sola vez al crear el usuario.
+        </p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Crear usuario</button>
+    </div>
+</form>
