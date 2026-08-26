@@ -36,12 +36,13 @@
                         @if (User.IsInRole("Admin") || User.IsInRole("AdminIT"))
                         {
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle @(currentController == "User" || currentController == "Status" ? "active" : "")" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle @(currentController == "User" || currentController == "Status" || currentController == "Eventlog" ? "active" : "")" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Administrativo
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminMenu">
                                     <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
                                     <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Eventlog" asp-action="Index">Bitácora de eventos</a></li>
                                 </ul>
                             </li>
                         }

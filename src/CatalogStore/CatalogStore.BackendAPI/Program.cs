@@ -1,6 +1,8 @@
 using CatalogStore.BackendAPI.Data;
+using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
+using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Configurar la cadena de conexión para SQL Server
 builder.Services.AddDbContext<ApplicationDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -42,6 +45,8 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 //Dependency Injection for Services and Repositories
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
 builder.Services.AddScoped<IStatusServices, StatusServices>();
+builder.Services.AddScoped<IEventlogRepository, EventlogRepository>();
+builder.Services.AddScoped<IEventlogServices, EventlogServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 
 

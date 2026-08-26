@@ -1,0 +1,58 @@
+@model List<CatalogStore.UI.Models.Eventlog.EventlogViewModel>
+@using CatalogStore.UI.Models.Eventlog
+@{
+    ViewData["Title"] = "Bitácora de eventos";
+
+    string BadgeClass(typeEvent t) => t.ToString().EndsWith("Fail") || t == typeEvent.Error
+        ? "text-bg-danger"
+        : t == typeEvent.Delete || t == typeEvent.Inactivate
+            ? "text-bg-warning"
+            : "text-bg-success";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Bitácora de eventos</h1>
+</div>
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="eventlogTable" data-column="all" placeholder="Buscar eventos..." />
+</div>
+
+<table id="eventlogTable" class="table app-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Módulo</th>
+            <th>Tabla</th>
+            <th>Registro</th>
+            <th>Acción</th>
+            <th>Descripción</th>
+            <th>Ejecutado por</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var e in Model)
+        {
+            <tr>
+                <td>@e.EventlogId</td>
+                <td>@e.ModuleName</td>
+                <td>@e.TableName</td>
+                <td>@e.RecordID</td>
+                <td><span class="badge @BadgeClass(e.TypeLog)">@e.TypeLog</span></td>
+                <td>@e.EventDesc</td>
+                <td>@e.CreatedBy</td>
+                <td>@e.CreatedOn.ToString("g")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No hay eventos registrados.</p>
+}
+
+@section Scripts {
+    <script src="~/js/eventlog.js" asp-append-version="true"></script>
+}
