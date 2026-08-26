@@ -477,3 +477,113 @@ body::before {
     font-size: 0.85rem;
     pointer-events: none;
 }
+
+/* ==========================================================================
+   Responsive — target: desktop y tablet primero, celular como piso mínimo.
+   Breakpoints alineados a Bootstrap 5: lg = 992px, md = 768px, sm = 576px.
+   ========================================================================== */
+
+/* ---------- Tablet (<= 991.98px: portrait de iPad/tablet, y navbar colapsado) ---------- */
+@media (max-width: 991.98px) {
+    body::before {
+        background-size: 360px auto;
+    }
+
+    .app-navbar-brand {
+        font-size: 1rem;
+    }
+
+    .app-navbar .navbar-collapse {
+        padding-top: 10px;
+    }
+
+    .app-navbar .nav-link {
+        padding: 10px 14px !important;
+    }
+
+    .app-navbar .dropdown-menu {
+        box-shadow: none;
+        background: rgba(255, 255, 255, 0.08);
+        margin-top: 2px;
+    }
+
+    .app-navbar .dropdown-item {
+        color: #fff;
+    }
+
+    .app-navbar .dropdown-item:hover,
+    .app-navbar .dropdown-item:focus {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: #fff;
+    }
+
+    .status-card {
+        padding: 36px 28px;
+    }
+
+    .auth-card {
+        padding: 32px 26px 26px;
+    }
+
+    .app-table {
+        font-size: 0.88rem;
+    }
+
+    .app-table thead th,
+    .app-table tbody td {
+        padding: 10px 12px;
+    }
+}
+
+/* ---------- Celular (<= 575.98px) — piso mínimo, no es el target principal ---------- */
+@media (max-width: 575.98px) {
+    body::before {
+        background-size: 260px auto;
+    }
+
+    .home-hero {
+        min-height: 40vh;
+    }
+
+    .auth-page {
+        padding: 16px;
+    }
+
+    .auth-card {
+        padding: 28px 20px 22px;
+    }
+
+    .status-card {
+        padding: 32px 20px;
+        max-width: 100%;
+    }
+
+    .status-code {
+        font-size: 2.6rem;
+    }
+
+    .app-table-search-wrap {
+        max-width: 100%;
+    }
+
+    /* Encabezado de página (título + botón de acción) — pasa a apilado para que no se aprieten */
+    .d-flex.justify-content-between.align-items-center.mb-3 {
+        flex-wrap: wrap;
+        row-gap: 10px;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mb-3 > .btn {
+        width: 100%;
+    }
+}
+
+/* ---------- Tablas anchas: scroll horizontal propio, nunca desborda la página ---------- */
+.table-responsive {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+}
+
+.table-responsive > .app-table {
+    box-shadow: none;
+    margin-bottom: 0;
+}
