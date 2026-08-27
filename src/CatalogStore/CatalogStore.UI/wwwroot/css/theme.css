@@ -134,6 +134,24 @@ body::before {
     color: var(--brand-primary-dark);
 }
 
+/* Submenús anidados (dropend) — posición fija por CSS, no depende de que Popper la calcule bien
+   (Popper queda desactivado en estos toggles vía data-bs-display="static"). */
+.app-navbar .dropdown-menu li {
+    position: relative;
+}
+
+.app-navbar .dropend {
+    position: relative;
+}
+
+.app-navbar .dropend > .dropdown-menu {
+    top: 0;
+    left: 100%;
+    right: auto;
+    margin-top: -8px;
+    margin-left: 8px;
+}
+
 /* ---------- Home ---------- */
 
 .home-hero {
@@ -523,6 +541,12 @@ body::before {
     color: var(--text-muted);
 }
 
+/* Bootstrap no trae un "info oscuro" de fábrica — para distinguir LogOut de LogIn (ambos celeste) */
+.text-bg-info-dark {
+    background-color: #0e7490 !important;
+    color: #fff !important;
+}
+
 /* Estado vacío de una tabla — icono + texto, en vez de un párrafo suelto */
 .app-table-empty {
     display: flex;
@@ -678,4 +702,132 @@ body::before {
 .table-responsive > .app-table {
     box-shadow: none;
     margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Página de detalle (Client/Details y similares) — tarjeta de información
+   ========================================================================== */
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.detail-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.detail-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.detail-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 4px;
+}
+
+.detail-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.detail-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.info-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+}
+
+.info-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.info-card-title i {
+    color: var(--brand-primary);
+}
+
+.info-field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 32px;
+}
+
+.info-field-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.info-field-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    word-break: break-word;
+}
+
+/* Secciones todavía sin módulo propio (Órdenes, Ventas...) — el espacio ya queda reservado */
+.info-card-placeholder .info-card-title {
+    color: var(--text-muted);
+}
+
+.info-card-placeholder .app-table-empty {
+    padding: 24px 12px;
+}
+
+.info-card-soon {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: #f1f1f2;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-left: auto;
+}
+
+@media (max-width: 575.98px) {
+    .info-field-grid {
+        grid-template-columns: 1fr;
+    }
 }

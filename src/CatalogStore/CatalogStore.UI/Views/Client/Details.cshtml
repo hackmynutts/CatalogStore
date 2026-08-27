@@ -1,51 +1,122 @@
 @model CatalogStore.UI.Models.Client.ClientViewModel
 @{
     ViewData["Title"] = "Detalle del cliente";
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor");
+    bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    var initials = string.Join("", Model.ClientName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
 }
-<h1>Detalle del cliente</h1>
 
-<dl class="row" style="max-width:480px;">
-    <dt class="col-sm-4">Cédula</dt>
-    <dd class="col-sm-8">@Model.Identification</dd>
-
-    <dt class="col-sm-4">Nombre</dt>
-    <dd class="col-sm-8">@Model.ClientName</dd>
-
-    <dt class="col-sm-4">Teléfono</dt>
-    <dd class="col-sm-8">@Model.ClientPhone</dd>
-
-    <dt class="col-sm-4">Correo</dt>
-    <dd class="col-sm-8">@Model.ClientEmail</dd>
-
-    <dt class="col-sm-4">Dirección</dt>
-    <dd class="col-sm-8">@Model.ClientAddress</dd>
-
-    <dt class="col-sm-4">Estado</dt>
-    <dd class="col-sm-8">
-        @if (Model.StatusID == 1)
+<div class="detail-header">
+    <div class="detail-header-left">
+        <div class="detail-avatar">@initials</div>
+        <div>
+            <h1 class="detail-title">@Model.ClientName</h1>
+            <div class="detail-subtitle">
+                <span>Cédula @Model.Identification</span>
+                @if (Model.StatusID == 1)
+                {
+                    <span class="badge badge-status-active">Activo</span>
+                }
+                else
+                {
+                    <span class="badge badge-status-inactive">Inactivo</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="detail-actions">
+        @if (canManage)
         {
-            <span class="badge badge-status-active">Activo</span>
+            <button type="button" class="btn btn-sm btn-outline-primary btn-edit-client" data-id="@Model.Id" style="width:auto;"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
         }
-        else
-        {
-            <span class="badge badge-status-inactive">Inactivo</span>
-        }
-    </dd>
+        <a asp-controller="Client" asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+    </div>
+</div>
 
-    <dt class="col-sm-4">Creado por</dt>
-    <dd class="col-sm-8">@Model.CreatedBy</dd>
+<div class="row">
+    <div class="col-12">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-address-card"></i> Datos de contacto</h2>
+            <div class="info-field-grid">
+                <div>
+                    <span class="info-field-label">Teléfono</span>
+                    <span class="info-field-value">@Model.ClientPhone</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Correo</span>
+                    <span class="info-field-value">@Model.ClientEmail</span>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <span class="info-field-label">Dirección</span>
+                    <span class="info-field-value">@(string.IsNullOrEmpty(Model.ClientAddress) ? "—" : Model.ClientAddress)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <dt class="col-sm-4">Creado el</dt>
-    <dd class="col-sm-8">@Model.CreatedOn.ToString("g")</dd>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="info-card info-card-placeholder">
+            <h2 class="info-card-title"><i class="fa-solid fa-file-invoice"></i> Órdenes <span class="info-card-soon">Próximamente</span></h2>
+            <div class="app-table-empty">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>Este cliente todavía no tiene órdenes registradas.</span>
+            </div>
+        </div>
+    </div>
 
-    @if (Model.ModifiedOn.HasValue)
+    <div class="col-lg-6">
+        <div class="info-card info-card-placeholder">
+            <h2 class="info-card-title"><i class="fa-solid fa-cart-shopping"></i> Ventas <span class="info-card-soon">Próximamente</span></h2>
+            <div class="app-table-empty">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span>Este cliente todavía no tiene ventas registradas.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (canSeeAudit)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="info-card">
+                <h2 class="info-card-title"><i class="fa-solid fa-clock-rotate-left"></i> Auditoría</h2>
+                <div class="info-field-grid">
+                    <div>
+                        <span class="info-field-label">Creado por</span>
+                        <span class="info-field-value">@Model.CreatedBy</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Creado el</span>
+                        <span class="info-field-value">@Model.CreatedOn.ToString("g")</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Modificado por</span>
+                        <span class="info-field-value">@(string.IsNullOrEmpty(Model.ModifiedBy) ? "—" : Model.ModifiedBy)</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Modificado el</span>
+                        <span class="info-field-value">@(Model.ModifiedOn.HasValue ? Model.ModifiedOn.Value.ToString("g") : "—")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/client.js" asp-append-version="true"></script>
+
+    @if (canManage)
     {
-        <dt class="col-sm-4">Modificado por</dt>
-        <dd class="col-sm-8">@Model.ModifiedBy</dd>
-
-        <dt class="col-sm-4">Modificado el</dt>
-        <dd class="col-sm-8">@Model.ModifiedOn.Value.ToString("g")</dd>
+        <!-- Modal de edición (mismo partial que usa el listado) -->
+        <div class="modal fade" id="editClientModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content" id="editClientModalContent"></div>
+            </div>
+        </div>
+        <form style="display:none">@Html.AntiForgeryToken()</form>
     }
-</dl>
-
-<a asp-controller="Client" asp-action="Index" class="btn btn-outline-secondary">Volver</a>
+}

@@ -64,6 +64,17 @@ namespace CatalogStore.UI.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Logout()
         {
+            try
+            {
+                // Tiene que ir antes del SignOutAsync — una vez cerrada la cookie ya no queda
+                // JWT para autenticar esta llamada. Si el Backend no responde, no bloquea el logout.
+                var client = _httpClientFactory.CreateClient("BackendApi");
+                await client.PostAsync("api/User/logout", null);
+            }
+            catch
+            {
+            }
+
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login", "Account");
         }

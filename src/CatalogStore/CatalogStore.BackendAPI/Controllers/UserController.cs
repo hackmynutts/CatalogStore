@@ -42,6 +42,18 @@ namespace CatalogStore.BackendAPI.Controllers
             return Ok(new { Token = newToken });
         }
 
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            var userIdClaim = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            await _userServices.LogoutAsync(userId);
+            return Ok();
+        }
+
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] AuthModels.ChangePasswordRequest request)

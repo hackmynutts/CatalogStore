@@ -3,11 +3,15 @@
 @{
     ViewData["Title"] = "Bitácora de eventos";
 
-    string BadgeClass(typeEvent t) => t.ToString().EndsWith("Fail") || t == typeEvent.Error
-        ? "text-bg-danger"
-        : t == typeEvent.Delete || t == typeEvent.Inactivate
-            ? "text-bg-warning"
-            : "text-bg-success";
+    string BadgeClass(typeEvent t) => t switch
+    {
+        _ when t.ToString().EndsWith("Fail") || t == typeEvent.Error => "text-bg-danger",
+        typeEvent.Delete or typeEvent.Inactivate => "text-bg-warning",
+        typeEvent.Edit => "text-bg-primary",
+        typeEvent.LogIn => "text-bg-info",
+        typeEvent.LogOut => "text-bg-info-dark",
+        _ => "text-bg-success"
+    };
 }
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Bitácora de eventos</h1>

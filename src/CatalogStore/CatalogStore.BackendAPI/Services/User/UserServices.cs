@@ -185,6 +185,16 @@ namespace CatalogStore.BackendAPI.Services.User
             return _jwtTokenService.GenerateToken(user, roles);
         }
 
+        public async Task LogoutAsync(Guid userId)
+        {
+            await _eventlogServices.LogAsync(
+                typeEvent.LogOut,
+                "Administration/Users",
+                UsersTable,
+                userId.ToString(),
+                "Cierre de sesión.");
+        }
+
         public async Task<AuthModels.ResetPasswordResult> ResetPasswordAsync(Guid id)
         {
             var usuario = await _userManager.FindByIdAsync(id.ToString());

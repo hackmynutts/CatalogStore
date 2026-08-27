@@ -45,6 +45,11 @@
             <th>Estado</th>
             <th>Creado por</th>
             <th>Fecha</th>
+            @if (isAdminView)
+            {
+                <th>Modificado por</th>
+                <th>Modificado el</th>
+            }
             <th class="sorter-false filter-false">Acciones</th>
         </tr>
     </thead>
@@ -68,6 +73,11 @@
                 </td>
                 <td>@c.CreatedBy</td>
                 <td>@c.CreatedOn.ToString("g")</td>
+                @if (isAdminView)
+                {
+                    <td>@(string.IsNullOrEmpty(c.ModifiedBy) ? "—" : c.ModifiedBy)</td>
+                    <td>@(c.ModifiedOn.HasValue ? c.ModifiedOn.Value.ToString("g") : "—")</td>
+                }
                 <td class="text-end">
                     <div class="action-buttons">
                         <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" asp-action="Details" asp-route-id="@c.Id"><i class="fa-solid fa-eye"></i></a>

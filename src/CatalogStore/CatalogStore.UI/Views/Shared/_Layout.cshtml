@@ -43,8 +43,62 @@
                                     <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
                                     <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
                                     <li><a class="dropdown-item" asp-controller="Eventlog" asp-action="Index">Bitácora de eventos</a></li>
+                                    @* Submenú IT: solo para AdminIT *@
+                                    @if (User.IsInRole("AdminIT"))
+                                    {
+                                        <li class="dropdown dropend">
+                                            <a class="dropdown-item dropdown-toggle"
+                                               href="#"
+                                               data-bs-toggle="dropdown"
+                                               data-bs-display="static"
+                                               data-bs-auto-close="outside"
+                                               aria-expanded="false">
+                                                IT
+                                            </a>
+                                            <ul class="dropdown-menu shadow">
+
+                                                @* ── Grupo: Administracion ── *@
+                                                <li class="dropdown dropend">
+                                                    <a class="dropdown-item dropdown-toggle"
+                                                       href="#"
+                                                       data-bs-toggle="dropdown"
+                                                       data-bs-display="static"
+                                                       data-bs-auto-close="outside"
+                                                       aria-expanded="false">
+                                                        Administración
+                                                    </a>
+                                                    <ul class="dropdown-menu shadow">
+                                                        <li><a class="dropdown-item" asp-controller="Client" asp-action="IndexAdmin">Clientes</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Eventlog" asp-action="Index">Bitácora de eventos</a></li>
+                                                    </ul>
+                                                </li>
+                                                @* ── Grupo: Administracion ── *@
+                                                <li class="dropdown dropend">
+                                                    <a class="dropdown-item dropdown-toggle"
+                                                       href="#"
+                                                       data-bs-toggle="dropdown"
+                                                       data-bs-display="static"
+                                                       data-bs-auto-close="outside"
+                                                       aria-expanded="false">
+                                                        Ventas
+                                                    </a>
+                                                    <ul class="dropdown-menu shadow">
+                                                        <li><a class="dropdown-item" asp-controller="Sales" asp-action="IndexAdmin">Ventas</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Producto" asp-action="Index">Productos</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Vendedor" asp-action="Index">Vendedores</a></li>
+                                                    </ul>
+                                                </li>
+
+                                            </ul>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
+                            
                         }
 
                         @if (User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor"))
