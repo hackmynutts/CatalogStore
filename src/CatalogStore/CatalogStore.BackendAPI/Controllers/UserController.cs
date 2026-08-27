@@ -34,6 +34,14 @@ namespace CatalogStore.BackendAPI.Controllers
                                     : Unauthorized();
         }
 
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] AuthModels.RefreshTokenRequest request)
+        {
+            var newToken = await _userServices.RefreshTokenAsync(request.Token);
+            if (newToken == null) return Unauthorized();
+            return Ok(new { Token = newToken });
+        }
+
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] AuthModels.ChangePasswordRequest request)

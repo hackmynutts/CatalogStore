@@ -1,0 +1,51 @@
+@model CatalogStore.UI.Models.Client.ClientViewModel
+@{
+    ViewData["Title"] = "Detalle del cliente";
+}
+<h1>Detalle del cliente</h1>
+
+<dl class="row" style="max-width:480px;">
+    <dt class="col-sm-4">Cédula</dt>
+    <dd class="col-sm-8">@Model.Identification</dd>
+
+    <dt class="col-sm-4">Nombre</dt>
+    <dd class="col-sm-8">@Model.ClientName</dd>
+
+    <dt class="col-sm-4">Teléfono</dt>
+    <dd class="col-sm-8">@Model.ClientPhone</dd>
+
+    <dt class="col-sm-4">Correo</dt>
+    <dd class="col-sm-8">@Model.ClientEmail</dd>
+
+    <dt class="col-sm-4">Dirección</dt>
+    <dd class="col-sm-8">@Model.ClientAddress</dd>
+
+    <dt class="col-sm-4">Estado</dt>
+    <dd class="col-sm-8">
+        @if (Model.StatusID == 1)
+        {
+            <span class="badge badge-status-active">Activo</span>
+        }
+        else
+        {
+            <span class="badge badge-status-inactive">Inactivo</span>
+        }
+    </dd>
+
+    <dt class="col-sm-4">Creado por</dt>
+    <dd class="col-sm-8">@Model.CreatedBy</dd>
+
+    <dt class="col-sm-4">Creado el</dt>
+    <dd class="col-sm-8">@Model.CreatedOn.ToString("g")</dd>
+
+    @if (Model.ModifiedOn.HasValue)
+    {
+        <dt class="col-sm-4">Modificado por</dt>
+        <dd class="col-sm-8">@Model.ModifiedBy</dd>
+
+        <dt class="col-sm-4">Modificado el</dt>
+        <dd class="col-sm-8">@Model.ModifiedOn.Value.ToString("g")</dd>
+    }
+</dl>
+
+<a asp-controller="Client" asp-action="Index" class="btn btn-outline-secondary">Volver</a>

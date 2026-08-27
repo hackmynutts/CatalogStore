@@ -15,7 +15,7 @@
     <header>
         @{
             var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-            var ventasControllers = new[] { "Cliente", "Orden", "Producto", "Inventario", "Vendedor" };
+            var ventasControllers = new[] { "Client", "Orden", "Producto", "Inventario", "Vendedor" };
         }
         <nav class="navbar navbar-expand-lg navbar-dark app-navbar mb-3">
             <div class="container-fluid">
@@ -54,7 +54,7 @@
                                     Ventas
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="ventasMenu">
-                                    <li><a class="dropdown-item" asp-controller="Cliente" asp-action="Index">Clientes</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Client" asp-action="Index">Clientes</a></li>
                                     <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
                                     <li><a class="dropdown-item" asp-controller="Producto" asp-action="Index">Productos</a></li>
                                     <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
@@ -112,6 +112,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.widgets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/extras/jquery.tablesorter.pager.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/table-init.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)

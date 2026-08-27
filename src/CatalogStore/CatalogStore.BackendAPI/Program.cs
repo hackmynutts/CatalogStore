@@ -1,7 +1,10 @@
 using CatalogStore.BackendAPI.Data;
+using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
+using CatalogStore.BackendAPI.Services.Client;
+using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
@@ -42,13 +45,22 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     options.User.RequireUniqueEmail = true;
 })
     .AddEntityFrameworkStores<ApplicationDBContext>();
+
+builder.Services.AddHttpClient("HaciendaApi", client =>
+{
+    client.BaseAddress = new Uri("https://api.hacienda.go.cr/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
 //Dependency Injection for Services and Repositories
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
 builder.Services.AddScoped<IStatusServices, StatusServices>();
 builder.Services.AddScoped<IEventlogRepository, EventlogRepository>();
 builder.Services.AddScoped<IEventlogServices, EventlogServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
-
+builder.Services.AddScoped<IHaciendaServices, HaciendaServices>();
+builder.Services.AddScoped<IClientRepository, ClientRepository>();
+builder.Services.AddScoped<IClientServices, ClientServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

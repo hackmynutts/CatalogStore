@@ -1,0 +1,45 @@
+@model CatalogStore.UI.Models.Client.AddClientViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">Nuevo cliente</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="createClientForm">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="Identification" class="form-label">Cédula</label>
+            <div class="input-group">
+                <input asp-for="Identification" id="clientIdentification" class="form-control" />
+                <button type="button" class="btn btn-outline-secondary" id="btn-lookup-client" style="width:auto;">
+                    <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                </button>
+            </div>
+            <small class="text-muted" id="lookupStatus"></small>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientName" class="form-label">Nombre</label>
+            <input asp-for="ClientName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientPhone" class="form-label">Teléfono</label>
+            <input asp-for="ClientPhone" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientEmail" class="form-label">Correo</label>
+            <input asp-for="ClientEmail" type="email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientAddress" class="form-label">Dirección</label>
+            <input asp-for="ClientAddress" class="form-control" />
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Crear cliente</button>
+    </div>
+</form>

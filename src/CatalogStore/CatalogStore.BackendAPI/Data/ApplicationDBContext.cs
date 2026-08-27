@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
+using CatalogStore.BackendAPI.Models.Client;
 
 namespace CatalogStore.BackendAPI.Data
 {
@@ -12,6 +13,7 @@ namespace CatalogStore.BackendAPI.Data
     {
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Eventlog> Eventlogs { get; set; }
+        public DbSet<Client> Clients { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -47,6 +49,31 @@ namespace CatalogStore.BackendAPI.Data
                     .HasDatabaseName("IX_Eventlogs_TableName_RecordID");
                 entity.HasIndex(e => e.CreatedOn)
                     .HasDatabaseName("IX_Eventlogs_CreatedOn");
+            });
+            builder.Entity<Client>(entity =>
+            {
+                entity.Property(e => e.Identification)
+                    .HasMaxLength(20).IsRequired();
+                entity.Property(e => e.ClientName)
+                    .HasMaxLength(250).IsRequired();
+                entity.Property(e => e.ClientPhone)
+                    .HasMaxLength(10).IsRequired();
+                entity.Property(e => e.ClientEmail)
+                    .HasMaxLength(250).IsRequired();
+                entity.Property(e => e.ClientAddress)
+                    .HasMaxLength(350);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.HasIndex(e => new { e.Identification})
+                    .IsUnique()
+                    .HasDatabaseName("IX_Client_Identification_UQ");
+                entity.HasOne(e => e.Status)
+                    .WithMany()
+                    .HasForeignKey(e => e.StatusID)
+                    .HasConstraintName("FK_Client_Status_StatusID")
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

@@ -7,6 +7,7 @@ namespace CatalogStore.BackendAPI.Services.User
     {
         Task<AuthModels.RegisterResult> RegisterAsync(AuthModels.RegisterRequest request);
         Task<AuthModels.LoginResult> LoginAsync(AuthModels.LoginRequest request);
+        Task<string?> RefreshTokenAsync(string oldToken);
         Task<AuthModels.ChangePasswordResult> ChangePasswordAsync(Guid userId, AuthModels.ChangePasswordRequest request);
         Task<AuthModels.ResetPasswordResult> ResetPasswordAsync(Guid id);
         Task<UserDTO?> GetUserAsync(Guid id);

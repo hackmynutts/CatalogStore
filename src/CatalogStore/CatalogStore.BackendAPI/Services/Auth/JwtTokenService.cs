@@ -44,5 +44,34 @@ namespace CatalogStore.BackendAPI.Services.Auth
                 signingCredentials: creds);
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        public Guid? GetUserIdFromExpiredToken(string token)
+        {
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidAudience = _configuration["Jwt:Audience"],
+                IssuerSigningKey = key
+            };
+
+            try
+            {
+                var principal = new JwtSecurityTokenHandler().ValidateToken(token, validationParameters, out var validatedToken);
+                if (validatedToken is not JwtSecurityToken jwt || !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                    return null;
+
+                var sub = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                return Guid.TryParse(sub, out var userId) ? userId : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

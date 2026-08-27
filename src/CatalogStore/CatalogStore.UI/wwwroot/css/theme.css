@@ -235,6 +235,14 @@ body::before {
     margin-bottom: 14px;
 }
 
+.auth-brand-logo {
+    height: 56px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+    margin-bottom: 14px;
+}
+
 .auth-brand-title {
     font-size: 1.15rem;
     font-weight: 600;
@@ -476,6 +484,90 @@ body::before {
     color: var(--text-muted);
     font-size: 0.85rem;
     pointer-events: none;
+}
+
+/* Grupo de botones de acción en tablas — siempre en una sola fila, nunca se apila */
+.action-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.action-sep {
+    color: var(--border-color);
+    font-size: 0.9rem;
+    line-height: 1;
+    user-select: none;
+}
+
+/* Badges de estado (Activo/Inactivo) y de rol — colores de marca, no el gris/rojo/verde genérico de Bootstrap */
+.badge-status-active,
+.badge-status-inactive,
+.badge-role {
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.3px;
+    padding: 5px 10px;
+    border-radius: 999px;
+}
+
+.badge-status-active,
+.badge-role {
+    background-color: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+}
+
+.badge-status-inactive {
+    background-color: #c69797;
+    color: var(--text-muted);
+}
+
+/* Estado vacío de una tabla — icono + texto, en vez de un párrafo suelto */
+.app-table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* Paginador de tabla (tablesorter pager) */
+.app-table-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+.app-table-pager .pagedisplay {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0 4px;
+    white-space: nowrap;
+}
+
+.app-table-pager .pagesize {
+    width: auto;
+    padding: 4px 28px 4px 10px;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: #fff;
+}
+
+.app-table-pager button.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.app-table-empty i {
+    font-size: 1.8rem;
+    opacity: 0.5;
 }
 
 /* ==========================================================================

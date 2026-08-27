@@ -36,14 +36,18 @@
                 <td>
                     @foreach (var role in u.Roles)
                     {
-                        <span class="badge bg-secondary me-1">@role</span>
+                        <span class="badge badge-role me-1">@role</span>
                     }
                 </td>
                 <td>@(u.SendNotifications ? "Sí" : "No")</td>
                 <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-user" title="Editar" data-id="@u.Id"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button type="button" class="btn btn-sm btn-outline-warning btn-reset-password" title="Restablecer contraseña" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-rotate"></i></button>
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user" title="Eliminar" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-trash"></i></button>
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-user" title="Editar" data-id="@u.Id"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <span class="action-sep">|</span>
+                        <button type="button" class="btn btn-sm btn-outline-warning btn-reset-password" title="Restablecer contraseña" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-rotate"></i></button>
+                        <span class="action-sep">|</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user" title="Eliminar" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-trash"></i></button>
+                    </div>
                 </td>
             </tr>
         }
@@ -51,9 +55,26 @@
 </table>
 </div>
 
+<div id="usersTable-pager" class="app-table-pager">
+    <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+    <span class="pagedisplay"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+    <select class="pagesize">
+        <option value="10" selected>10 / página</option>
+        <option value="25">25 / página</option>
+        <option value="50">50 / página</option>
+        <option value="100">100 / página</option>
+    </select>
+</div>
+
 @if (!Model.Any())
 {
-    <p class="text-muted">No hay usuarios para mostrar.</p>
+    <div class="app-table-empty">
+        <i class="fa-solid fa-users"></i>
+        <span>No hay usuarios para mostrar.</span>
+    </div>
 }
 
 <!-- Modal de edición -->

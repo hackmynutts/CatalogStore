@@ -173,6 +173,18 @@ namespace CatalogStore.BackendAPI.Services.User
             return new AuthModels.LoginResult(true, token, user.MustChangePassword);
         }
 
+        public async Task<string?> RefreshTokenAsync(string oldToken)
+        {
+            var userId = _jwtTokenService.GetUserIdFromExpiredToken(oldToken);
+            if (userId == null) return null;
+
+            var user = await _userManager.FindByIdAsync(userId.Value.ToString());
+            if (user == null) return null;
+
+            var roles = await _userManager.GetRolesAsync(user);
+            return _jwtTokenService.GenerateToken(user, roles);
+        }
+
         public async Task<AuthModels.ResetPasswordResult> ResetPasswordAsync(Guid id)
         {
             var usuario = await _userManager.FindByIdAsync(id.ToString());

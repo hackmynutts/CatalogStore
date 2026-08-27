@@ -13,6 +13,12 @@ builder.Services.AddHttpClient("BackendApi", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["BackendApi:BaseUrl"]!);
 }).AddHttpMessageHandler<JwtDelegatingHandler>();
+// Sin JwtDelegatingHandler a propósito — la usa el propio handler para refrescar el token,
+// si tuviera el handler encima se auto-intercepta y entra en loop infinito.
+builder.Services.AddHttpClient("BackendApiAuth", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["BackendApi:BaseUrl"]!);
+});
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

@@ -1,0 +1,46 @@
+@model CatalogStore.UI.Models.Client.UpdateClientViewModel
+@{
+    var statusOptions = ViewData["StatusOptions"] as List<CatalogStore.UI.Models.Status.StatusViewModel> ?? new();
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar cliente</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="editClientForm" data-id="@ViewData["ClientId"]">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="ClientName" class="form-label">Nombre</label>
+            <input asp-for="ClientName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientPhone" class="form-label">Teléfono</label>
+            <input asp-for="ClientPhone" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientEmail" class="form-label">Correo</label>
+            <input asp-for="ClientEmail" type="email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientAddress" class="form-label">Dirección</label>
+            <input asp-for="ClientAddress" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="StatusID" class="form-label">Estado</label>
+            <select asp-for="StatusID" class="form-select">
+                @foreach (var status in statusOptions)
+                {
+                    <option value="@status.StatusID">@status.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    </div>
+</form>
