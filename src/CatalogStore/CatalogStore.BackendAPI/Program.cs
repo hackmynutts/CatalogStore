@@ -1,11 +1,13 @@
 using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.EventLogs;
+using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.EventLogs;
+using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -61,6 +63,8 @@ builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IHaciendaServices, HaciendaServices>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientServices, ClientServices>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IProductServices, ProductServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

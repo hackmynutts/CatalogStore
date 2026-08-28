@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using CatalogStore.BackendAPI.Models.Client;
+using CatalogStore.BackendAPI.Models.Product;
 
 namespace CatalogStore.BackendAPI.Data
 {
@@ -14,6 +15,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Eventlog> Eventlogs { get; set; }
         public DbSet<Client> Clients { get; set; }
+        public DbSet<Product> Products { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -73,6 +75,26 @@ namespace CatalogStore.BackendAPI.Data
                     .WithMany()
                     .HasForeignKey(e => e.StatusID)
                     .HasConstraintName("FK_Client_Status_StatusID")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<Product>(entity =>
+            {
+                entity.Property(e => e.ProductCode)
+                    .HasMaxLength(20);
+                entity.Property(e => e.ProductName)
+                    .HasMaxLength(150).IsRequired();
+                entity.Property(e => e.ProductDesc)
+                    .HasMaxLength(250).IsRequired();
+                entity.Property(e => e.Price)
+                    .HasPrecision(10,2);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.HasOne(e => e.Status)
+                    .WithMany()
+                    .HasForeignKey(e => e.StatusID)
+                    .HasConstraintName("FK_Product_Status_StatusID")
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

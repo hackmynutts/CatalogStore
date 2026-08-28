@@ -44,6 +44,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 ClientPhone = dto.ClientPhone,
                 ClientEmail = dto.ClientEmail,
                 ClientAddress = dto.ClientAddress,
+                Credito = dto.Credito,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
@@ -90,6 +91,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.ClientPhone,
                     existing.ClientEmail,
                     existing.ClientAddress,
+                    existing.Credito,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
@@ -101,6 +103,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 existing.ClientPhone = dto.ClientPhone;
                 existing.ClientEmail = dto.ClientEmail;
                 existing.ClientAddress = dto.ClientAddress;
+                existing.Credito = dto.Credito;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
                 existing.ModifiedOn = DateTime.UtcNow;
@@ -157,6 +160,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.ClientPhone,
                     existing.ClientEmail,
                     existing.ClientAddress,
+                    existing.Credito,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,

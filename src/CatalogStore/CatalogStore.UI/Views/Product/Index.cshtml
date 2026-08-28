@@ -1,0 +1,160 @@
+@model List<CatalogStore.UI.Models.Product.ProductViewModel>
+@{
+    ViewData["Title"] = "Productos";
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canDelete = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canSeeAll = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool isAdminView = ViewContext.RouteData.Values["action"]?.ToString() == "IndexAdmin";
+
+    string CategoriaLabel(int c) => c switch
+    {
+        0 => "Genérica",
+        1 => "Repuestos de moto",
+        2 => "Accesorios de moto",
+        3 => "Capas de moto",
+        4 => "Tapas plásticas de moto",
+        _ => "—"
+    };
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Productos</h1>
+    <div class="d-flex gap-2">
+        @if (canSeeAll)
+        {
+            @if (isAdminView)
+            {
+                <a asp-controller="Product" asp-action="Index" class="btn btn-outline-secondary" style="width:auto;">Ver solo activos</a>
+            }
+            else
+            {
+                <a asp-controller="Product" asp-action="IndexAdmin" class="btn btn-outline-secondary" style="width:auto;">Ver todos</a>
+            }
+        }
+        @if (canManage)
+        {
+            <button type="button" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;" id="btn-new-product"><i class="fa-solid fa-plus"></i> Nuevo producto</button>
+        }
+    </div>
+</div>
+
+<form style="display:none">@Html.AntiForgeryToken()</form>
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="productTable" data-column="all" placeholder="Buscar productos..." />
+</div>
+
+<div class="table-responsive">
+<table id="productTable" class="table app-table">
+    <thead>
+        <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Estado</th>
+            <th>Creado por</th>
+            <th>Fecha</th>
+            @if (isAdminView)
+            {
+                <th>Modificado por</th>
+                <th>Modificado el</th>
+            }
+            <th class="sorter-false filter-false">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@(string.IsNullOrEmpty(p.ProductCode) ? "—" : p.ProductCode)</td>
+                <td>@p.ProductName</td>
+                <td>@p.ProductDesc</td>
+                <td>@CategoriaLabel(p.categoria)</td>
+                <td>@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</td>
+                <td>
+                    @if (p.StatusID == 1)
+                    {
+                        <span class="badge badge-status-active">Activo</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-status-inactive">Inactivo</span>
+                    }
+                </td>
+                <td>@p.CreatedBy</td>
+                <td>@p.CreatedOn.ToString("g")</td>
+                @if (isAdminView)
+                {
+                    <td>@(string.IsNullOrEmpty(p.ModifiedBy) ? "—" : p.ModifiedBy)</td>
+                    <td>@(p.ModifiedOn.HasValue ? p.ModifiedOn.Value.ToString("g") : "—")</td>
+                }
+                <td class="text-end">
+                    <div class="action-buttons">
+                        <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" asp-action="Details" asp-route-id="@p.ProductID"><i class="fa-solid fa-eye"></i></a>
+                        @if (canManage)
+                        {
+                            <span class="action-sep">|</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit-product" title="Editar" data-id="@p.ProductID"><i class="fa-solid fa-pen-to-square"></i></button>
+                            @if (p.StatusID == 1)
+                            {
+                                <span class="action-sep">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-warning btn-inactivate-product" title="Inactivar" data-id="@p.ProductID" data-name="@p.ProductName"><i class="fa-solid fa-ban"></i></button>
+                            }
+                        }
+                        @if (canDelete)
+                        {
+                            <span class="action-sep">|</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-product" title="Eliminar" data-id="@p.ProductID" data-name="@p.ProductName"><i class="fa-solid fa-trash"></i></button>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+
+<div id="productTable-pager" class="app-table-pager">
+    <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+    <span class="pagedisplay"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+    <select class="pagesize">
+        <option value="10" selected>10 / página</option>
+        <option value="25">25 / página</option>
+        <option value="50">50 / página</option>
+        <option value="100">100 / página</option>
+    </select>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-box-open"></i>
+        <span>No hay productos para mostrar.</span>
+    </div>
+}
+
+@if (canManage)
+{
+    <!-- Modal de edición -->
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="editProductModalContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal de creación -->
+    <div class="modal fade" id="createProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="createProductModalContent"></div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/product.js" asp-append-version="true"></script>
+}

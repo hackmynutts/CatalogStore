@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using CatalogStore.BackendAPI.Models.Client;
+using System.ComponentModel.DataAnnotations;
 
 namespace CatalogStore.BackendAPI.DTO.Client
 {
@@ -18,8 +19,8 @@ namespace CatalogStore.BackendAPI.DTO.Client
         public string ClientEmail { get; set; } = string.Empty;
         [Display(Name = "Dirección")]
         public string ClientAddress { get; set; } = string.Empty;
-        [Display(Name = "Estado")]
-        public int StatusID { get; set; }
+        [Display(Name = "Credito")]
+        public credit? Credito { get; set; } = credit.D0;
         [Display(Name = "Creado por")]
         public string CreatedBy { get; set; } = string.Empty;
         [Display(Name = "Creado el")]

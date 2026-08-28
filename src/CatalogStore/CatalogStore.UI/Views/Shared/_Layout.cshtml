@@ -15,7 +15,7 @@
     <header>
         @{
             var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-            var ventasControllers = new[] { "Client", "Orden", "Producto", "Inventario", "Vendedor" };
+            var ventasControllers = new[] { "Client", "Orden", "Product", "Inventario", "Vendedor" };
         }
         <nav class="navbar navbar-expand-lg navbar-dark app-navbar mb-3">
             <div class="container-fluid">
@@ -87,7 +87,7 @@
                                                     <ul class="dropdown-menu shadow">
                                                         <li><a class="dropdown-item" asp-controller="Sales" asp-action="IndexAdmin">Ventas</a></li>
                                                         <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
-                                                        <li><a class="dropdown-item" asp-controller="Producto" asp-action="Index">Productos</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Product" asp-action="IndexAdmin">Productos</a></li>
                                                         <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
                                                         <li><a class="dropdown-item" asp-controller="Vendedor" asp-action="Index">Vendedores</a></li>
                                                     </ul>
@@ -110,7 +110,7 @@
                                 <ul class="dropdown-menu" aria-labelledby="ventasMenu">
                                     <li><a class="dropdown-item" asp-controller="Client" asp-action="Index">Clientes</a></li>
                                     <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Producto" asp-action="Index">Productos</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">Productos</a></li>
                                     <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
                                     <li><a class="dropdown-item" asp-controller="Vendedor" asp-action="Index">Vendedores</a></li>
                                 </ul>

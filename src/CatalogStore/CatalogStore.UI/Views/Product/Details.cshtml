@@ -1,0 +1,121 @@
+@model CatalogStore.UI.Models.Product.ProductViewModel
+@{
+    ViewData["Title"] = "Detalle del producto";
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+
+    string CategoriaLabel(int c) => c switch
+    {
+        0 => "Genérica",
+        1 => "Repuestos de moto",
+        2 => "Accesorios de moto",
+        3 => "Capas de moto",
+        4 => "Tapas plásticas de moto",
+        _ => "—"
+    };
+}
+
+<div class="detail-header">
+    <div class="detail-header-left">
+        <div class="detail-avatar"><i class="fa-solid fa-box"></i></div>
+        <div>
+            <h1 class="detail-title">@Model.ProductName</h1>
+            <div class="detail-subtitle">
+                <span>Código @(string.IsNullOrEmpty(Model.ProductCode) ? "—" : Model.ProductCode)</span>
+                @if (Model.StatusID == 1)
+                {
+                    <span class="badge badge-status-active">Activo</span>
+                }
+                else
+                {
+                    <span class="badge badge-status-inactive">Inactivo</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="detail-actions">
+        @if (canManage)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary btn-edit-product" data-id="@Model.ProductID" style="width:auto;"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+        }
+        <a asp-controller="Product" asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-5">
+        <div class="info-card product-media-card">
+            <div id="productImageCarousel" class="carousel slide product-media-carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="product-media-placeholder">
+                            <i class="fa-solid fa-image"></i>
+                            <span>Sin imágenes todavía</span>
+                            <span class="info-card-soon">Próximamente</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-tag"></i> Datos del producto</h2>
+            <div class="info-field-grid">
+                <div>
+                    <span class="info-field-label">Categoría</span>
+                    <span class="info-field-value">@CategoriaLabel(Model.categoria)</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Precio unitario</span>
+                    <span class="info-field-value">@(Model.Price.HasValue ? Model.Price.Value.ToString("N2") : "—")</span>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <span class="info-field-label">Descripción</span>
+                    <span class="info-field-value">@(string.IsNullOrEmpty(Model.ProductDesc) ? "—" : Model.ProductDesc)</span>
+                </div>
+            </div>
+        </div>
+
+        @if (canSeeAudit)
+        {
+            <div class="info-card">
+                <h2 class="info-card-title"><i class="fa-solid fa-clock-rotate-left"></i> Auditoría</h2>
+                <div class="info-field-grid">
+                    <div>
+                        <span class="info-field-label">Creado por</span>
+                        <span class="info-field-value">@Model.CreatedBy</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Creado el</span>
+                        <span class="info-field-value">@Model.CreatedOn.ToString("g")</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Modificado por</span>
+                        <span class="info-field-value">@(string.IsNullOrEmpty(Model.ModifiedBy) ? "—" : Model.ModifiedBy)</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Modificado el</span>
+                        <span class="info-field-value">@(Model.ModifiedOn.HasValue ? Model.ModifiedOn.Value.ToString("g") : "—")</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/product.js" asp-append-version="true"></script>
+
+    @if (canManage)
+    {
+        <!-- Modal de edición (mismo partial que usa el listado) -->
+        <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content" id="editProductModalContent"></div>
+            </div>
+        </div>
+        <form style="display:none">@Html.AntiForgeryToken()</form>
+    }
+}

@@ -1,5 +1,4 @@
 ﻿using CatalogStore.BackendAPI.Data;
-using CatalogStore.BackendAPI.Models.Client;
 using Microsoft.EntityFrameworkCore;
 
 namespace CatalogStore.BackendAPI.Repository.Client

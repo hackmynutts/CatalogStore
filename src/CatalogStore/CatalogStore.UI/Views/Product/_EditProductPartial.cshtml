@@ -1,0 +1,58 @@
+@model CatalogStore.UI.Models.Product.UpdateProductViewModel
+@{
+    var statusOptions = ViewData["StatusOptions"] as List<CatalogStore.UI.Models.Status.StatusViewModel> ?? new();
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar producto</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="editProductForm" data-id="@ViewData["ProductId"]">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="ProductCode" class="form-label">Código</label>
+            <input asp-for="ProductCode" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ProductName" class="form-label">Nombre</label>
+            <input asp-for="ProductName" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ProductDesc" class="form-label">Descripción</label>
+            <input asp-for="ProductDesc" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="categoria" class="form-label">Categoría</label>
+            <select asp-for="categoria" class="form-select">
+                <option value="0">Genérica</option>
+                <option value="1">Repuestos de moto</option>
+                <option value="2">Accesorios de moto</option>
+                <option value="3">Capas de moto</option>
+                <option value="4">Tapas plásticas de moto</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Price" class="form-label">Precio unitario</label>
+            <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="StatusID" class="form-label">Estado</label>
+            <select asp-for="StatusID" class="form-select">
+                @foreach (var status in statusOptions)
+                {
+                    <option value="@status.StatusID">@status.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    </div>
+</form>
