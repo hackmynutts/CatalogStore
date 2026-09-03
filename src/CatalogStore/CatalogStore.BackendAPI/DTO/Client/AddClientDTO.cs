@@ -21,6 +21,8 @@ namespace CatalogStore.BackendAPI.DTO.Client
         public string ClientAddress { get; set; } = string.Empty;
         [Display(Name = "Credito")]
         public credit? Credito { get; set; } = credit.D0;
+        [Display(Name = "Actividad Economica")]
+        public string? cabys { get; set; }
         [Display(Name = "Creado por")]
         public string CreatedBy { get; set; } = string.Empty;
         [Display(Name = "Creado el")]

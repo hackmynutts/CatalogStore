@@ -25,9 +25,29 @@
             <input asp-for="ClientEmail" type="email" class="form-control" />
         </div>
 
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Provincia</label>
+                <select id="provinciaSelect" class="form-select"></select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Cantón</label>
+                <select id="cantonSelect" class="form-select"></select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Distrito</label>
+                <select id="distritoSelect" class="form-select"></select>
+            </div>
+        </div>
+        <small class="text-muted d-block mb-2">Si escogés provincia/cantón/distrito, se agregan al final de la dirección al guardar.</small>
+
         <div class="mb-3">
-            <label asp-for="ClientAddress" class="form-label">Dirección</label>
+            <label asp-for="ClientAddress" class="form-label">Señas exactas</label>
             <input asp-for="ClientAddress" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Cabys" class="form-label">Actividad económica</label>
+            <input asp-for="Cabys" class="form-control" />
         </div>
         <div class="mb-3">
             <label asp-for="StatusID" class="form-label">Estado</label>

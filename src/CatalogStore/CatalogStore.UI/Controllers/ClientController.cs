@@ -59,10 +59,10 @@ namespace CatalogStore.UI.Controllers
             var response = await client.GetAsync($"api/Client/lookup?identification={Uri.EscapeDataString(identification)}");
 
             if (!response.IsSuccessStatusCode)
-                return Json(new { nombre = (string?)null });
+                return Json(new { nombre = (string?)null, actividades = new List<HaciendaActividadResult>() });
 
             var result = await response.Content.ReadFromJsonAsync<HaciendaLookupResult>();
-            return Json(new { nombre = result?.Nombre });
+            return Json(new { nombre = result?.Nombre, actividades = result?.Actividades ?? new List<HaciendaActividadResult>() });
         }
 
         [Authorize(Roles = "Admin,AdminIT,Vendedor")]
@@ -106,6 +106,7 @@ namespace CatalogStore.UI.Controllers
                 ClientPhone = cliente.ClientPhone,
                 ClientEmail = cliente.ClientEmail,
                 ClientAddress = cliente.ClientAddress,
+                Cabys = cliente.Cabys,
                 StatusID = cliente.StatusID
             };
 

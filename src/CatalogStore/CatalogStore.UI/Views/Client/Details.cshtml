@@ -46,6 +46,10 @@
                     <span class="info-field-label">Correo</span>
                     <span class="info-field-value">@Model.ClientEmail</span>
                 </div>
+                <div>
+                    <span class="info-field-label">Actividad económica</span>
+                    <span class="info-field-value">@(string.IsNullOrEmpty(Model.Cabys) ? "—" : Model.Cabys)</span>
+                </div>
                 <div style="grid-column: 1 / -1;">
                     <span class="info-field-label">Dirección</span>
                     <span class="info-field-value">@(string.IsNullOrEmpty(Model.ClientAddress) ? "—" : Model.ClientAddress)</span>

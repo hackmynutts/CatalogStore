@@ -10,6 +10,79 @@ document.addEventListener('DOMContentLoaded', function () {
     const createModalContent = document.getElementById('createClientModalContent');
     const newClientBtn = document.getElementById('btn-new-client');
 
+    let ubicacionesData = null;
+    async function loadUbicaciones() {
+        if (ubicacionesData) return ubicacionesData;
+        const response = await fetch('/data/cr-ubicaciones.json');
+        ubicacionesData = await response.json();
+        return ubicacionesData;
+    }
+
+    async function wireUbicacionCascade(container) {
+        const provinciaSelect = container.querySelector('#provinciaSelect');
+        const cantonSelect = container.querySelector('#cantonSelect');
+        const distritoSelect = container.querySelector('#distritoSelect');
+        if (!provinciaSelect || !cantonSelect || !distritoSelect) return;
+
+        const ubicaciones = await loadUbicaciones();
+
+        function fillSelect(select, items, placeholder) {
+            select.innerHTML = `<option value="">${placeholder}</option>` +
+                items.map(name => `<option value="${name}">${name}</option>`).join('');
+        }
+
+        fillSelect(provinciaSelect, ubicaciones.map(p => p.provincia), 'Seleccione provincia...');
+        fillSelect(cantonSelect, [], 'Seleccione cantón...');
+        fillSelect(distritoSelect, [], 'Seleccione distrito...');
+        cantonSelect.disabled = true;
+        distritoSelect.disabled = true;
+
+        provinciaSelect.addEventListener('change', function () {
+            const prov = ubicaciones.find(p => p.provincia === provinciaSelect.value);
+            fillSelect(cantonSelect, prov ? prov.cantones.map(c => c.canton) : [], 'Seleccione cantón...');
+            fillSelect(distritoSelect, [], 'Seleccione distrito...');
+            cantonSelect.disabled = !prov;
+            distritoSelect.disabled = true;
+        });
+
+        cantonSelect.addEventListener('change', function () {
+            const prov = ubicaciones.find(p => p.provincia === provinciaSelect.value);
+            const canton = prov && prov.cantones.find(c => c.canton === cantonSelect.value);
+            fillSelect(distritoSelect, canton ? canton.distritos : [], 'Seleccione distrito...');
+            distritoSelect.disabled = !canton;
+        });
+    }
+
+    function showApiError(result, fallbackMessage) {
+        let messages = null;
+        try {
+            const parsed = JSON.parse(result.details);
+            if (parsed && parsed.errors) {
+                messages = Object.values(parsed.errors).flat();
+            }
+        } catch (e) { }
+
+        if (messages && messages.length) {
+            Swal.fire({ icon: 'error', title: 'Revisá estos campos', html: messages.join('<br>') });
+        } else {
+            Swal.fire('Error', result.message || fallbackMessage, 'error');
+        }
+    }
+
+    function appendUbicacionToAddress(container) {
+        const addressInput = container.querySelector('[name="ClientAddress"]');
+        const provinciaSelect = container.querySelector('#provinciaSelect');
+        const cantonSelect = container.querySelector('#cantonSelect');
+        const distritoSelect = container.querySelector('#distritoSelect');
+        if (!addressInput || !provinciaSelect || !cantonSelect || !distritoSelect) return;
+
+        if (provinciaSelect.value && cantonSelect.value && distritoSelect.value) {
+            const senas = addressInput.value.trim();
+            const ubicacion = `${distritoSelect.value}, ${cantonSelect.value}, ${provinciaSelect.value}`;
+            addressInput.value = senas ? `${senas}, ${ubicacion}` : ubicacion;
+        }
+    }
+
     document.querySelectorAll('.btn-edit-client').forEach(function (btn) {
         btn.addEventListener('click', async function () {
             const id = btn.getAttribute('data-id');
@@ -28,8 +101,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function wireEditForm() {
         const form = editModalContent.querySelector('#editClientForm');
+        wireUbicacionCascade(editModalContent);
+
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            appendUbicacionToAddress(editModalContent);
             const id = form.getAttribute('data-id');
             const formData = new FormData(form);
 
@@ -45,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire({ icon: 'success', title: 'Cliente actualizado', timer: 1500, showConfirmButton: false })
                     .then(() => location.reload());
             } else {
-                Swal.fire('Error', result.message || 'No se pudo actualizar el cliente.', 'error');
+                showApiError(result, 'No se pudo actualizar el cliente.');
             }
         });
     }
@@ -71,6 +147,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const identificationInput = createModalContent.querySelector('#clientIdentification');
         const lookupStatus = createModalContent.querySelector('#lookupStatus');
         const nameInput = createModalContent.querySelector('[name="ClientName"]');
+        const cabysInput = createModalContent.querySelector('#clientCabys');
+        wireUbicacionCascade(createModalContent);
 
         lookupBtn.addEventListener('click', async function () {
             const cedula = identificationInput.value.trim();
@@ -82,14 +160,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (data.nombre && data.nombre !== 'No encontrado.') {
                 nameInput.value = data.nombre;
-                lookupStatus.textContent = 'Nombre encontrado en Hacienda.';
+
+                const actividades = data.actividades || [];
+                const principal = actividades.find(a => a.tipo === 'P') || actividades[0];
+                cabysInput.value = principal ? principal.codigo : '';
+
+                lookupStatus.textContent = principal
+                    ? 'Nombre encontrado en Hacienda.'
+                    : 'Nombre encontrado en Hacienda — sin actividad económica registrada.';
             } else {
+                cabysInput.value = '';
                 lookupStatus.textContent = 'No se encontró esa cédula en Hacienda — completá el nombre a mano.';
             }
         });
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            appendUbicacionToAddress(createModalContent);
             const formData = new FormData(form);
 
             const response = await fetch('/Client/Create', {
@@ -104,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire({ icon: 'success', title: 'Cliente creado', timer: 1500, showConfirmButton: false })
                     .then(() => location.reload());
             } else {
-                Swal.fire('Error', result.message || 'No se pudo crear el cliente.', 'error');
+                showApiError(result, 'No se pudo crear el cliente.');
             }
         });
     }

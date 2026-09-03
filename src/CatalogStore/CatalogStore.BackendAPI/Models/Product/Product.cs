@@ -13,7 +13,7 @@ namespace CatalogStore.BackendAPI.Models.Product
         Accesorios = 2,
         [Display(Name = "Capas de moto")]
         Capas = 3,
-        [Display(Name = "Tapas plasticas de moto")]
+        [Display(Name = "Plasticos de moto")]
         Tapas = 4
     }
     [Table("Products_TB")]

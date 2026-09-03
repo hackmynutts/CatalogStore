@@ -40,9 +40,8 @@ namespace CatalogStore.BackendAPI.Controllers
         [HttpGet("lookup")]
         public async Task<IActionResult> GetLookup(string identification)
         {
-            var nombre = await _services.LookupAsync(identification);
-            if (nombre == null) return NotFound();
-            return Ok(new { nombre });
+            var result = await _services.LookupAsync(identification);
+            return Ok(result);
         }
 
         // POST api/<ClientController>

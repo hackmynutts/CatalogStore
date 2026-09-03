@@ -26,13 +26,13 @@ namespace CatalogStore.BackendAPI.Services.Client
         public async Task<List<Models.Client.Client>> GetActiveClientsAsync() => await _clientRepository.GetActiveClientsAsync();
         public async Task<Models.Client.Client> GetClientAsync(int ID) => await _clientRepository.GetClientAsync(ID);
 
-        public async Task<string> LookupAsync(string? identification)
+        public async Task<HaciendaLookupResponseDTO> LookupAsync(string? identification)
         {
             if (string.IsNullOrWhiteSpace(identification))
-                return "No encontrado.";
+                return new HaciendaLookupResponseDTO { Nombre = "No encontrado.", Actividades = null };
 
             var result = await _haciendaServices.LookupAsync(identification);
-            return result?.Nombre ?? "No encontrado.";
+            return result ?? new HaciendaLookupResponseDTO { Nombre = "No encontrado.", Actividades = null };
         }
 
         public async Task<int> AddAsync(AddClientDTO dto)
@@ -45,6 +45,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 ClientEmail = dto.ClientEmail,
                 ClientAddress = dto.ClientAddress,
                 Credito = dto.Credito,
+                Cabys = dto.cabys,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
@@ -92,6 +93,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.ClientEmail,
                     existing.ClientAddress,
                     existing.Credito,
+                    existing.Cabys,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
@@ -104,6 +106,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 existing.ClientEmail = dto.ClientEmail;
                 existing.ClientAddress = dto.ClientAddress;
                 existing.Credito = dto.Credito;
+                existing.Cabys = dto.cabys;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
                 existing.ModifiedOn = DateTime.UtcNow;
@@ -161,6 +164,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.ClientEmail,
                     existing.ClientAddress,
                     existing.Credito,
+                    existing.Cabys,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
