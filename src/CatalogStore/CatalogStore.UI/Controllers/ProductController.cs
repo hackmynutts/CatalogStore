@@ -9,7 +9,20 @@ namespace CatalogStore.UI.Controllers
     public class ProductController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        public ProductController(IHttpClientFactory httpClientFactory) { _httpClientFactory = httpClientFactory; }
+        private readonly IConfiguration _configuration;
+        public ProductController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        {
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
+        }
+
+        private void ResolveImageUrls(IEnumerable<ProductViewModel> productos)
+        {
+            var baseUrl = _configuration["BackendApi:PublicBaseUrl"]!.TrimEnd('/');
+            foreach (var producto in productos)
+                foreach (var img in producto.Images)
+                    img.Url = baseUrl + img.Url;
+        }
 
         // GET: ProductController — solo productos activos
         public async Task<IActionResult> Index()
@@ -20,8 +33,23 @@ namespace CatalogStore.UI.Controllers
             if (!response.IsSuccessStatusCode)
                 return View(new List<ProductViewModel>());
 
-            var productos = await response.Content.ReadFromJsonAsync<List<ProductViewModel>>();
-            return View(productos ?? new List<ProductViewModel>());
+            var productos = await response.Content.ReadFromJsonAsync<List<ProductViewModel>>() ?? new List<ProductViewModel>();
+            ResolveImageUrls(productos);
+            return View(productos);
+        }
+
+        // GET: ProductController/Catalog — vista tipo catálogo para que el vendedor le muestre al cliente
+        public async Task<IActionResult> Catalog()
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync("api/Product/active");
+
+            if (!response.IsSuccessStatusCode)
+                return View(new List<ProductViewModel>());
+
+            var productos = await response.Content.ReadFromJsonAsync<List<ProductViewModel>>() ?? new List<ProductViewModel>();
+            ResolveImageUrls(productos);
+            return View(productos);
         }
 
         // GET: ProductController/Details/5
@@ -34,6 +62,7 @@ namespace CatalogStore.UI.Controllers
 
             var producto = await response.Content.ReadFromJsonAsync<ProductViewModel>();
             if (producto == null) return NotFound();
+            ResolveImageUrls(new[] { producto });
             return View(producto);
         }
 

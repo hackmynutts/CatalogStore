@@ -2,12 +2,14 @@ using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Product;
+using CatalogStore.BackendAPI.Repository.ProductImage;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Product;
+using CatalogStore.BackendAPI.Services.ProductImage;
 using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -65,6 +67,8 @@ builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientServices, ClientServices>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductServices, ProductServices>();
+builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
+builder.Services.AddScoped<IProductImageServices, ProductImageServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>
@@ -129,7 +133,7 @@ if (app.Environment.IsDevelopment())
 
 }
 app.UseHttpsRedirection();
-
+app.UseStaticFiles(); // Habilitar el uso de archivos estáticos como imagenes 
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -1,3 +1,5 @@
+using CatalogStore.UI.Models.ProductImage;
+
 namespace CatalogStore.UI.Models.Product
 {
     public class ProductViewModel
@@ -13,5 +15,6 @@ namespace CatalogStore.UI.Models.Product
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
+        public List<ProductImageViewModel> Images { get; set; } = new List<ProductImageViewModel>();
     }
 }

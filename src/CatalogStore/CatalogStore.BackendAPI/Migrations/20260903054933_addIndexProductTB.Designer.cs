@@ -4,6 +4,7 @@ using CatalogStore.BackendAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CatalogStore.BackendAPI.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260903054933_addIndexProductTB")]
+    partial class addIndexProductTB
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,53 +318,7 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     b.HasIndex("StatusID");
 
-                    b.HasIndex("ProductName", "categoria")
-                        .HasDatabaseName("IX_Products_ProductName_Categoria");
-
                     b.ToTable("Products_TB", "dbo");
-                });
-
-            modelBuilder.Entity("CatalogStore.BackendAPI.Models.ProductImage.ProductImage", b =>
-                {
-                    b.Property<int>("ProductImageID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductImageID"));
-
-                    b.Property<string>("ContentType")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(140)
-                        .HasColumnType("nvarchar(140)");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(140)
-                        .HasColumnType("nvarchar(140)");
-
-                    b.Property<DateTime?>("ModifiedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ProductID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.HasKey("ProductImageID");
-
-                    b.HasIndex("ProductID", "Url")
-                        .HasDatabaseName("IX_ProductImage_ProductID_Url");
-
-                    b.ToTable("ProductImages_TB", "dbo");
                 });
 
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.Status.Status", b =>
@@ -522,18 +479,6 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Navigation("Status");
                 });
 
-            modelBuilder.Entity("CatalogStore.BackendAPI.Models.ProductImage.ProductImage", b =>
-                {
-                    b.HasOne("CatalogStore.BackendAPI.Models.Product.Product", "Product")
-                        .WithMany("Images")
-                        .HasForeignKey("ProductID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_ProductImage_Product_ProductID");
-
-                    b.Navigation("Product");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("CatalogStore.BackendAPI.Data.ApplicationRole", null)
@@ -583,11 +528,6 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("CatalogStore.BackendAPI.Models.Product.Product", b =>
-                {
-                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }

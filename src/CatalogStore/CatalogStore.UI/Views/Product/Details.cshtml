@@ -45,18 +45,51 @@
 <div class="row">
     <div class="col-lg-5">
         <div class="info-card product-media-card">
+            @if (canManage)
+            {
+                <button type="button" class="btn btn-sm btn-brand product-media-manage-btn" id="btn-manage-images" data-product-id="@Model.ProductID" title="Gestionar imágenes">
+                    <i class="fa-solid fa-camera"></i>
+                </button>
+            }
             <div id="productImageCarousel" class="carousel slide product-media-carousel">
-                <div class="carousel-inner">
-                    <div class="carousel-item active">
-                        <div class="product-media-placeholder">
-                            <i class="fa-solid fa-image"></i>
-                            <span>Sin imágenes todavía</span>
-                            <span class="info-card-soon">Próximamente</span>
+                <div class="carousel-inner" id="productCarouselInner">
+                    @if (Model.Images.Any())
+                    {
+                        for (int i = 0; i < Model.Images.Count; i++)
+                        {
+                            <div class="carousel-item @(i == 0 ? "active" : "")">
+                                <img src="@Model.Images[i].Url" class="d-block w-100 product-media-img" data-id="@Model.Images[i].ProductImageID" role="button" />
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="carousel-item active">
+                            <div class="product-media-placeholder">
+                                <i class="fa-solid fa-image"></i>
+                                <span>Sin imágenes todavía</span>
+                            </div>
                         </div>
-                    </div>
+                    }
                 </div>
+                @if (Model.Images.Count > 1)
+                {
+                    <button class="carousel-control-prev" type="button" data-bs-target="#productImageCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#productImageCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    </button>
+                    <div class="carousel-indicators" id="productCarouselIndicators">
+                        @for (int i = 0; i < Model.Images.Count; i++)
+                        {
+                            <button type="button" data-bs-target="#productImageCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")"></button>
+                        }
+                    </div>
+                }
             </div>
         </div>
+
     </div>
 
     <div class="col-lg-7">
@@ -105,8 +138,23 @@
     </div>
 </div>
 
+<!-- Modal de imagen a pantalla completa -->
+<div class="modal fade" id="imageFullscreenModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="imageFullscreenImg" src="" alt="Imagen del producto" class="img-fluid" />
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="~/js/product.js" asp-append-version="true"></script>
+    <script src="~/js/product-image.js" asp-append-version="true"></script>
 
     @if (canManage)
     {
@@ -114,6 +162,13 @@
         <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content" id="editProductModalContent"></div>
+            </div>
+        </div>
+
+        <!-- Modal de gestión de imágenes -->
+        <div class="modal fade" id="manageImagesModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content" id="manageImagesModalContent"></div>
             </div>
         </div>
         <form style="display:none">@Html.AntiForgeryToken()</form>

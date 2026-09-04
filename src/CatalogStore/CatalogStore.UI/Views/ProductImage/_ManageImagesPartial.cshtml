@@ -1,0 +1,29 @@
+@model List<CatalogStore.UI.Models.ProductImage.ProductImageViewModel>
+
+<div class="modal-header">
+    <h5 class="modal-title">Gestionar imágenes</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<div class="modal-body">
+    <form id="uploadImageForm" class="product-image-upload-form" data-product-id="@ViewData["ProductId"]">
+        @Html.AntiForgeryToken()
+        <input type="file" name="file" id="productImageFile" accept=".jpg,.jpeg,.png,.webp" class="form-control" required />
+        <button type="submit" class="btn btn-brand" style="width:auto;">Subir imagen</button>
+    </form>
+    <div class="product-image-thumbs" id="productImageThumbs">
+        @foreach (var img in Model)
+        {
+            <div class="product-image-thumb-wrap" data-id="@img.ProductImageID">
+                <img src="@img.Url" class="product-image-thumb" data-id="@img.ProductImageID" role="button" />
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-image" data-id="@img.ProductImageID" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        }
+        @if (!Model.Any())
+        {
+            <p class="text-muted mb-0">Este producto todavía no tiene imágenes.</p>
+        }
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+</div>

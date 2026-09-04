@@ -31,5 +31,6 @@ namespace CatalogStore.BackendAPI.Models.Product
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public Models.Status.Status Status { get; set; } = null!;
+        public ICollection<BackendAPI.Models.ProductImage.ProductImage> Images { get; set; } = new List<BackendAPI.Models.ProductImage.ProductImage>();
     }
 }

@@ -18,7 +18,6 @@ namespace CatalogStore.BackendAPI.Controllers
         public ProductController(IProductServices productServices) { _productServices = productServices; }
         // GET: api/<ProductController>
         [HttpGet]
-
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> GetAll()
         {

@@ -1,0 +1,102 @@
+@model List<CatalogStore.UI.Models.Product.ProductViewModel>
+@{
+    ViewData["Title"] = "Catálogo de productos";
+
+    string CategoriaLabel(int c) => c switch
+    {
+        0 => "Genérica",
+        1 => "Repuestos de moto",
+        2 => "Accesorios de moto",
+        3 => "Capas de moto",
+        4 => "Tapas plásticas de moto",
+        _ => "—"
+    };
+
+    var categoriasPresentes = Model.Select(p => p.categoria).Distinct().OrderBy(c => c).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Catálogo de productos</h1>
+</div>
+
+<div class="app-table-search-wrap mb-3">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" id="catalogSearch" data-column="all" placeholder="Buscar productos..." />
+</div>
+
+<div class="catalog-filter-pills mb-4">
+    <button type="button" class="catalog-pill active" data-categoria="all">Todas</button>
+    @foreach (var c in categoriasPresentes)
+    {
+        <button type="button" class="catalog-pill" data-categoria="@c">@CategoriaLabel(c)</button>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-box-open"></i>
+        <span>No hay productos activos para mostrar.</span>
+    </div>
+}
+else
+{
+    <div class="catalog-grid" id="catalogGrid">
+        @foreach (var p in Model)
+        {
+            <div class="catalog-card" data-categoria="@p.categoria" data-name="@p.ProductName.ToLowerInvariant()" data-code="@(p.ProductCode ?? string.Empty)">
+                @if (!p.Images.Any())
+                {
+                    <div class="catalog-card-media">
+                        <div class="product-media-placeholder catalog-media-placeholder">
+                            <i class="fa-solid fa-image"></i>
+                        </div>
+                    </div>
+                }
+                else if (p.Images.Count == 1)
+                {
+                    <div class="catalog-card-media">
+                        <img src="@p.Images[0].Url" class="d-block w-100 catalog-card-img" alt="@p.ProductName" />
+                    </div>
+                }
+                else
+                {
+                    <div id="catalogCarousel-@p.ProductID" class="carousel slide catalog-card-media" data-bs-ride="false">
+                        <div class="carousel-inner">
+                            @for (int i = 0; i < p.Images.Count; i++)
+                            {
+                                <div class="carousel-item @(i == 0 ? "active" : "")">
+                                    <img src="@p.Images[i].Url" class="d-block w-100 catalog-card-img" alt="@p.ProductName" />
+                                </div>
+                            }
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#catalogCarousel-@p.ProductID" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#catalogCarousel-@p.ProductID" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                }
+                <div class="catalog-card-body">
+                    <span class="catalog-card-category">@CategoriaLabel(p.categoria)</span>
+                    <h3 class="catalog-card-title">@p.ProductName</h3>
+                    <p class="catalog-card-code">@(string.IsNullOrEmpty(p.ProductCode) ? "" : $"Código {p.ProductCode}")</p>
+                    <div class="catalog-card-footer">
+                        <span class="catalog-card-price">@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</span>
+                        <a class="btn btn-sm btn-outline-secondary" asp-controller="Product" asp-action="Details" asp-route-id="@p.ProductID">Ver detalle</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="app-table-empty" id="catalogNoResults" hidden>
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Ningún producto coincide con el filtro.</span>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/product-catalog.js" asp-append-version="true"></script>
+}

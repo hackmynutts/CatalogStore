@@ -1,11 +1,10 @@
 ﻿using CatalogStore.BackendAPI.Models.Status;
 using CatalogStore.BackendAPI.Models.EventLogs;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.Product;
+using CatalogStore.BackendAPI.Models.ProductImage;
 
 namespace CatalogStore.BackendAPI.Data
 {
@@ -16,6 +15,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<Eventlog> Eventlogs { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -91,11 +91,31 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
+                entity.HasIndex(e => new { e.ProductName, e.categoria})
+                    .HasDatabaseName("IX_Products_ProductName_Categoria");
                 entity.HasOne(e => e.Status)
                     .WithMany()
                     .HasForeignKey(e => e.StatusID)
                     .HasConstraintName("FK_Product_Status_StatusID")
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<ProductImage>(entity =>
+            {
+                entity.Property(e => e.Url)
+                    .HasMaxLength(250).IsRequired();
+                entity.Property(e => e.ContentType)
+                    .HasMaxLength(100);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.HasIndex(e => new { e.ProductID, e.Url })
+                    .HasDatabaseName("IX_ProductImage_ProductID_Url");
+                entity.HasOne(e => e.Product)
+                    .WithMany(p => p.Images)
+                    .HasForeignKey(e => e.ProductID)
+                    .HasConstraintName("FK_ProductImage_Product_ProductID")
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

@@ -7,9 +7,9 @@ namespace CatalogStore.BackendAPI.Repository.Product
     {
         private readonly ApplicationDBContext _dbContext;
         public ProductRepository(ApplicationDBContext applicationDB) { _dbContext = applicationDB; }
-        public async Task<List<Models.Product.Product>> GetAllProductsAsync() => await _dbContext.Products.AsNoTracking().ToListAsync();
-        public async Task<List<Models.Product.Product>> GetActiveProductsAsync() => await _dbContext.Products.Where(p=>p.StatusID==1).AsNoTracking().ToListAsync();
-        public async Task<Models.Product.Product> GetProductAsync(int id) => await _dbContext.Products.AsNoTracking().FirstOrDefaultAsync(p=>p.ProductID==id);
+        public async Task<List<Models.Product.Product>> GetAllProductsAsync() => await _dbContext.Products.AsNoTracking().Include(p => p.Images).ToListAsync();
+        public async Task<List<Models.Product.Product>> GetActiveProductsAsync() => await _dbContext.Products.Where(p=>p.StatusID==1).AsNoTracking().Include(p => p.Images).ToListAsync();
+        public async Task<Models.Product.Product> GetProductAsync(int id) => await _dbContext.Products.AsNoTracking().Include(p => p.Images).FirstOrDefaultAsync(p=>p.ProductID==id);
         public async Task<int> AddAsync(Models.Product.Product prod)
         {
             await _dbContext.Products.AddAsync(prod);

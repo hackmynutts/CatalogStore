@@ -36,13 +36,14 @@
                         @if (User.IsInRole("Admin") || User.IsInRole("AdminIT"))
                         {
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle @(currentController == "User" || currentController == "Status" || currentController == "Eventlog" ? "active" : "")" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle @(currentController == "User" || currentController == "Status" || currentController == "Eventlog" || currentController == "ProductImage" ? "active" : "")" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Administrativo
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminMenu">
                                     <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
                                     <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
                                     <li><a class="dropdown-item" asp-controller="Eventlog" asp-action="Index">Bitácora de eventos</a></li>
+                                    <li><a class="dropdown-item" asp-controller="ProductImage" asp-action="Index">Imágenes de producto</a></li>
                                     @* Submenú IT: solo para AdminIT *@
                                     @if (User.IsInRole("AdminIT"))
                                     {
@@ -109,6 +110,7 @@
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="ventasMenu">
                                     <li><a class="dropdown-item" asp-controller="Client" asp-action="Index">Clientes</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Product" asp-action="Catalog">Catálogo</a></li>
                                     <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
                                     <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">Productos</a></li>
                                     <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
