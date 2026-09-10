@@ -19,6 +19,8 @@ namespace CatalogStore.BackendAPI.DTO.Product
         [Display(Name = "Precio Unitario")]
         [Required(ErrorMessage = "Indique el precio unitario.")]
         public decimal? Price { get; set; }
+        [Display(Name = "Unidad de medida")]
+        public unit UnidadMedida { get; set; } = unit.Pieza;
         [Display(Name = "Estado")]
         public int StatusID { get; set; }
         [Display(Name = "Modificado por")]

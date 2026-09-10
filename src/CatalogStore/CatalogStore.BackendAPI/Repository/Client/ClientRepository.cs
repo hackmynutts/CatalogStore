@@ -10,6 +10,7 @@ namespace CatalogStore.BackendAPI.Repository.Client
         public async Task<List<Models.Client.Client>> GetAllClientsAsync() => await _dbContext.Clients.AsNoTracking().ToListAsync();
         public async Task<List<Models.Client.Client>> GetActiveClientsAsync() => await _dbContext.Clients.Where(c => c.StatusID == 1).AsNoTracking().ToListAsync();
         public async Task<Models.Client.Client> GetClientAsync(int ID) => await _dbContext.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == ID);
+        public async Task<Models.Client.Client> GetClientByIdentificationAsync(string identification) => await _dbContext.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.Identification == identification);
         public async Task<int> AddAsync(Models.Client.Client client) 
         {
             _dbContext.Clients.Add(client);

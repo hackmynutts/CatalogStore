@@ -29,6 +29,7 @@ namespace CatalogStore.BackendAPI.Models.Client
         public string ClientAddress { get; set; } = string.Empty;
         public credit? Credito { get; set; } = credit.D0;
         public string? Cabys { get; set; }
+        public string? DeliveryPartner { get; set; }
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }

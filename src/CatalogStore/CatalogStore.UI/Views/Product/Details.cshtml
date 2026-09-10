@@ -13,6 +13,18 @@
         4 => "Tapas plásticas de moto",
         _ => "—"
     };
+
+    string UnidadMedidaLabel(int u) => u switch
+    {
+        0 => "Pieza",
+        1 => "Litro",
+        2 => "Metro",
+        3 => "Kilogramo",
+        4 => "Caja",
+        5 => "Paquete",
+        6 => "Unidad",
+        _ => "—"
+    };
 }
 
 <div class="detail-header">
@@ -107,6 +119,10 @@
                 <div style="grid-column: 1 / -1;">
                     <span class="info-field-label">Descripción</span>
                     <span class="info-field-value">@(string.IsNullOrEmpty(Model.ProductDesc) ? "—" : Model.ProductDesc)</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Unidad de medida</span>
+                    <span class="info-field-value">@UnidadMedidaLabel(Model.UnidadMedida)</span>
                 </div>
             </div>
         </div>

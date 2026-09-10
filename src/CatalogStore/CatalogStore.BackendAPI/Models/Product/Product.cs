@@ -16,6 +16,23 @@ namespace CatalogStore.BackendAPI.Models.Product
         [Display(Name = "Plasticos de moto")]
         Tapas = 4
     }
+    public enum unit
+    {
+        [Display(Name = "Pieza")]
+        Pieza = 0,
+        [Display(Name = "Litro")]
+        Litro = 1,
+        [Display(Name = "Metro")]
+        Metro = 2,
+        [Display(Name = "Kilogramo")]
+        Kilogramo = 3,
+        [Display(Name = "Caja")]
+        Caja = 4,
+        [Display(Name = "Paquete")]
+        Paquete = 5,
+        [Display(Name = "Unidad")]
+        Unidad = 6
+    }
     [Table("Products_TB")]
     public class Product
     {
@@ -25,6 +42,7 @@ namespace CatalogStore.BackendAPI.Models.Product
         public string ProductDesc{ get; set; } = string.Empty;
         public categoryType categoria { get; set; } = categoryType.General;
         public decimal? Price { get; set; }
+        public unit UnidadMedida { get; set; } = unit.Pieza;
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }

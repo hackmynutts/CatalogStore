@@ -48,7 +48,8 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.User.RequireUniqueEmail = true;
 })
-    .AddEntityFrameworkStores<ApplicationDBContext>();
+    .AddEntityFrameworkStores<ApplicationDBContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddHttpClient("HaciendaApi", client =>
 {
@@ -112,6 +113,10 @@ if (app.Environment.IsDevelopment())
     if(!await roleManager.RoleExistsAsync("Admin"))
     {
         await roleManager.CreateAsync(new ApplicationRole { Name = "Admin" });
+    }
+    if(!await roleManager.RoleExistsAsync("Vendedor"))
+    {
+        await roleManager.CreateAsync(new ApplicationRole { Name = "Vendedor" });
     }
 
     if (existingAdmin == null)

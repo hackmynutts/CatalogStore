@@ -4,6 +4,7 @@ using CatalogStore.BackendAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CatalogStore.BackendAPI.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260907180300_RemoveUniqueIdentification1")]
+    partial class RemoveUniqueIdentification1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -176,9 +179,6 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Property<int?>("Credito")
                         .HasColumnType("int");
 
-                    b.Property<string>("DeliveryPartner")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Identification")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -305,9 +305,6 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<int>("StatusID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnidadMedida")
                         .HasColumnType("int");
 
                     b.Property<int>("categoria")

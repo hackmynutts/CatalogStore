@@ -42,11 +42,13 @@
             <th>Nombre</th>
             <th>Teléfono</th>
             <th>Correo</th>
+            <th>Cabys</th>
+            <th>Encomiendas de entrega</th>
             <th>Estado</th>
-            <th>Creado por</th>
-            <th>Fecha</th>
             @if (isAdminView)
             {
+                <th>Creado por</th>
+                <th>Creado el</th>            
                 <th>Modificado por</th>
                 <th>Modificado el</th>
             }
@@ -61,6 +63,8 @@
                 <td>@c.ClientName</td>
                 <td>@c.ClientPhone</td>
                 <td>@c.ClientEmail</td>
+                <td>@(string.IsNullOrEmpty(c.Cabys) ? "—" : c.Cabys)</td>
+                <td>@(string.IsNullOrEmpty(c.DeliveryPartner) ? "—" : c.DeliveryPartner)</td>
                 <td>
                     @if (c.StatusID == 1)
                     {
@@ -71,10 +75,10 @@
                         <span class="badge badge-status-inactive">Inactivo</span>
                     }
                 </td>
-                <td>@c.CreatedBy</td>
-                <td>@c.CreatedOn.ToString("g")</td>
                 @if (isAdminView)
                 {
+                    <td>@c.CreatedBy</td>
+                    <td>@c.CreatedOn.ToString("g")</td>                
                     <td>@(string.IsNullOrEmpty(c.ModifiedBy) ? "—" : c.ModifiedBy)</td>
                     <td>@(c.ModifiedOn.HasValue ? c.ModifiedOn.Value.ToString("g") : "—")</td>
                 }

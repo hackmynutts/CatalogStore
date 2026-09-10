@@ -50,6 +50,10 @@
             <input asp-for="Cabys" class="form-control" />
         </div>
         <div class="mb-3">
+            <label asp-for="DeliveryPartner" class="form-label">Encomiendas:</label>
+            <input asp-for="DeliveryPartner" class="form-control" />
+        </div>
+        <div class="mb-3">
             <label asp-for="StatusID" class="form-label">Estado</label>
             <select asp-for="StatusID" class="form-select">
                 @foreach (var status in statusOptions)

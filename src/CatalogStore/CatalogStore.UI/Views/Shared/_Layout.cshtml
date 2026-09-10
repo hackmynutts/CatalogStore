@@ -40,10 +40,23 @@
                                     Administrativo
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminMenu">
-                                    <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
+                                    @* ── Grupo: Administracion ── *@
+                                    <li class="dropdown dropend">
+                                        <a class="dropdown-item dropdown-toggle"
+                                           href="#"
+                                           data-bs-toggle="dropdown"
+                                           data-bs-display="static"
+                                           data-bs-auto-close="outside"
+                                           aria-expanded="false">
+                                            Administración
+                                        </a>
+                                        <ul class="dropdown-menu shadow">
+                                            <li><a class="dropdown-item" asp-controller="Client" asp-action="IndexAdmin">Clientes</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Seller" asp-action="Index">Vendedores</a></li>
+                                        </ul>
+                                    </li>
                                     <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Eventlog" asp-action="Index">Bitácora de eventos</a></li>
-                                    <li><a class="dropdown-item" asp-controller="ProductImage" asp-action="Index">Imágenes de producto</a></li>
+                                    <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
                                     @* Submenú IT: solo para AdminIT *@
                                     @if (User.IsInRole("AdminIT"))
                                     {
@@ -69,13 +82,14 @@
                                                         Administración
                                                     </a>
                                                     <ul class="dropdown-menu shadow">
-                                                        <li><a class="dropdown-item" asp-controller="Client" asp-action="IndexAdmin">Clientes</a></li>
-                                                        <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
-                                                        <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
                                                         <li><a class="dropdown-item" asp-controller="Eventlog" asp-action="Index">Bitácora de eventos</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Client" asp-action="IndexAdmin">Clientes</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Status" asp-action="Index">Estados</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="User" asp-action="Index">Usuarios</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Seller" asp-action="Index">Vendedores</a></li>
                                                     </ul>
                                                 </li>
-                                                @* ── Grupo: Administracion ── *@
+                                                @* ── Grupo: Operacional ── *@
                                                 <li class="dropdown dropend">
                                                     <a class="dropdown-item dropdown-toggle"
                                                        href="#"
@@ -83,12 +97,25 @@
                                                        data-bs-display="static"
                                                        data-bs-auto-close="outside"
                                                        aria-expanded="false">
-                                                        Ventas
+                                                        Operacional
                                                     </a>
                                                     <ul class="dropdown-menu shadow">
+                                                        <li class="dropdown dropend">
+                                                            <a class="dropdown-item dropdown-toggle"
+                                                               href="#"
+                                                               data-bs-toggle="dropdown"
+                                                               data-bs-display="static"
+                                                               data-bs-auto-close="outside"
+                                                               aria-expanded="false">
+                                                                Productos
+                                                            </a>
+                                                            <ul class="dropdown-menu shadow">
+                                                                <li><a class="dropdown-item" asp-controller="Product" asp-action="IndexAdmin">Productos</a></li>
+                                                                <li><a class="dropdown-item" asp-controller="ProductImage" asp-action="Index">Imágenes de producto</a></li>
+                                                            </ul>
+                                                        </li>
                                                         <li><a class="dropdown-item" asp-controller="Sales" asp-action="IndexAdmin">Ventas</a></li>
-                                                        <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
-                                                        <li><a class="dropdown-item" asp-controller="Product" asp-action="IndexAdmin">Productos</a></li>
+                                                        <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>                                                        
                                                         <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
                                                         <li><a class="dropdown-item" asp-controller="Vendedor" asp-action="Index">Vendedores</a></li>
                                                     </ul>
@@ -106,15 +133,27 @@
                         {
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle @(ventasControllers.Contains(currentController) ? "active" : "")" href="#" id="ventasMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Ventas
+                                    Operación
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="ventasMenu">
-                                    <li><a class="dropdown-item" asp-controller="Client" asp-action="Index">Clientes</a></li>
                                     <li><a class="dropdown-item" asp-controller="Product" asp-action="Catalog">Catálogo</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Client" asp-action="Index">Clientes</a></li>
                                     <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">Productos</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Vendedor" asp-action="Index">Vendedores</a></li>
+                                    <li class="dropdown dropend">
+                                        <a class="dropdown-item dropdown-toggle"
+                                           href="#"
+                                           data-bs-toggle="dropdown"
+                                           data-bs-display="static"
+                                           data-bs-auto-close="outside"
+                                           aria-expanded="false">
+                                            Ventas
+                                        </a>
+                                        <ul class="dropdown-menu shadow">
+                                            <li><a class="dropdown-item" asp-controller="Orden" asp-action="Index">Órdenes</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Sales" asp-action="Index">Ventas</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Inventario" asp-action="Index">Inventario</a></li>
+                                        </ul>
+                                    </li>
                                 </ul>
                             </li>
                         }

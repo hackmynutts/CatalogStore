@@ -68,9 +68,6 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
-                entity.HasIndex(e => new { e.Identification})
-                    .IsUnique()
-                    .HasDatabaseName("IX_Client_Identification_UQ");
                 entity.HasOne(e => e.Status)
                     .WithMany()
                     .HasForeignKey(e => e.StatusID)

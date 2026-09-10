@@ -19,6 +19,8 @@ namespace CatalogStore.BackendAPI.DTO.Client
         [Display(Name = "Credito")]
         public credit? Credito { get; set; } = credit.D0;
         public string? cabys { get; set; }
+        [Display(Name = "Encomienda de Entrega")]
+        public string? DeliveryPartner { get; set; }
         [Display(Name = "Estado")]
         public int StatusID { get; set; }
         [Display(Name = "Modificado por")]

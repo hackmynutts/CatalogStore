@@ -35,7 +35,7 @@ namespace CatalogStore.BackendAPI.Services.Client
             return result ?? new HaciendaLookupResponseDTO { Nombre = "No encontrado.", Actividades = null };
         }
 
-        public async Task<int> AddAsync(AddClientDTO dto)
+        public async Task<int> AddAsync(AddClientDTO dto, bool isAdmin)
         {
             Models.Client.Client client = new Models.Client.Client
             {
@@ -46,12 +46,27 @@ namespace CatalogStore.BackendAPI.Services.Client
                 ClientAddress = dto.ClientAddress,
                 Credito = dto.Credito,
                 Cabys = dto.cabys,
+                DeliveryPartner = dto.DeliveryPartner,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
             };
             try
             {
+                //validacion de duplicidad de cliente por identificacion
+                Models.Client.Client clientExist = await _clientRepository.GetClientByIdentificationAsync(dto.Identification);
+                if (clientExist != null && !isAdmin)
+                {
+                    await _eventlogServices.LogAsync(
+                        typeEvent.AddFail,
+                        ModuleName,
+                        ClientsTable,
+                        dto.Identification,
+                        "El cliente con la identificación proporcionada ya existe.",
+                        postData: client);
+                    return 0;
+                }
+
                 var id = await _clientRepository.AddAsync(client);
 
                 await _eventlogServices.LogAsync(
@@ -94,6 +109,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.ClientAddress,
                     existing.Credito,
                     existing.Cabys,
+                    existing.DeliveryPartner,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
@@ -107,9 +123,10 @@ namespace CatalogStore.BackendAPI.Services.Client
                 existing.ClientAddress = dto.ClientAddress;
                 existing.Credito = dto.Credito;
                 existing.Cabys = dto.cabys;
+                existing.DeliveryPartner = dto.DeliveryPartner;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
-                existing.ModifiedOn = DateTime.UtcNow;
+                existing.ModifiedOn = DateTime.Now;
 
                 var updated = await _clientRepository.UpdateAsync(existing);
                 if (!updated)
@@ -165,6 +182,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.ClientAddress,
                     existing.Credito,
                     existing.Cabys,
+                    existing.DeliveryPartner,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,

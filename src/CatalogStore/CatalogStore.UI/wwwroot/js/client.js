@@ -55,17 +55,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showApiError(result, fallbackMessage) {
         let messages = null;
+        let specificMessage = null;
+
         try {
             const parsed = JSON.parse(result.details);
             if (parsed && parsed.errors) {
                 messages = Object.values(parsed.errors).flat();
+            } else if (parsed && parsed.message) {
+                specificMessage = parsed.message;
             }
         } catch (e) { }
 
         if (messages && messages.length) {
             Swal.fire({ icon: 'error', title: 'Revisá estos campos', html: messages.join('<br>') });
         } else {
-            Swal.fire('Error', result.message || fallbackMessage, 'error');
+            Swal.fire('Error', specificMessage || result.message || fallbackMessage, 'error');
         }
     }
 

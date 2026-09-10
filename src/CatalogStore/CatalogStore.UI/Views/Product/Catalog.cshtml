@@ -83,7 +83,7 @@ else
                     <h3 class="catalog-card-title">@p.ProductName</h3>
                     <p class="catalog-card-code">@(string.IsNullOrEmpty(p.ProductCode) ? "" : $"Código {p.ProductCode}")</p>
                     <div class="catalog-card-footer">
-                        <span class="catalog-card-price">@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</span>
+                        <span class="catalog-card-price">₡@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</span>
                         <a class="btn btn-sm btn-outline-secondary" asp-controller="Product" asp-action="Details" asp-route-id="@p.ProductID">Ver detalle</a>
                     </div>
                 </div>

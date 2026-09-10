@@ -29,6 +29,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 ProductDesc = dto.ProductDesc,
                 categoria = dto.categoria,
                 Price = dto.Price,
+                UnidadMedida = dto.UnidadMedida,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
@@ -74,6 +75,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                     existing.ProductDesc,
                     existing.categoria,
                     existing.Price,
+                    existing.UnidadMedida,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
@@ -86,6 +88,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 existing.ProductDesc = dto.ProductDesc;
                 existing.categoria = dto.categoria;
                 existing.Price = dto.Price;
+                existing.UnidadMedida = dto.UnidadMedida;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
                 existing.ModifiedOn = DateTime.UtcNow;
@@ -142,6 +145,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                     existing.ProductDesc,
                     existing.categoria,
                     existing.Price,
+                    existing.UnidadMedida,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,

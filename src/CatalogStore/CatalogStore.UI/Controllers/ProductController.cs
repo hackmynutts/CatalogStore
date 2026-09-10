@@ -122,6 +122,7 @@ namespace CatalogStore.UI.Controllers
                 ProductDesc = producto.ProductDesc,
                 categoria = producto.categoria,
                 Price = producto.Price,
+                UnidadMedida = producto.UnidadMedida,
                 StatusID = producto.StatusID
             };
 
@@ -174,6 +175,7 @@ namespace CatalogStore.UI.Controllers
                 ProductDesc = producto.ProductDesc,
                 categoria = producto.categoria,
                 Price = producto.Price,
+                UnidadMedida = producto.UnidadMedida,
                 StatusID = producto.StatusID
             };
 

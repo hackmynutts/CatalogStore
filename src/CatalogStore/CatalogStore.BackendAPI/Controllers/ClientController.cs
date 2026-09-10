@@ -48,8 +48,11 @@ namespace CatalogStore.BackendAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] AddClientDTO cliente)
         {
+            bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
             cliente.CreatedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
-            var id = await _services.AddAsync(cliente);
+            var id = await _services.AddAsync(cliente, isAdmin);
+            if (id == 0)
+                return BadRequest(new { message = "Ya existe un cliente con esa identificación, favor contactar al administrador." });
             return CreatedAtAction(nameof(Get), new { id }, cliente);
         }
 

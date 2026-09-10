@@ -7,6 +7,7 @@ namespace CatalogStore.BackendAPI.Repository.Client
         Task<List<Models.Client.Client>> GetAllClientsAsync();
         Task<List<Models.Client.Client>> GetActiveClientsAsync();
         Task<Models.Client.Client> GetClientAsync(int ID);
+        Task<Models.Client.Client> GetClientByIdentificationAsync(string identification);
         Task<int>AddAsync(Models.Client.Client client);
         Task<bool>UpdateAsync(Models.Client.Client client);
         Task<bool>DeleteAsync(int ID);

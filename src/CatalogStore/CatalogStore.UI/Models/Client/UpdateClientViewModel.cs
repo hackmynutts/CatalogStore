@@ -7,6 +7,7 @@
         public string ClientEmail { get; set; } = string.Empty;
         public string ClientAddress { get; set; } = string.Empty;
         public string? Cabys { get; set; }
+        public string? DeliveryPartner { get; set; }
         public int StatusID { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
