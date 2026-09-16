@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.Product;
 using CatalogStore.BackendAPI.Models.ProductImage;
+using CatalogStore.BackendAPI.Models.Inventory;
 
 namespace CatalogStore.BackendAPI.Data
 {
@@ -16,6 +17,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<Client> Clients { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
+        public DbSet<Inventory> Inventories { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -113,6 +115,24 @@ namespace CatalogStore.BackendAPI.Data
                     .HasForeignKey(e => e.ProductID)
                     .HasConstraintName("FK_ProductImage_Product_ProductID")
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+            builder.Entity<Inventory>(entity =>
+            {
+                entity.Property(e => e.Name)
+                    .HasMaxLength(150).IsRequired();
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(250);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.HasIndex(e => e.Name)
+                    .HasDatabaseName("IX_Inventory_Name");
+                entity.HasOne(e => e.Status)
+                    .WithMany()
+                    .HasForeignKey(e => e.StatusID)
+                    .HasConstraintName("FK_Inventory_Status_StatusID")
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

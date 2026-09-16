@@ -52,6 +52,20 @@
                                         </a>
                                         <ul class="dropdown-menu shadow">
                                             <li><a class="dropdown-item" asp-controller="Client" asp-action="IndexAdmin">Clientes</a></li>
+                                            <li class="dropdown dropend">
+                                                <a class="dropdown-item dropdown-toggle"
+                                                   href="#"
+                                                   data-bs-toggle="dropdown"
+                                                   data-bs-display="static"
+                                                   data-bs-auto-close="outside"
+                                                   aria-expanded="false">
+                                                    Productos
+                                                </a>
+                                                <ul class="dropdown-menu shadow">
+                                                    <li><a class="dropdown-item" asp-controller="Product" asp-action="IndexAdmin">Productos</a></li>
+                                                    <li><a class="dropdown-item" asp-controller="ProductImage" asp-action="Index">Imágenes de producto</a></li>
+                                                </ul>
+                                            </li>
                                             <li><a class="dropdown-item" asp-controller="Seller" asp-action="Index">Vendedores</a></li>
                                         </ul>
                                     </li>

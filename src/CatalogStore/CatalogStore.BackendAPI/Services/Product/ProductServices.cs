@@ -8,6 +8,7 @@ namespace CatalogStore.BackendAPI.Services.Product
 {
     public class ProductServices : IProductServices
     {
+        private const decimal IVA_RATE = 1.13m;
         private const string ModuleName = "Ventas/Productos";
         private const string ProductsTable = "Product";
         private readonly IProductRepository _repository;
@@ -29,6 +30,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 ProductDesc = dto.ProductDesc,
                 categoria = dto.categoria,
                 Price = dto.Price,
+                PriceCalcIVA = Math.Round((decimal)(dto.Price ?? 0 * IVA_RATE), 2),
                 UnidadMedida = dto.UnidadMedida,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
@@ -75,6 +77,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                     existing.ProductDesc,
                     existing.categoria,
                     existing.Price,
+                    existing.PriceCalcIVA,
                     existing.UnidadMedida,
                     existing.StatusID,
                     existing.CreatedBy,
@@ -88,12 +91,13 @@ namespace CatalogStore.BackendAPI.Services.Product
                 existing.ProductDesc = dto.ProductDesc;
                 existing.categoria = dto.categoria;
                 existing.Price = dto.Price;
+                existing.PriceCalcIVA = Math.Round((decimal)(dto.Price ?? 0 * IVA_RATE), 2);
                 existing.UnidadMedida = dto.UnidadMedida;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
                 existing.ModifiedOn = DateTime.UtcNow;
 
-                var updated = await _repository.UpdateAsync(existing);
+                bool updated = await _repository.UpdateAsync(existing);
                 if (!updated)
                 {
                     await _eventlogServices.LogAsync(

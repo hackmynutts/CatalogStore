@@ -17,6 +17,8 @@ namespace CatalogStore.BackendAPI.DTO.Product
         public categoryType categoria { get; set; } = categoryType.General;
         [Display(Name ="Precio unitario")]
         public decimal? Price { get; set; }
+        [Display(Name ="Precio con IVA")]
+        public decimal? PriceCalcIVA { get; set; }
         [Display(Name = "Unidad de medida")]
         public unit UnidadMedida { get; set; } = unit.Pieza;
         [Display(Name ="Estado")]

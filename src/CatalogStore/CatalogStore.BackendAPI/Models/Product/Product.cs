@@ -42,6 +42,7 @@ namespace CatalogStore.BackendAPI.Models.Product
         public string ProductDesc{ get; set; } = string.Empty;
         public categoryType categoria { get; set; } = categoryType.General;
         public decimal? Price { get; set; }
+        public decimal PriceCalcIVA { get; set; }
         public unit UnidadMedida { get; set; } = unit.Pieza;
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;

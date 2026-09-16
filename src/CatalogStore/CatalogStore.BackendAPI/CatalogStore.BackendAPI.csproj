@@ -23,6 +23,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="DTO\InventoryLines\" />
+    <Folder Include="DTO\InventoryTransactions\" />
+    <Folder Include="Repository\InventoryTransactions\" />
+    <Folder Include="Repository\InventoryLines\" />
+    <Folder Include="Services\InventoryTransactions\" />
+    <Folder Include="Services\InventoryLines\" />
     <Folder Include="wwwroot\uploads\products\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>

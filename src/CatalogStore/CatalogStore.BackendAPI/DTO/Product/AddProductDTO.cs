@@ -19,6 +19,8 @@ namespace CatalogStore.BackendAPI.DTO.Product
         [Display(Name = "Precio unitario")]
         [Required(ErrorMessage = "Indique el precio unitario.")]
         public decimal? Price { get; set; }
+        [Display(Name = "Precio con IVA")]
+        public decimal? PriceCalcIVA { get; set; }
         [Display(Name = "Unidad de medida")]
         [Required(ErrorMessage = "El campo {0} es obligatorio.")]
         public unit UnidadMedida { get; set; } = unit.Pieza;
