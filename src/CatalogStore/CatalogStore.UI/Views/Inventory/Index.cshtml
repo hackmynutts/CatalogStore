@@ -1,0 +1,147 @@
+﻿@model List<CatalogStore.UI.Models.Inventory.InventoryViewModel>
+@{
+    ViewData["Title"] = "Inventarios";
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canDelete = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canSeeAll = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool isAdminView = ViewContext.RouteData.Values["action"]?.ToString() == "IndexAdmin";
+
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Inventarios</h1>
+    <div class="d-flex gap-2">
+        @if (canSeeAll)
+        {
+            @if (isAdminView)
+            {
+                <a asp-controller="Inventory" asp-action="Index" class="btn btn-outline-secondary" style="width:auto;">Ver solo activos</a>
+            }
+            else
+            {
+                <a asp-controller="Inventory" asp-action="IndexAdmin" class="btn btn-outline-secondary" style="width:auto;">Ver todos</a>
+            }
+        }
+        @if (canManage)
+        {
+            <button type="button" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;" id="btn-new-inventory"><i class="fa-solid fa-plus"></i> Nuevo inventario</button>
+        }
+    </div>
+</div>
+
+<form style="display:none">@Html.AntiForgeryToken()</form>
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="inventoryTable" data-column="all" placeholder="Buscar inventarios..." />
+</div>
+
+<div class="table-responsive">
+    <table id="inventoryTable" class="table app-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                @if (isAdminView)
+                {
+                    <th>Creado por</th>
+                    <th>Fecha</th>                
+                    <th>Modificado por</th>
+                    <th>Modificado el</th>
+                }
+                <th class="sorter-false filter-false">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var i in Model)
+            {
+                <tr>
+                    <td>@i.InventoryID</td>
+                    <td>@i.Name</td>
+                    <td>@i.Descripcion</td>
+                    <td>
+                        @if (i.StatusID == 1)
+                        {
+                            <span class="badge badge-status-active">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-status-inactive">Inactivo</span>
+                        }
+                    </td>
+                    @if (isAdminView)
+                    {
+                        <td>@i.CreatedBy</td>
+                        <td>@i.CreatedOn.ToString("g")</td>                    
+                        <td>@(string.IsNullOrEmpty(i.ModifiedBy) ? "—" : i.ModifiedBy)</td>
+                        <td>@(i.ModifiedOn.HasValue ? i.ModifiedOn.Value.ToString("g") : "—")</td>
+                    }
+                    <td class="text-end">
+                        <div class="action-buttons">
+                            <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" asp-action="Details" asp-route-id="@i.InventoryID"><i class="fa-solid fa-eye"></i></a>
+                            @if (canManage)
+                            {
+                                <span class="action-sep">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-inventory" title="Editar" data-id="@i.InventoryID"><i class="fa-solid fa-pen-to-square"></i></button>
+                                @if (i.StatusID == 1)
+                                {
+                                    <span class="action-sep">|</span>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-inactivate-inventory" title="Inactivar" data-id="@i.InventoryID" data-name="@i.Name"><i class="fa-solid fa-ban"></i></button>
+                                }
+                            }
+                            @if (canDelete)
+                            {
+                                <span class="action-sep">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-inventory" title="Eliminar" data-id="@i.InventoryID" data-name="@i.Name"><i class="fa-solid fa-trash"></i></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div id="inventoryTable-pager" class="app-table-pager">
+    <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+    <span class="pagedisplay"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+    <select class="pagesize">
+        <option value="10" selected>10 / página</option>
+        <option value="25">25 / página</option>
+        <option value="50">50 / página</option>
+        <option value="100">100 / página</option>
+    </select>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-box-open"></i>
+        <span>No hay inventarios para mostrar.</span>
+    </div>
+}
+
+@if (canManage)
+{
+    <!-- Modal de edición -->
+    <div class="modal fade" id="editInventoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="editInventoryModalContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal de creación -->
+    <div class="modal fade" id="createInventoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="createInventoryModalContent"></div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/inventory.js" asp-append-version="true"></script>
+}

@@ -1,9 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace CatalogStore.BackendAPI.Models.Inventory
+﻿namespace CatalogStore.UI.Models.Inventory
 {
-    [Table("Inventory_TB")]
-    public class Inventory
+    public class InventoryViewModel
     {
         public int InventoryID { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -13,6 +10,5 @@ namespace CatalogStore.BackendAPI.Models.Inventory
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
-        public Models.Status.Status Status { get; set; } = null!;
     }
 }

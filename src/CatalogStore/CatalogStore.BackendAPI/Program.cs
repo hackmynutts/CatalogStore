@@ -1,6 +1,7 @@
 using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.EventLogs;
+using CatalogStore.BackendAPI.Repository.Inventory;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Repository.ProductImage;
 using CatalogStore.BackendAPI.Repository.Status;
@@ -8,6 +9,7 @@ using CatalogStore.BackendAPI.Services.Auth;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.EventLogs;
+using CatalogStore.BackendAPI.Services.Inventory;
 using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.ProductImage;
 using CatalogStore.BackendAPI.Services.Status;
@@ -70,6 +72,8 @@ builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductServices, ProductServices>();
 builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
 builder.Services.AddScoped<IProductImageServices, ProductImageServices>();
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+builder.Services.AddScoped<IInventoryServices, InventoryServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

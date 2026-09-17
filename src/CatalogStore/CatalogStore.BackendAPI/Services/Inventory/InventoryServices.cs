@@ -150,7 +150,7 @@ namespace CatalogStore.BackendAPI.Services.Inventory
                 if (result)
                 {
                     await _eventlogServices.LogAsync(
-                        typeEvent.Edit,
+                        typeEvent.Inactivate,
                         ModuleName,
                         "Inventory",
                         dto.InventoryID.ToString(),

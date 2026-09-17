@@ -86,6 +86,8 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(250).IsRequired();
                 entity.Property(e => e.Price)
                     .HasPrecision(10,2);
+                entity.Property(e => e.PriceCalcIVA)
+                    .HasPrecision(10,2);
                 entity.Property(e => e.CreatedBy)
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.ModifiedBy)

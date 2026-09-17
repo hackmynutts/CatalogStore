@@ -1,0 +1,37 @@
+@model CatalogStore.UI.Models.Inventory.UpdateInventoryViewModel
+@{
+    var statusOptions = ViewData["StatusOptions"] as List<CatalogStore.UI.Models.Status.StatusViewModel> ?? new();
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar inventario</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="editInventoryForm" data-id="@ViewData["InventoryId"]">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Nombre</label>
+            <input asp-for="Name" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Descripcion" class="form-label">Descripción</label>
+            <input asp-for="Descripcion" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="StatusID" class="form-label">Estado</label>
+            <select asp-for="StatusID" class="form-select">
+                @foreach (var status in statusOptions)
+                {
+                    <option value="@status.StatusID">@status.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    </div>
+</form>

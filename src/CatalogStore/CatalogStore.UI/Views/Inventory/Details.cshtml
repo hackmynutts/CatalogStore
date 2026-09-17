@@ -1,0 +1,112 @@
+@model CatalogStore.UI.Models.Inventory.InventoryViewModel
+@{
+    ViewData["Title"] = "Detalle del inventario";
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+}
+
+<div class="detail-header">
+    <div class="detail-header-left">
+        <div class="detail-avatar"><i class="fa-solid fa-warehouse"></i></div>
+        <div>
+            <h1 class="detail-title">@Model.Name</h1>
+            <div class="detail-subtitle">
+                @if (Model.StatusID == 1)
+                {
+                    <span class="badge badge-status-active">Activo</span>
+                }
+                else
+                {
+                    <span class="badge badge-status-inactive">Inactivo</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="detail-actions">
+        @if (canManage)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary btn-edit-inventory" data-id="@Model.InventoryID" style="width:auto;"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+        }
+        <a asp-controller="Inventory" asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-circle-info"></i> Datos</h2>
+            <div class="info-field-grid">
+                <div style="grid-column: 1 / -1;">
+                    <span class="info-field-label">Descripción</span>
+                    <span class="info-field-value">@(string.IsNullOrEmpty(Model.Descripcion) ? "—" : Model.Descripcion)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="info-card info-card-placeholder">
+            <h2 class="info-card-title"><i class="fa-solid fa-boxes-stacked"></i> Líneas de inventario <span class="info-card-soon">Próximamente</span></h2>
+            <div class="app-table-empty">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <span>Este inventario todavía no tiene existencias registradas.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="info-card info-card-placeholder">
+            <h2 class="info-card-title"><i class="fa-solid fa-right-left"></i> Transacciones <span class="info-card-soon">Próximamente</span></h2>
+            <div class="app-table-empty">
+                <i class="fa-solid fa-right-left"></i>
+                <span>Este inventario todavía no tiene movimientos registrados.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (canSeeAudit)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="info-card">
+                <h2 class="info-card-title"><i class="fa-solid fa-clock-rotate-left"></i> Auditoría</h2>
+                <div class="info-field-grid">
+                    <div>
+                        <span class="info-field-label">Creado por</span>
+                        <span class="info-field-value">@Model.CreatedBy</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Creado el</span>
+                        <span class="info-field-value">@Model.CreatedOn.ToString("g")</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Modificado por</span>
+                        <span class="info-field-value">@(string.IsNullOrEmpty(Model.ModifiedBy) ? "—" : Model.ModifiedBy)</span>
+                    </div>
+                    <div>
+                        <span class="info-field-label">Modificado el</span>
+                        <span class="info-field-value">@(Model.ModifiedOn.HasValue ? Model.ModifiedOn.Value.ToString("g") : "—")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/inventory.js" asp-append-version="true"></script>
+
+    @if (canManage)
+    {
+        <!-- Modal de edición (mismo partial que usa el listado) -->
+        <div class="modal fade" id="editInventoryModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content" id="editInventoryModalContent"></div>
+            </div>
+        </div>
+        <form style="display:none">@Html.AntiForgeryToken()</form>
+    }
+}
