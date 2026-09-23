@@ -6,7 +6,7 @@ using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.Product;
 using CatalogStore.BackendAPI.Models.ProductImage;
 using CatalogStore.BackendAPI.Models.Inventory;
-
+using CatalogStore.BackendAPI.Models.InventoryLine;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -18,6 +18,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Inventory> Inventories { get; set; }
+        public DbSet<InventoryLine> InventoryLines { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -134,6 +135,33 @@ namespace CatalogStore.BackendAPI.Data
                     .WithMany()
                     .HasForeignKey(e => e.StatusID)
                     .HasConstraintName("FK_Inventory_Status_StatusID")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<InventoryLine>(entity =>
+            {
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.Property(e => e.QuantityAvailable)
+                    .HasComputedColumnSql("[Quantity] - [QuantityOnHold]", stored: true);
+                entity.HasIndex(e => new { e.InventoryID, e.ProductID })
+                    .HasDatabaseName("IX_InventoryLine_InventoryID_ProductID")
+                    .IsUnique();
+                entity.HasOne(e => e.Status)
+                    .WithMany()
+                    .HasForeignKey(e => e.StatusID)
+                    .HasConstraintName("FK_InventoryLine_Status_StatusID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Inventory)
+                    .WithMany()
+                    .HasForeignKey(e => e.InventoryID)
+                    .HasConstraintName("FK_InventoryLine_Inventory_InventoryID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductID)
+                    .HasConstraintName("FK_InventoryLine_Product_ProductID")
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

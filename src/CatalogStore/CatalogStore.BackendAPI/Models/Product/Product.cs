@@ -22,16 +22,12 @@ namespace CatalogStore.BackendAPI.Models.Product
         Pieza = 0,
         [Display(Name = "Litro")]
         Litro = 1,
-        [Display(Name = "Metro")]
-        Metro = 2,
-        [Display(Name = "Kilogramo")]
-        Kilogramo = 3,
         [Display(Name = "Caja")]
-        Caja = 4,
+        Caja = 2,
         [Display(Name = "Paquete")]
-        Paquete = 5,
+        Paquete = 3,
         [Display(Name = "Unidad")]
-        Unidad = 6
+        Unidad = 4
     }
     [Table("Products_TB")]
     public class Product
