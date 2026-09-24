@@ -20,7 +20,7 @@ namespace CatalogStore.BackendAPI.DTO.Product
         [Display(Name ="Precio con IVA")]
         public decimal? PriceCalcIVA { get; set; }
         [Display(Name = "Unidad de medida")]
-        public unit UnidadMedida { get; set; } = unit.Pieza;
+        public Unit UnidadMedida { get; set; } = Unit.Unidad;
         [Display(Name ="Estado")]
         public int StatusID { get; set; }
         [Display(Name ="Creado por")]

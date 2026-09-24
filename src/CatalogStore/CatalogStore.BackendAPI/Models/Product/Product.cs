@@ -16,7 +16,7 @@ namespace CatalogStore.BackendAPI.Models.Product
         [Display(Name = "Plasticos de moto")]
         Tapas = 4
     }
-    public enum unit
+    public enum Unit
     {
         [Display(Name = "Pieza")]
         Pieza = 0,
@@ -39,12 +39,13 @@ namespace CatalogStore.BackendAPI.Models.Product
         public categoryType categoria { get; set; } = categoryType.General;
         public decimal? Price { get; set; }
         public decimal PriceCalcIVA { get; set; }
-        public unit UnidadMedida { get; set; } = unit.Pieza;
+        public Unit UnidadMedida { get; set; } = Unit.Pieza;
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
+        public int? ExternalProductID { get; set; }
         public Models.Status.Status Status { get; set; } = null!;
         public ICollection<BackendAPI.Models.ProductImage.ProductImage> Images { get; set; } = new List<BackendAPI.Models.ProductImage.ProductImage>();
     }

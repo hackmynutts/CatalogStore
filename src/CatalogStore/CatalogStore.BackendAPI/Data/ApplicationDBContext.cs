@@ -95,6 +95,10 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140);
                 entity.HasIndex(e => new { e.ProductName, e.categoria})
                     .HasDatabaseName("IX_Products_ProductName_Categoria");
+                entity.HasIndex(e=>e.ExternalProductID)
+                    .IsUnique()
+                    .HasFilter("[ExternalProductID] IS NOT NULL")
+                    .HasDatabaseName("IX_Products_ExternalProductID_UQ");
                 entity.HasOne(e => e.Status)
                     .WithMany()
                     .HasForeignKey(e => e.StatusID)
@@ -143,6 +147,12 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_InventoryLine_Quantity_NonNegative", "[Quantity] >= 0");
+                    t.HasCheckConstraint("CK_InventoryLine_QuantityOnHold_NonNegative", "[QuantityOnHold] >= 0");
+                    t.HasCheckConstraint("CK_InventoryLine_OnHold_LTE_Quantity", "[QuantityOnHold] <= [Quantity]");
+                });
                 entity.Property(e => e.QuantityAvailable)
                     .HasComputedColumnSql("[Quantity] - [QuantityOnHold]", stored: true);
                 entity.HasIndex(e => new { e.InventoryID, e.ProductID })

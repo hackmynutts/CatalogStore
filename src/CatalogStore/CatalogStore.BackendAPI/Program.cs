@@ -11,6 +11,7 @@ using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Inventory;
 using CatalogStore.BackendAPI.Services.Product;
+using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using CatalogStore.BackendAPI.Services.ProductImage;
 using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
@@ -58,6 +59,13 @@ builder.Services.AddHttpClient("HaciendaApi", client =>
     client.BaseAddress = new Uri("https://api.hacienda.go.cr/");
     client.Timeout = TimeSpan.FromSeconds(10);
 });
+builder.Services.AddHttpClient("ExternalCatalog", client =>
+{
+    var baseUrl = builder.Configuration["ExternalCatalog:BaseUrl"] 
+        ?? throw new InvalidOperationException("ExternalCatalog:BaseUrl no esta configurado.");
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 //Dependency Injection for Services and Repositories
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
@@ -66,6 +74,7 @@ builder.Services.AddScoped<IEventlogRepository, EventlogRepository>();
 builder.Services.AddScoped<IEventlogServices, EventlogServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IHaciendaServices, HaciendaServices>();
+builder.Services.AddScoped<ICatalogExternalServices, CatalogExternalServices>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientServices, ClientServices>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();

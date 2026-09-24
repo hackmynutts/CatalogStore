@@ -13,7 +13,7 @@ namespace CatalogStore.BackendAPI.Models.InventoryLine
         public int QuantityAvailable { get; set; }
         public int QuantityReorder { get; set; }
         public int QuantityOnHold { get; set; }
-        public DateOnly LastRestock { get; set; }
+        public DateOnly? LastRestock { get; set; }
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }

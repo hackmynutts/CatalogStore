@@ -23,7 +23,7 @@ namespace CatalogStore.BackendAPI.DTO.Product
         public decimal? PriceCalcIVA { get; set; }
         [Display(Name = "Unidad de medida")]
         [Required(ErrorMessage = "El campo {0} es obligatorio.")]
-        public unit UnidadMedida { get; set; } = unit.Pieza;
+        public Unit UnidadMedida { get; set; } = Unit.Unidad;
         [Display(Name = "Creado por")]
         public string CreatedBy { get; set; } = string.Empty;
         [Display(Name = "Creado el")]
