@@ -75,6 +75,7 @@ builder.Services.AddScoped<IEventlogServices, EventlogServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IHaciendaServices, HaciendaServices>();
 builder.Services.AddScoped<ICatalogExternalServices, CatalogExternalServices>();
+builder.Services.AddScoped<IProductImportServices, ProductImportServices>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientServices, ClientServices>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();

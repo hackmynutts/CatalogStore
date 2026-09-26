@@ -33,8 +33,12 @@ namespace CatalogStore.UI.Models.Eventlog
         Inactivate = 13,
         [Display(Name = "Inactivación fallida")]
         InactivateFail = 14,
+        [Display(Name = "Importación")]
+        Import = 15,
+        [Display(Name = "Importación fallida")]
+        ImportFail = 16,
         [Display(Name = "Error")]
-        Error = 15
+        Error = 17
     }
     public class EventlogViewModel
     {

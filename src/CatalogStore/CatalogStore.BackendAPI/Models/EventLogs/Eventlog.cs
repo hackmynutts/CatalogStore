@@ -19,7 +19,9 @@ namespace CatalogStore.BackendAPI.Models.EventLogs
         RegisterFail = 12,
         Inactivate = 13,
         InactivateFail = 14,
-        Error = 15
+        Import = 15,
+        ImportFail= 16,
+        Error = 17
     }
 
     [Table("Eventlog_TB")]

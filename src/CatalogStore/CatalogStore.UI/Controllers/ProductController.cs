@@ -2,6 +2,7 @@ using CatalogStore.UI.Models.Product;
 using CatalogStore.UI.Models.Status;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace CatalogStore.UI.Controllers
 {
@@ -184,6 +185,26 @@ namespace CatalogStore.UI.Controllers
                 return Json(new { success = false, message = "No se pudo inactivar el producto." });
 
             return Json(new { success = true });
+        }
+
+        // POST: ProductController/ImportCatalog?dryRun=true — dispara la importación del catálogo del proveedor externo.
+        // Con dryRun solo simula: devuelve el resumen sin guardar nada. El resumen del backend se reenvía tal cual al JS.
+        [HttpPost]
+        [Authorize(Roles = "Admin,AdminIT")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportCatalog(bool dryRun = true)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsync($"api/Product/import?dryRun={(dryRun ? "true" : "false")}", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                return Json(new { success = false, message = "No se pudo importar el catálogo.", details = errorBody });
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return Json(new { success = true, result });
         }
 
         [HttpPost]

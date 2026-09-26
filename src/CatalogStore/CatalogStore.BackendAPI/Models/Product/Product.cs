@@ -27,7 +27,9 @@ namespace CatalogStore.BackendAPI.Models.Product
         [Display(Name = "Paquete")]
         Paquete = 3,
         [Display(Name = "Unidad")]
-        Unidad = 4
+        Unidad = 4,
+        [Display(Name = "Desconocido")]
+        Unknown = 5
     }
     [Table("Products_TB")]
     public class Product

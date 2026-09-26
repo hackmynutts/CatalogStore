@@ -1,9 +1,11 @@
 ﻿using CatalogStore.BackendAPI.DTO.Product;
 using CatalogStore.BackendAPI.Models.Product;
 using CatalogStore.BackendAPI.Services.Product;
+using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -15,7 +17,12 @@ namespace CatalogStore.BackendAPI.Controllers
     public class ProductController : ControllerBase
     {
         private readonly IProductServices _productServices;
-        public ProductController(IProductServices productServices) { _productServices = productServices; }
+        private readonly IProductImportServices _importServices;
+        public ProductController(IProductServices productServices, IProductImportServices importServices)
+        {
+            _productServices = productServices;
+            _importServices = importServices;
+        }
         // GET: api/<ProductController>
         [HttpGet]
         [Authorize(Roles = "Admin,AdminIT")]
@@ -51,6 +58,39 @@ namespace CatalogStore.BackendAPI.Controllers
             add.CreatedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
             var res = await _productServices.AddAsync(add);
             return CreatedAtAction(nameof(Get), new { id = res }, add);
+        }
+
+        // POST api/Product/import?dryRun=true
+        [HttpPost("import")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> Import([FromQuery] bool dryRun = false, CancellationToken cancellationToken = default)
+        {
+            var requestedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
+            try
+            {
+                var result = await _importServices.ImportAsync(dryRun, requestedBy, cancellationToken);
+                return Ok(result);
+            }
+            catch (ProductImportInProgressException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, new { message = "No se pudo obtener el catálogo del proveedor externo. Revise la configuración o intente más tarde." });
+            }
+            catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return StatusCode(StatusCodes.Status504GatewayTimeout, new { message = "El proveedor externo tardó demasiado en responder." });
+            }
+            catch (JsonException)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, new { message = "El proveedor externo devolvió una respuesta inválida." });
+            }
         }
 
         // PUT api/<ProductController>/5

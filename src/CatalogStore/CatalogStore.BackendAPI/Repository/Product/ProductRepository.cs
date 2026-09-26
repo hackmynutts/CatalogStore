@@ -28,5 +28,15 @@ namespace CatalogStore.BackendAPI.Repository.Product
             _dbContext.Products.Remove(prod);
             return await _dbContext.SaveChangesAsync() > 0;
         }
+        // Con seguimiento a propósito: el servicio modifica las entidades y EF genera solo los UPDATE necesarios.
+        public async Task<Dictionary<int, Models.Product.Product>> GetByExternalIdsAsync(IEnumerable<int> externalIds)
+        {
+            var ids = externalIds.ToList();
+            return await _dbContext.Products
+                .Where(p => p.ExternalProductID != null && ids.Contains(p.ExternalProductID.Value))
+                .ToDictionaryAsync(p => p.ExternalProductID!.Value);
+        }
+        public async Task AddRangeAsync(IEnumerable<Models.Product.Product> products) => await _dbContext.Products.AddRangeAsync(products);
+        public async Task<int> SaveChangesAsync() => await _dbContext.SaveChangesAsync();
     }
 }
