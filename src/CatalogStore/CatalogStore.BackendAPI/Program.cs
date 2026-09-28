@@ -8,6 +8,7 @@ using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.Client.Hacienda;
+using CatalogStore.BackendAPI.Services.DateManagement;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Inventory;
 using CatalogStore.BackendAPI.Services.Product;
@@ -17,6 +18,8 @@ using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -66,6 +69,13 @@ builder.Services.AddHttpClient("ExternalCatalog", client =>
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+
+// Reloj de la aplicación: UTC para guardar, zona de Localization:TimeZoneId (Costa Rica) para mostrar.
+// Se registra también como TimeProvider para que cualquier servicio (incluidos Identity y JWT) use el mismo reloj.
+builder.Services.AddSingleton<AppTimeProvider>();
+builder.Services.AddSingleton<TimeProvider>(sp => sp.GetRequiredService<AppTimeProvider>());
+// Todas las fechas del JSON de la API salen (y entran) en hora de Costa Rica; en la BD siguen en UTC.
+builder.Services.AddSingleton<IConfigureOptions<JsonOptions>, ConfigureLocalDateTimeJson>();
 
 //Dependency Injection for Services and Repositories
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
@@ -152,7 +162,15 @@ if (app.Environment.IsDevelopment())
 
 }
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // Habilitar el uso de archivos estáticos como imagenes 
+
+// Cultura de cada request (textos de Humanizer, formatos). La API recibe y devuelve JSON, que no depende de la cultura.
+var culture = builder.Configuration["Localization:Culture"] ?? "es-CR";
+app.UseRequestLocalization(new RequestLocalizationOptions()
+    .SetDefaultCulture(culture)
+    .AddSupportedCultures(culture)
+    .AddSupportedUICultures(culture));
+
+app.UseStaticFiles(); // Habilitar el uso de archivos estáticos como imagenes
 app.UseAuthentication();
 app.UseAuthorization();
 

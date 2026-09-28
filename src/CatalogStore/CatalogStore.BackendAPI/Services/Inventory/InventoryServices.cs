@@ -26,7 +26,7 @@ namespace CatalogStore.BackendAPI.Services.Inventory
                 Descripcion = inventory.Descripcion,
                 StatusID = 1,
                 CreatedBy = inventory.CreatedBy,
-                CreatedOn = DateTime.Now
+                CreatedOn = DateTime.UtcNow
             };
             try
             {
@@ -85,7 +85,7 @@ namespace CatalogStore.BackendAPI.Services.Inventory
                 existing.Descripcion = dto.Descripcion;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
-                existing.ModifiedOn = DateTime.Now;
+                existing.ModifiedOn = DateTime.UtcNow;
 
                 bool result = await _repository.UpdateAsync(existing);
                 if (result)
@@ -144,7 +144,7 @@ namespace CatalogStore.BackendAPI.Services.Inventory
 
                 existing.StatusID = 2;
                 existing.ModifiedBy = dto.ModifiedBy;
-                existing.ModifiedOn = DateTime.Now;
+                existing.ModifiedOn = DateTime.UtcNow;
 
                 bool result = await _repository.UpdateAsync(existing);
                 if (result)

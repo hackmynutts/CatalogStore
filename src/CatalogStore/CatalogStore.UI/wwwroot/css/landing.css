@@ -1,0 +1,576 @@
+/* ==========================================================================
+   Landing pública SAM Design (Views/Home/Index.cshtml)
+   Paleta: la de theme.css (verde bosque + acento dorado). Un solo acento en toda la página.
+   Formas: botones en píldora, paneles y tiles con radio de 16px.
+   ========================================================================== */
+
+.lp {
+    --lp-ink: #1c2622;
+    --lp-muted: #55625d;
+    --lp-surface: #f4f5f2;
+    --lp-mint: #e3ede9;
+    --lp-gold-soft: #f3ead3;
+    --lp-radius: 16px;
+    --lp-shadow: 0 18px 40px rgba(36, 71, 61, 0.14);
+    --lp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+    font-family: "Archivo", var(--font-base);
+    color: var(--lp-ink);
+    background: var(--lp-surface);
+}
+
+.lp-wrap {
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.lp h1, .lp h2, .lp h3 {
+    font-family: "Archivo", var(--font-base);
+    color: var(--brand-primary-dark);
+}
+
+.lp-h2 {
+    font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0 0 2rem;
+    max-width: 22ch;
+}
+
+/* ---------- Botones ---------- */
+
+.lp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.lp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 26px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 1rem;
+    white-space: nowrap;
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition: transform 0.25s var(--lp-ease), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.lp-btn:active {
+    transform: scale(0.98);
+}
+
+.lp-btn:focus-visible {
+    outline: 3px solid var(--brand-accent);
+    outline-offset: 3px;
+}
+
+/* Dorado con texto oscuro: contraste ~7:1. */
+.lp-btn-primary {
+    background: var(--brand-accent);
+    color: var(--lp-ink);
+}
+
+.lp-btn-primary:hover {
+    background: #b8913a;
+    color: var(--lp-ink);
+}
+
+.lp-btn-ghost {
+    border-color: var(--brand-primary);
+    color: var(--brand-primary-dark);
+    background: transparent;
+}
+
+.lp-btn-ghost:hover {
+    background: var(--brand-primary);
+    color: #fff;
+}
+
+.lp-btn-light {
+    border-color: rgba(255, 255, 255, 0.55);
+    color: #fff;
+}
+
+.lp-btn-light:hover {
+    background: #fff;
+    color: var(--brand-primary-dark);
+}
+
+/* ---------- Hero (split asimétrico) ---------- */
+
+.lp-hero {
+    margin-top: -1rem; /* compensa el mb-3 del navbar del layout */
+    padding: 56px 0 72px;
+    background: linear-gradient(180deg, #fff 0%, var(--lp-surface) 100%);
+}
+
+.lp-hero-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 56px;
+    align-items: center;
+    min-height: min(calc(100dvh - 180px), 640px);
+}
+
+.lp-hero-title {
+    font-size: clamp(2.3rem, 1.5rem + 2.6vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.04;
+    margin: 0 0 20px;
+}
+
+.lp-hero-sub {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: var(--lp-muted);
+    max-width: 40ch;
+    margin: 0 0 32px;
+}
+
+.lp-hero-media {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    max-height: 600px;
+    width: 100%;
+    border-radius: var(--lp-radius);
+    background-size: cover;
+    background-position: center;
+    box-shadow: var(--lp-shadow);
+    overflow: hidden;
+}
+
+/* ---------- Fallback de fotos: fondo de marca con el logo ---------- */
+
+.lp-fallback-logo {
+    display: none;
+}
+
+.lp-media-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(120% 90% at 30% 20%, #fff 0%, var(--lp-mint) 60%, #cfe0d9 100%);
+}
+
+.lp-media-fallback .lp-fallback-logo {
+    display: block;
+    width: 72%;
+    max-width: 380px;
+    opacity: 0.9;
+}
+
+.lp-media-dark {
+    background: radial-gradient(120% 90% at 30% 20%, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+}
+
+.lp-media-dark .lp-fallback-logo {
+    filter: invert(1);
+    opacity: 0.85;
+}
+
+/* ---------- Secciones ---------- */
+
+.lp-section {
+    padding: 96px 0;
+}
+
+/* ---------- Bento de productos (5 celdas, 5 productos) ---------- */
+
+.lp-bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(180px, auto);
+    gap: 16px;
+}
+
+.lp-tile {
+    border-radius: var(--lp-radius);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: transform 0.35s var(--lp-ease), box-shadow 0.35s var(--lp-ease);
+}
+
+.lp-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--lp-shadow);
+}
+
+.lp-tile h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+}
+
+.lp-tile p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--lp-muted);
+    max-width: 38ch;
+}
+
+.lp-tile-icon {
+    font-size: 1.6rem;
+    margin-bottom: auto;
+    padding-bottom: 24px;
+    color: var(--brand-primary);
+}
+
+/* Posiciones: Capas grande a la izquierda, dos tiles a la derecha, dos abajo. */
+.lp-tile-feature { grid-column: 1 / span 7; grid-row: span 2; padding: 0; overflow: hidden; background: #fff; }
+.lp-tile-mint    { grid-column: 8 / span 5; background: var(--lp-mint); }
+.lp-tile-gold    { grid-column: 8 / span 5; background: var(--lp-gold-soft); }
+.lp-tile-plain   { grid-column: 1 / span 6; background: #fff; border: 1px solid #dfe5e2; }
+.lp-tile-forest  { grid-column: 7 / span 6; background: var(--brand-primary-dark); }
+
+.lp-tile-feature .lp-tile-media {
+    flex: 1;
+    min-height: 260px;
+    background-size: cover;
+    background-position: center;
+}
+
+/* Dos fotos lado a lado dentro del tile destacado. */
+.lp-tile-pair {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    min-height: 300px;
+}
+
+.lp-tile-pair .lp-tile-media {
+    min-height: 0;
+}
+
+.lp-tile-feature .lp-tile-body {
+    padding: 24px 28px 28px;
+}
+
+.lp-tile-gold .lp-tile-icon { color: #8a6a22; }
+
+.lp-tile-forest h3 { color: #fff; }
+.lp-tile-forest p { color: rgba(255, 255, 255, 0.78); }
+.lp-tile-forest .lp-tile-icon { color: var(--brand-accent); }
+
+/* ---------- Banda de tallas (imagen a todo lo ancho) ---------- */
+
+.lp-band {
+    padding: 112px 0;
+    background-color: var(--brand-primary-dark);
+    background-size: cover;
+    background-position: center;
+}
+
+.lp-band-fallback {
+    background-image:
+        radial-gradient(60% 80% at 85% 50%, rgba(200, 162, 74, 0.18) 0%, transparent 70%),
+        linear-gradient(120deg, var(--brand-primary-dark) 0%, var(--brand-primary) 100%);
+}
+
+.lp-band-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 40px;
+    align-items: center;
+}
+
+/* Combinaciones de color de las capas. */
+.lp-swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.lp-swatches img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--lp-radius);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+}
+
+.lp-swatches span {
+    display: block;
+    margin-top: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+}
+
+.lp-band-panel {
+    max-width: 520px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: var(--lp-radius);
+    padding: 36px;
+    box-shadow: var(--lp-shadow);
+}
+
+.lp-band-panel .lp-h2 {
+    margin-bottom: 12px;
+}
+
+.lp-band-panel > p {
+    color: var(--lp-muted);
+    margin-bottom: 24px;
+}
+
+.lp-sizes {
+    display: grid;
+    gap: 18px;
+    margin: 0;
+}
+
+.lp-sizes dt {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.lp-sizes dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+}
+
+.lp-sizes span {
+    min-width: 48px;
+    text-align: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--lp-mint);
+    color: var(--brand-primary-dark);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* ---------- Cómo comprar (flujo en línea) ---------- */
+
+.lp-flow {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    position: relative;
+}
+
+/* Línea que conecta los tres pasos, detrás de los íconos. */
+.lp-flow::before {
+    content: "";
+    position: absolute;
+    top: 28px;
+    left: 28px;
+    right: 28px;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, #c9d6d1 0 10px, transparent 10px 18px);
+}
+
+.lp-flow li {
+    position: relative;
+}
+
+.lp-flow-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    box-shadow: 0 0 0 8px var(--lp-surface);
+}
+
+.lp-flow h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+}
+
+.lp-flow p {
+    margin: 0;
+    color: var(--lp-muted);
+    line-height: 1.55;
+    max-width: 30ch;
+}
+
+/* ---------- Contacto ---------- */
+
+.lp-cta {
+    background: var(--brand-primary-dark);
+    padding: 80px 0;
+}
+
+.lp-cta-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+.lp-cta .lp-h2 {
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.lp-cta p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.lp-admin-note {
+    margin: 0 0 48px;
+    padding: 16px 20px;
+    border-radius: var(--lp-radius);
+    border: 1px dashed #b9c7c1;
+    color: var(--lp-muted);
+    font-size: 0.92rem;
+    background: #fff;
+}
+
+/* ---------- Movimiento (solo si el usuario no pidió reducirlo) ---------- */
+
+@keyframes lp-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+}
+
+.lp-motion .lp-enter {
+    animation: lp-rise 0.8s var(--lp-ease) both;
+}
+
+.lp-motion .lp-enter-2 { animation-delay: 0.1s; }
+.lp-motion .lp-enter-3 { animation-delay: 0.2s; }
+
+.lp-motion .lp-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s var(--lp-ease), transform 0.7s var(--lp-ease);
+    transition-delay: calc(var(--lp-i, 0) * 70ms);
+}
+
+.lp-motion .lp-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp *, .lp *::before, .lp *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* ---------- Móvil: todo a una columna ---------- */
+
+@media (max-width: 991.98px) {
+    .lp-hero-grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+        min-height: 0;
+    }
+
+    .lp-hero-media {
+        aspect-ratio: 4 / 3;
+        background-position: center 70%;
+    }
+
+    .lp-band-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .lp-wrap {
+        padding: 0 16px;
+    }
+
+    .lp-hero {
+        padding: 32px 0 48px;
+    }
+
+    .lp-section {
+        padding: 64px 0;
+    }
+
+    .lp-bento {
+        grid-template-columns: 1fr;
+    }
+
+    .lp-tile-feature, .lp-tile-mint, .lp-tile-gold, .lp-tile-plain, .lp-tile-forest {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .lp-band {
+        padding: 64px 0;
+    }
+
+    .lp-band-panel {
+        padding: 24px;
+    }
+
+    /* Carrusel horizontal con snap en móvil, en lugar de tres miniaturas diminutas. */
+    .lp-swatches {
+        grid-auto-flow: column;
+        grid-template-columns: none;
+        grid-auto-columns: 72%;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 8px;
+    }
+
+    .lp-swatches li {
+        scroll-snap-align: start;
+    }
+
+    .lp-flow {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    /* En columna la línea pasa a vertical. */
+    .lp-flow::before {
+        top: 28px;
+        bottom: 28px;
+        left: 27px;
+        right: auto;
+        width: 2px;
+        height: auto;
+        background: repeating-linear-gradient(180deg, #c9d6d1 0 10px, transparent 10px 18px);
+    }
+
+    .lp-flow li {
+        padding-left: 76px;
+    }
+
+    .lp-flow-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    .lp-cta {
+        padding: 56px 0;
+    }
+}

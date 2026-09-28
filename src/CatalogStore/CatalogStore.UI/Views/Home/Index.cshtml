@@ -1,10 +1,206 @@
+@inject IConfiguration Configuration
+@inject IWebHostEnvironment Env
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "SAM Design";
+    ViewData["FullWidth"] = true;
+
+    // Canales de contacto: se configuran en appsettings.json (sección "Landing"). Los vacíos no se muestran.
+    var whatsApp = (Configuration["Landing:WhatsApp"] ?? string.Empty).Where(char.IsDigit).Aggregate(string.Empty, (acc, c) => acc + c);
+    var instagram = (Configuration["Landing:Instagram"] ?? string.Empty).Trim().TrimStart('@');
+    var email = (Configuration["Landing:Email"] ?? string.Empty).Trim();
+    bool hasWhatsApp = whatsApp.Length > 0;
+    bool hasAnyContact = hasWhatsApp || instagram.Length > 0 || email.Length > 0;
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    string whatsAppUrl = $"https://wa.me/{whatsApp}";
+
+    // Fotos opcionales en wwwroot/img/landing/. Si el archivo no existe, el bloque usa su fondo de marca.
+    string? Photo(string file) =>
+        System.IO.File.Exists(System.IO.Path.Combine(Env.WebRootPath, "img", "landing", file))
+            ? $"background-image: url('{Url.Content($"~/img/landing/{file}")}');"
+            : null;
+
+    // Combinaciones de color de las capas; solo se muestran las que tienen foto.
+    var capaColors = new[]
+    {
+        (File: "capa-gris-azul.webp", Label: "Gris y azul"),
+        (File: "capa-gris-verde.webp", Label: "Gris y verde"),
+        (File: "capa-negro-gris.webp", Label: "Negro y gris")
+    }.Where(c => System.IO.File.Exists(System.IO.Path.Combine(Env.WebRootPath, "img", "landing", c.File))).ToList();
 }
 
-<div class="home-hero">
-    <div class="home-hero-content">
-        <h1 class="display-4">Bienvenido a CatalogStore</h1>
-        <p class="text-muted">Gestión de inventario, ventas operacionales para SAM DESIGN.</p>
-    </div>
+@section Styles {
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" />
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    <script>
+        // Solo se ocultan los bloques animables si el usuario acepta movimiento. Sin JS, todo queda visible.
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('lp-motion');
+        }
+    </script>
+}
+
+<div class="lp">
+
+    <!-- Hero -->
+    <section class="lp-hero">
+        <div class="lp-wrap lp-hero-grid">
+            <div class="lp-hero-copy">
+                <h1 class="lp-hero-title lp-enter">Protegemos tu viaje en dos ruedas.</h1>
+                <p class="lp-hero-sub lp-enter lp-enter-2">Capas impermeables, jackets de protección y accesorios para tu moto, en tallas de S a 3XL.</p>
+                <div class="lp-actions lp-enter lp-enter-3">
+                    <a href="#productos" class="lp-btn lp-btn-primary">Ver productos</a>
+                    @if (hasWhatsApp)
+                    {
+                        <a href="@whatsAppUrl" class="lp-btn lp-btn-ghost" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Escríbenos</a>
+                    }
+                </div>
+            </div>
+            <div class="lp-hero-media lp-enter lp-enter-2 @(Photo("hero.jpg") == null ? "lp-media-fallback" : "")"
+                 style="@Photo("hero.jpg")" role="img" aria-label="Guantes SAM en rojo">
+                <img src="~/img/logos/sam_desing-removebg-preview.png" alt="" class="lp-fallback-logo" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Productos -->
+    <section class="lp-section" id="productos">
+        <div class="lp-wrap">
+            <h2 class="lp-h2 lp-reveal">Lo que tenemos para tu moto</h2>
+            <div class="lp-bento">
+                <article class="lp-tile lp-tile-feature lp-reveal">
+                    <div class="lp-tile-pair">
+                        <div class="lp-tile-media @(Photo("guantes-negro.jpg") == null ? "lp-media-fallback lp-media-dark" : "")" style="@Photo("guantes-negro.jpg")" role="img" aria-label="Guantes SAM en negro">
+                            <img src="~/img/logos/sam_desing-removebg-preview.png" alt="" class="lp-fallback-logo" />
+                        </div>
+                        <div class="lp-tile-media @(Photo("guantes-azul.jpg") == null ? "lp-media-fallback" : "")" style="@Photo("guantes-azul.jpg")" role="img" aria-label="Guantes SAM en azul">
+                            <img src="~/img/logos/sam_desing-removebg-preview.png" alt="" class="lp-fallback-logo" />
+                        </div>
+                    </div>
+                    <div class="lp-tile-body">
+                        <h3>Guantes SAM</h3>
+                        <p>En varios colores, con el logo SAM en los nudillos.</p>
+                    </div>
+                </article>
+                <article class="lp-tile lp-tile-mint lp-reveal">
+                    <i class="fa-solid fa-shield-halved lp-tile-icon"></i>
+                    <h3>Jackets de protección</h3>
+                    <p>Con o sin protecciones, de S a 3XL.</p>
+                </article>
+                <article class="lp-tile lp-tile-gold lp-reveal">
+                    <i class="fa-solid fa-hand-back-fist lp-tile-icon"></i>
+                    <h3>Puños</h3>
+                    <p>Modelos Protaper y Yamaha en muchos colores.</p>
+                </article>
+                <article class="lp-tile lp-tile-plain lp-reveal">
+                    <i class="fa-solid fa-gears lp-tile-icon"></i>
+                    <h3>Tapas, protectores y accesorios</h3>
+                    <p>Tapas de clutch y piñón, protectores de suspensión, porta placas y más, para DT, XR, XTZ y AX-100.</p>
+                </article>
+                <article class="lp-tile lp-tile-forest lp-reveal">
+                    <i class="fa-solid fa-cloud-rain lp-tile-icon"></i>
+                    <h3>Capas SAM</h3>
+                    <p>Impermeables, con corte para hombre y para mujer.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tallas de capas -->
+    <section class="lp-band lp-band-fallback">
+        <div class="lp-wrap lp-band-grid">
+            <div class="lp-band-panel lp-reveal">
+                <h2 class="lp-h2">Una talla para cada rider</h2>
+                <p>Nuestras capas vienen en corte para hombre y para mujer.</p>
+                <dl class="lp-sizes">
+                    <div>
+                        <dt>Hombre</dt>
+                        <dd><span>S</span><span>M</span><span>L</span><span>XL</span><span>2XL</span><span>3XL</span></dd>
+                    </div>
+                    <div>
+                        <dt>Mujer</dt>
+                        <dd><span>S</span><span>M</span><span>L</span><span>XL</span><span>2XL</span></dd>
+                    </div>
+                </dl>
+            </div>
+            @if (capaColors.Any())
+            {
+                <ul class="lp-swatches">
+                    @foreach (var capa in capaColors)
+                    {
+                        <li class="lp-reveal">
+                            <img src="@Url.Content($"~/img/landing/{capa.File}")" alt="Capa SAM @capa.Label.ToLower()" loading="lazy" width="1024" height="1024" />
+                            <span>@capa.Label</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+
+    <!-- Cómo comprar -->
+    <section class="lp-section">
+        <div class="lp-wrap">
+            <h2 class="lp-h2 lp-reveal">Comprar es sencillo</h2>
+            <ol class="lp-flow">
+                <li class="lp-reveal">
+                    <span class="lp-flow-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <h3>Elige</h3>
+                    <p>Revisa los productos y anota lo que necesitas.</p>
+                </li>
+                <li class="lp-reveal">
+                    <span class="lp-flow-icon"><i class="fa-regular fa-comment-dots"></i></span>
+                    <h3>Consulta</h3>
+                    <p>Te confirmamos talla, color y disponibilidad.</p>
+                </li>
+                <li class="lp-reveal">
+                    <span class="lp-flow-icon"><i class="fa-solid fa-box"></i></span>
+                    <h3>Recibe</h3>
+                    <p>Te lo enviamos por encomienda o lo retiras en San José.</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- Contacto -->
+    @if (hasAnyContact)
+    {
+        <section class="lp-cta">
+            <div class="lp-wrap lp-cta-inner lp-reveal">
+                <div>
+                    <h2 class="lp-h2">¿Buscas algo para tu moto?</h2>
+                    <p>Escríbenos y te ayudamos a encontrarlo.</p>
+                </div>
+                <div class="lp-actions">
+                    @if (hasWhatsApp)
+                    {
+                        <a href="@whatsAppUrl" class="lp-btn lp-btn-primary" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Escríbenos</a>
+                    }
+                    @if (instagram.Length > 0)
+                    {
+                        <a href="https://instagram.com/@instagram" class="lp-btn lp-btn-light" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Instagram</a>
+                    }
+                    @if (email.Length > 0)
+                    {
+                        <a href="mailto:@email" class="lp-btn lp-btn-light"><i class="fa-regular fa-envelope"></i> Correo</a>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+    else if (isAdmin)
+    {
+        <div class="lp-wrap">
+            <div class="lp-admin-note">
+                <i class="fa-solid fa-circle-info"></i>
+                Solo visible para administradores: configura <code>Landing:WhatsApp</code>, <code>Landing:Instagram</code> o <code>Landing:Email</code> en <code>appsettings.json</code> para mostrar la sección de contacto.
+            </div>
+        </div>
+    }
+
 </div>
+
+@section Scripts {
+    <script src="~/js/landing.js" asp-append-version="true"></script>
+}

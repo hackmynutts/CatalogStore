@@ -126,7 +126,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 existing.DeliveryPartner = dto.DeliveryPartner;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
-                existing.ModifiedOn = DateTime.Now;
+                existing.ModifiedOn = DateTime.UtcNow;
 
                 var updated = await _clientRepository.UpdateAsync(existing);
                 if (!updated)

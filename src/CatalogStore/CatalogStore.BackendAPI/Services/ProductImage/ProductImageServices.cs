@@ -47,7 +47,7 @@ namespace CatalogStore.BackendAPI.Services.ProductImage
                                                                                                         Url = $"/images/products/{productFolder}/{uniqueFileName}",
                                                                                                         ContentType = image.ContentType,
                                                                                                         CreatedBy = CreatedBy,
-                                                                                                        CreatedOn = DateTime.Now
+                                                                                                        CreatedOn = DateTime.UtcNow
                                                                                                     };
                     int res = await _productImageRepository.AddAsync(entity);
                     await _eventlogServices.LogAsync(
