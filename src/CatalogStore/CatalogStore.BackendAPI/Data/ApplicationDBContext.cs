@@ -7,6 +7,7 @@ using CatalogStore.BackendAPI.Models.Product;
 using CatalogStore.BackendAPI.Models.ProductImage;
 using CatalogStore.BackendAPI.Models.Inventory;
 using CatalogStore.BackendAPI.Models.InventoryLine;
+using CatalogStore.BackendAPI.Models.InventoryTransaction;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -19,6 +20,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Inventory> Inventories { get; set; }
         public DbSet<InventoryLine> InventoryLines { get; set; }
+        public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -172,6 +174,32 @@ namespace CatalogStore.BackendAPI.Data
                     .WithMany()
                     .HasForeignKey(e => e.ProductID)
                     .HasConstraintName("FK_InventoryLine_Product_ProductID")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<InventoryTransaction>(entity =>
+            {
+                entity.Property(e => e.Reference)
+                    .HasMaxLength(50);
+                entity.Property(e => e.Reason)
+                    .HasMaxLength(250);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_InventoryTransaction_Quantity_NonNegative", "[Quantity] > 0");
+                    t.HasCheckConstraint("CK_InventoryTransaction_QuantityBefore_NonNegative", "[QuantityBefore] >= 0");
+                    t.HasCheckConstraint("CK_InventoryTransaction_QuantityAfter_NonNegative", "[QuantityAfter] >= 0");
+                    t.HasCheckConstraint("CK_InventoryTransaction_OnHoldBefore_NonNegative", "[OnHoldBefore] >= 0");
+                    t.HasCheckConstraint("CK_InventoryTransaction_OnHoldAfter_NonNegative", "[OnHoldAfter] >= 0");
+                });
+                entity.HasIndex(e => new { e.InventoryLineID, e.CreatedOn })
+                    .HasDatabaseName("IX_InventoryTransaction_InventoryLineID_CreatedOn");
+                entity.HasIndex(e => new { e.InventoryLineID, e.ReferenceReason, e.Reference })
+                    .HasDatabaseName("IX_InventoryTransaction_InventoryLineID_ReferenceReason_Reference");
+                entity.HasOne(e => e.InventoryLine)
+                    .WithMany()
+                    .HasForeignKey(e => e.InventoryLineID)
+                    .HasConstraintName("FK_InventoryTransaction_InventoryLine_InventoryLineID")
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

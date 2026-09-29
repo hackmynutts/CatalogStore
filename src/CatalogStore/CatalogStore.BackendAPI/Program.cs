@@ -70,11 +70,8 @@ builder.Services.AddHttpClient("ExternalCatalog", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// Reloj de la aplicación: UTC para guardar, zona de Localization:TimeZoneId (Costa Rica) para mostrar.
-// Se registra también como TimeProvider para que cualquier servicio (incluidos Identity y JWT) use el mismo reloj.
 builder.Services.AddSingleton<AppTimeProvider>();
 builder.Services.AddSingleton<TimeProvider>(sp => sp.GetRequiredService<AppTimeProvider>());
-// Todas las fechas del JSON de la API salen (y entran) en hora de Costa Rica; en la BD siguen en UTC.
 builder.Services.AddSingleton<IConfigureOptions<JsonOptions>, ConfigureLocalDateTimeJson>();
 
 //Dependency Injection for Services and Repositories
