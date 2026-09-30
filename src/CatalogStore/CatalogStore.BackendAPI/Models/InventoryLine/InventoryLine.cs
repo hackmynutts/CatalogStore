@@ -11,7 +11,7 @@ namespace CatalogStore.BackendAPI.Models.InventoryLine
         public int ProductID { get; set; }
         public int Quantity { get; set; }
         public int QuantityAvailable { get; set; }
-        public int QuantityReorder { get; set; }
+        public int QuantityRestock { get; set; }
         public int QuantityOnHold { get; set; }
         public DateOnly? LastRestock { get; set; }
         public int StatusID { get; set; }

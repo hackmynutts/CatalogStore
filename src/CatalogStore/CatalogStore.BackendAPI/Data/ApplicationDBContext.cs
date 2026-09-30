@@ -178,7 +178,7 @@ namespace CatalogStore.BackendAPI.Data
             });
             builder.Entity<InventoryTransaction>(entity =>
             {
-                entity.Property(e => e.Reference)
+                entity.Property(e => e.ReferenceID)
                     .HasMaxLength(50);
                 entity.Property(e => e.Reason)
                     .HasMaxLength(250);
@@ -186,7 +186,7 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140).IsRequired();
                 entity.ToTable(t =>
                 {
-                    t.HasCheckConstraint("CK_InventoryTransaction_Quantity_NonNegative", "[Quantity] > 0");
+                    t.HasCheckConstraint("CK_InventoryTransaction_TransactionQuantity_Positive", "[TransactionQuantity] > 0");
                     t.HasCheckConstraint("CK_InventoryTransaction_QuantityBefore_NonNegative", "[QuantityBefore] >= 0");
                     t.HasCheckConstraint("CK_InventoryTransaction_QuantityAfter_NonNegative", "[QuantityAfter] >= 0");
                     t.HasCheckConstraint("CK_InventoryTransaction_OnHoldBefore_NonNegative", "[OnHoldBefore] >= 0");
@@ -194,8 +194,8 @@ namespace CatalogStore.BackendAPI.Data
                 });
                 entity.HasIndex(e => new { e.InventoryLineID, e.CreatedOn })
                     .HasDatabaseName("IX_InventoryTransaction_InventoryLineID_CreatedOn");
-                entity.HasIndex(e => new { e.InventoryLineID, e.ReferenceReason, e.Reference })
-                    .HasDatabaseName("IX_InventoryTransaction_InventoryLineID_ReferenceReason_Reference");
+                entity.HasIndex(e => new { e.ReferenceReason, e.ReferenceID })
+                    .HasDatabaseName("IX_InventoryTransaction_ReferenceReason_ReferenceID");
                 entity.HasOne(e => e.InventoryLine)
                     .WithMany()
                     .HasForeignKey(e => e.InventoryLineID)

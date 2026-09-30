@@ -2,6 +2,7 @@ using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Inventory;
+using CatalogStore.BackendAPI.Repository.InventoryLines;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Repository.ProductImage;
 using CatalogStore.BackendAPI.Repository.Status;
@@ -19,8 +20,8 @@ using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
@@ -91,6 +92,7 @@ builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
 builder.Services.AddScoped<IProductImageServices, ProductImageServices>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryServices, InventoryServices>();
+builder.Services.AddScoped<IInventoryLineRepository, InventoryLineRepository>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>
