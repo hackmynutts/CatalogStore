@@ -1,0 +1,56 @@
+@model CatalogStore.UI.Models.InventoryLine.UpdateInventoryLineViewModel
+@{
+    var line = ViewData["Line"] as CatalogStore.UI.Models.InventoryLine.InventoryLineViewModel;
+    bool hasStock = line != null && (line.Quantity > 0 || line.QuantityOnHold > 0);
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar línea de inventario</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="editLineForm" data-id="@Model.InventoryLineID">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="InventoryLineID" />
+    <div class="modal-body">
+        @if (line != null)
+        {
+            <div class="mb-3">
+                <span class="info-field-label">Producto</span>
+                <span class="info-field-value">@(string.IsNullOrWhiteSpace(line.ProductCode) ? line.ProductName : $"{line.ProductCode} - {line.ProductName}")</span>
+            </div>
+            <div class="info-field-grid mb-3">
+                <div>
+                    <span class="info-field-label">Stock</span>
+                    <span class="info-field-value">@line.Quantity</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Reservado</span>
+                    <span class="info-field-value">@line.QuantityOnHold</span>
+                </div>
+            </div>
+        }
+
+        <div class="mb-3">
+            <label asp-for="QuantityRestock" class="form-label">Mínimo para reponer</label>
+            <input asp-for="QuantityRestock" type="number" min="0" step="1" class="form-control" />
+            <div class="form-text">Use 0 para no avisar.</div>
+        </div>
+
+        <div class="mb-1">
+            <label asp-for="StatusID" class="form-label">Estado</label>
+            @* Las líneas solo usan Activo (1) e Inactivo (2); la API rechaza cualquier otro valor. *@
+            <select asp-for="StatusID" class="form-select">
+                <option value="1">Activo</option>
+                <option value="2">Inactivo</option>
+            </select>
+            @if (hasStock)
+            {
+                <div class="form-text">Esta línea tiene existencias o reservas, por lo que no se puede inactivar.</div>
+            }
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Guardar cambios</button>
+    </div>
+</form>

@@ -28,27 +28,7 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
             await _context.SaveChangesAsync();
             return inventoryLine.InventoryLineID;
         }
-        public async Task<bool> UpdateAsync(int inventoryLineId,int quantityRestock, int statusId, string modifiedBy, DateTime modifiedOn)
-        {
-            Models.InventoryLine.InventoryLine inventoryLine = await _context.InventoryLines.FindAsync(inventoryLineId);
-            if (inventoryLine == null) return false;
-
-            inventoryLine.QuantityRestock = quantityRestock;
-            inventoryLine.StatusID = statusId;
-            inventoryLine.ModifiedBy = modifiedBy;
-            inventoryLine.ModifiedOn = modifiedOn;
-            return await _context.SaveChangesAsync() > 0;
-        }
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
-        public async Task<bool> InactivateAsync (int inventoryLineId, string modifiedBy, DateTime modifiedOn)
-        {
-            Models.InventoryLine.InventoryLine inventoryLine = await _context.InventoryLines.FindAsync(inventoryLineId);
-            if (inventoryLine == null) return false;
-
-            inventoryLine.StatusID = 2;
-            inventoryLine.ModifiedBy = modifiedBy;
-            inventoryLine.ModifiedOn = modifiedOn;
-            return await _context.SaveChangesAsync() > 0;
-        }
+        
     }
 }

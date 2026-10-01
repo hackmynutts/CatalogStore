@@ -12,6 +12,7 @@ using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.DateManagement;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Inventory;
+using CatalogStore.BackendAPI.Services.InventoryLines;
 using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using CatalogStore.BackendAPI.Services.ProductImage;
@@ -92,7 +93,8 @@ builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
 builder.Services.AddScoped<IProductImageServices, ProductImageServices>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryServices, InventoryServices>();
-builder.Services.AddScoped<IInventoryLineRepository, InventoryLineRepository>();
+builder.Services.AddScoped<IInventoryLineRepository, InventoryLineRepository>(); 
+builder.Services.AddScoped<IInventoryLineServices, InventoryLineServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

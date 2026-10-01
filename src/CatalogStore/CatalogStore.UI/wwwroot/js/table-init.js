@@ -1,10 +1,13 @@
-document.addEventListener('DOMContentLoaded', function () {
+// Inicializa las tablas .app-table dentro de "root" (por defecto, toda la página).
+// Se expone como window.initAppTables para las tablas que llegan después por AJAX
+// (por ejemplo, las líneas de inventario en el detalle de una bodega).
+window.initAppTables = function (root) {
     if (typeof $ === 'undefined' || !$.fn.tablesorter) return;
 
     // Cada tabla .app-table busca su propio buscador por [data-table-search="<id-de-la-tabla>"]
     // y su propio paginador por id="<id-de-la-tabla>-pager". Si no los encuentra, sigue
     // funcionando igual (ordenable, sin filtro/paginación).
-    $('.app-table').each(function () {
+    $(root || document).find('.app-table').each(function () {
         var $table = $(this);
         var tableId = $table.attr('id');
         var $search = tableId ? $('[data-table-search="' + tableId + '"]') : $();
@@ -38,4 +41,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     });
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    window.initAppTables(document);
 });

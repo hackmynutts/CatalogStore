@@ -1,0 +1,89 @@
+@model List<CatalogStore.UI.Models.InventoryLine.InventoryLineViewModel>
+
+@if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Esta bodega todavía no tiene productos asignados.</span>
+    </div>
+}
+else
+{
+    <div class="app-table-search-wrap">
+        <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+        <input type="text" class="app-table-search" data-table-search="inventoryLineTable" data-column="all" placeholder="Buscar productos de la bodega..." />
+    </div>
+
+    <div class="table-responsive">
+        <table id="inventoryLineTable" class="table app-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th class="text-end">Stock</th>
+                    <th class="text-end">Reservado</th>
+                    <th class="text-end">Disponible</th>
+                    <th class="text-end">Mínimo</th>
+                    <th>Estado</th>
+                    <th class="sorter-false filter-false">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in Model)
+                {
+                    bool canInactivate = line.StatusID == 1 && line.Quantity == 0 && line.QuantityOnHold == 0;
+                    <tr>
+                        <td>@line.ProductCode</td>
+                        <td>@line.ProductName</td>
+                        <td class="text-end">@line.Quantity</td>
+                        <td class="text-end">@line.QuantityOnHold</td>
+                        <td class="text-end">
+                            <strong>@line.QuantityAvailable</strong>
+                            @if (line.NeedsRestock)
+                            {
+                                <span class="badge text-bg-warning ms-1" title="El disponible llegó al mínimo de reposición">Reponer</span>
+                            }
+                        </td>
+                        <td class="text-end">@(line.QuantityRestock > 0 ? line.QuantityRestock.ToString() : "—")</td>
+                        <td>
+                            @if (line.StatusID == 1)
+                            {
+                                <span class="badge badge-status-active">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-status-inactive">Inactivo</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="action-buttons">
+                                <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" asp-controller="InventoryLine" asp-action="Details" asp-route-id="@line.InventoryLineID"><i class="fa-solid fa-eye"></i></a>
+                                <span class="action-sep">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-line" title="Editar" data-id="@line.InventoryLineID"><i class="fa-solid fa-pen-to-square"></i></button>
+                                @if (canInactivate)
+                                {
+                                    <span class="action-sep">|</span>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-inactivate-line" title="Inactivar" data-id="@line.InventoryLineID" data-name="@line.ProductName"><i class="fa-solid fa-ban"></i></button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div id="inventoryLineTable-pager" class="app-table-pager">
+        <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+        <span class="pagedisplay"></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+        <select class="pagesize">
+            <option value="10" selected>10 / página</option>
+            <option value="25">25 / página</option>
+            <option value="50">50 / página</option>
+            <option value="100">100 / página</option>
+        </select>
+    </div>
+}

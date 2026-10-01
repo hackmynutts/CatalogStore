@@ -1,0 +1,54 @@
+@model CatalogStore.UI.Models.InventoryLine.AddInventoryLineViewModel
+@{
+    var products = ViewData["ProductOptions"] as List<CatalogStore.UI.Models.Product.ProductViewModel> ?? new();
+    bool productsLoaded = ViewData["ProductsLoaded"] as bool? ?? false;
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Agregar producto a la bodega</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<form id="createLineForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="InventoryID" />
+    <div class="modal-body">
+        @if (!productsLoaded)
+        {
+            <div class="alert alert-danger mb-0">No se pudo cargar la lista de productos. Cierre e intente de nuevo.</div>
+        }
+        else if (!products.Any())
+        {
+            <div class="app-table-empty">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Todos los productos activos ya están en esta bodega.</span>
+            </div>
+        }
+        else
+        {
+            <div class="mb-3">
+                <label for="lineProductSearch" class="form-label">Producto</label>
+                <input type="text" id="lineProductSearch" class="form-control mb-2" placeholder="Buscar por código o nombre..." autocomplete="off" />
+                <select asp-for="ProductID" class="form-select" size="8" required>
+                    @foreach (var p in products)
+                    {
+                        <option value="@p.ProductID">@(string.IsNullOrWhiteSpace(p.ProductCode) ? p.ProductName : $"{p.ProductCode} - {p.ProductName}")</option>
+                    }
+                </select>
+                <div class="form-text"><span id="lineProductCount">@products.Count</span> productos disponibles.</div>
+            </div>
+
+            <div class="mb-1">
+                <label asp-for="QuantityRestock" class="form-label">Mínimo para reponer</label>
+                <input asp-for="QuantityRestock" type="number" min="0" step="1" class="form-control" />
+                <div class="form-text">Cuando el disponible llegue a este número, la línea se marca para reponer. Use 0 para no avisar.</div>
+            </div>
+        }
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        @if (productsLoaded && products.Any())
+        {
+            <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Agregar</button>
+        }
+    </div>
+</form>

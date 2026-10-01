@@ -46,22 +46,21 @@
 </div>
 
 <div class="row">
-    <div class="col-lg-6">
-        <div class="info-card info-card-placeholder">
-            <h2 class="info-card-title"><i class="fa-solid fa-boxes-stacked"></i> Líneas de inventario <span class="info-card-soon">Próximamente</span></h2>
-            <div class="app-table-empty">
-                <i class="fa-solid fa-boxes-stacked"></i>
-                <span>Este inventario todavía no tiene existencias registradas.</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="info-card info-card-placeholder">
-            <h2 class="info-card-title"><i class="fa-solid fa-right-left"></i> Transacciones <span class="info-card-soon">Próximamente</span></h2>
-            <div class="app-table-empty">
-                <i class="fa-solid fa-right-left"></i>
-                <span>Este inventario todavía no tiene movimientos registrados.</span>
+    <div class="col-12">
+        <div class="info-card">
+            <h2 class="info-card-title">
+                <i class="fa-solid fa-boxes-stacked"></i> Líneas de inventario
+                @if (canManage)
+                {
+                    <button type="button" class="btn btn-sm btn-brand ms-auto" style="width:auto; padding-left:16px; padding-right:16px;" id="btn-add-line"><i class="fa-solid fa-plus"></i> Agregar producto</button>
+                }
+            </h2>
+            @* La tabla llega por AJAX desde InventoryLine/ByInventory, así se refresca sin recargar la página. *@
+            <div id="inventory-lines" data-inventory-id="@Model.InventoryID">
+                <div class="app-table-empty">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>Cargando productos de la bodega...</span>
+                </div>
             </div>
         </div>
     </div>
@@ -96,8 +95,19 @@
     </div>
 }
 
+@if (canManage)
+{
+    <!-- Modal compartido para agregar y editar líneas -->
+    <div class="modal fade" id="lineModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="lineModalContent"></div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script src="~/js/inventory.js" asp-append-version="true"></script>
+    <script src="~/js/inventory-line.js" asp-append-version="true"></script>
 
     @if (canManage)
     {

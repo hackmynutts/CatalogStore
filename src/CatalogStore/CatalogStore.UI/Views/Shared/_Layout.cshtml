@@ -37,7 +37,7 @@
                         @if (User.IsInRole("Admin") || User.IsInRole("AdminIT"))
                         {
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle @(currentController == "User" || currentController == "Status" || currentController == "Eventlog" || currentController == "ProductImage" ? "active" : "")" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle @(currentController == "User" || currentController == "Status" || currentController == "Eventlog" || currentController == "ProductImage" || currentController == "Inventory" || currentController == "InventoryLine" ? "active" : "")" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Administrativo
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminMenu">
@@ -63,6 +63,7 @@
                                                     Productos
                                                 </a>
                                                 <ul class="dropdown-menu shadow">
+                                                    <li><a class="dropdown-item" asp-controller="Inventory" asp-action="Index">Inventario</a></li>
                                                     <li><a class="dropdown-item" asp-controller="Product" asp-action="IndexAdmin">Productos</a></li>
                                                     <li><a class="dropdown-item" asp-controller="ProductImage" asp-action="Index">Imágenes de producto</a></li>
                                                 </ul>
