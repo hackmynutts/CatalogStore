@@ -1,0 +1,111 @@
+@using CatalogStore.UI.Models.InventoryTransaction
+@model List<InventoryTransactionViewModel>
+@{
+    bool loaded = ViewData["TransactionsLoaded"] as bool? ?? true;
+
+    // Un color por tipo para distinguir de un vistazo entradas, salidas, reservas y ajustes.
+    static string TypeBadge(TransactionType type) => type switch
+    {
+        TransactionType.CargaInicial => "text-bg-primary",
+        TransactionType.IncrementoStock => "text-bg-success",
+        TransactionType.ProductoReservado => "text-bg-info",
+        TransactionType.ProductoLiberado => "text-bg-secondary",
+        TransactionType.Venta => "text-bg-dark",
+        TransactionType.AjustePositivo => "text-bg-warning",
+        TransactionType.AjusteNegativo => "text-bg-danger",
+        _ => "text-bg-light"
+    };
+
+    static string Signed(int value) => value > 0 ? $"+{value}" : value.ToString();
+}
+
+@if (!loaded)
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>No se pudo cargar el historial de movimientos.</span>
+    </div>
+}
+else if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-right-left"></i>
+        <span>Esta línea todavía no tiene movimientos.</span>
+    </div>
+}
+else
+{
+    <div class="app-table-search-wrap">
+        <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+        <input type="text" class="app-table-search" data-table-search="transactionTable" data-column="all" placeholder="Buscar movimientos..." />
+    </div>
+
+    <div class="table-responsive">
+        <table id="transactionTable" class="table app-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th class="text-end">Movimiento</th>
+                    <th class="text-end">Stock</th>
+                    <th class="text-end">Reservado</th>
+                    <th>Referencia</th>
+                    <th>Razón</th>
+                    <th>Usuario</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model)
+                {
+                    <tr>
+                        @* data-text: tablesorter ordena por este valor; el texto "g" (dd/MM/yyyy) no ordena bien como texto. *@
+                        <td data-text="@t.CreatedOn.ToString("yyyy-MM-dd HH:mm:ss")">@t.CreatedOn.ToString("g")</td>
+                        <td><span class="badge @TypeBadge(t.Type)">@t.TypeName</span></td>
+                        <td class="text-end" data-text="@t.StockChange">
+                            @if (t.StockChange != 0)
+                            {
+                                <strong class="@(t.StockChange > 0 ? "text-success" : "text-danger")">@Signed(t.StockChange)</strong>
+                            }
+                            @if (t.OnHoldChange != 0)
+                            {
+                                <div class="small text-muted">reservado @Signed(t.OnHoldChange)</div>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">@t.QuantityBefore → <strong>@t.QuantityAfter</strong></td>
+                        <td class="text-end text-nowrap">@t.OnHoldBefore → <strong>@t.OnHoldAfter</strong></td>
+                        <td>
+                            @if (t.ReferenceReason == 0 && string.IsNullOrWhiteSpace(t.ReferenceID))
+                            {
+                                <span>—</span>
+                            }
+                            else
+                            {
+                                <span>@t.ReferenceReasonName</span>
+                                @if (!string.IsNullOrWhiteSpace(t.ReferenceID))
+                                {
+                                    <div class="small text-muted">@t.ReferenceID</div>
+                                }
+                            }
+                        </td>
+                        <td>@(string.IsNullOrWhiteSpace(t.Reason) ? "—" : t.Reason)</td>
+                        <td>@t.CreatedBy</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div id="transactionTable-pager" class="app-table-pager">
+        <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+        <span class="pagedisplay"></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+        <select class="pagesize">
+            <option value="10" selected>10 / página</option>
+            <option value="25">25 / página</option>
+            <option value="50">50 / página</option>
+            <option value="100">100 / página</option>
+        </select>
+    </div>
+}

@@ -114,6 +114,10 @@
                     <span class="info-field-label">Precio unitario</span>
                     <span class="info-field-value">@(Model.Price.HasValue ? Model.Price.Value.ToString("N2") : "—")</span>
                 </div>
+                <div>
+                    <span class="info-field-label">Precio con IVA</span>
+                    <span class="info-field-value">@(Model.Price.HasValue ? Model.PriceCalcIVA.ToString("N2") : "—")</span>
+                </div>
                 <div style="grid-column: 1 / -1;">
                     <span class="info-field-label">Descripción</span>
                     <span class="info-field-value">@(string.IsNullOrEmpty(Model.ProductDesc) ? "—" : Model.ProductDesc)</span>

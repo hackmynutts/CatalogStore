@@ -49,6 +49,15 @@ namespace CatalogStore.BackendAPI.Controllers
             if (producto == null) return NotFound();
             return Ok(producto);
         }
+        // GET api/<ProductController>/5
+        [HttpGet("code/{code}")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        public async Task<IActionResult> GetByCode(string code)
+        {
+            Product  producto = await _productServices.GetByProductCode(code);
+            if (producto == null) return NotFound();
+            return Ok(producto);
+        }
 
         // POST api/<ProductController>
         [HttpPost]

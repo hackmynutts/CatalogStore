@@ -4,8 +4,6 @@ namespace CatalogStore.BackendAPI.DTO.InventoryLines
 {
     public class AddInventoryLineDTO
     {
-        [Display(Name = "#")]
-        public int InventoryLineID { get; set; }
         [Display(Name = "Inventario")]
         public int InventoryID { get; set; }
         [Display(Name = "Producto")]

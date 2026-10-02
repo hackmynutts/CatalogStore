@@ -1,5 +1,6 @@
 using CatalogStore.UI.Models.Inventory;
 using CatalogStore.UI.Models.InventoryLine;
+using CatalogStore.UI.Models.InventoryTransaction;
 using CatalogStore.UI.Models.Product;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,7 @@ namespace CatalogStore.UI.Controllers
             return PartialView("_LinesPartial", await GetLinesAsync(id));
         }
 
-        // GET: InventoryLine/Details/5 — detalle de un producto dentro de una bodega (aquí vivirán sus transacciones)
+        // GET: InventoryLine/Details/5 — detalle de un producto dentro de una bodega, con su historial de movimientos
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -43,6 +44,13 @@ namespace CatalogStore.UI.Controllers
                 ? await inventoryResponse.Content.ReadFromJsonAsync<InventoryViewModel>()
                 : null;
             ViewData["InventoryName"] = inventory?.Name ?? "Bodega";
+
+            // Historial de movimientos. Si falla se distingue de "sin movimientos" para no confundir al usuario.
+            var transactionsResponse = await client.GetAsync($"api/InventoryTransaction/line/{id}");
+            ViewData["TransactionsLoaded"] = transactionsResponse.IsSuccessStatusCode;
+            ViewData["Transactions"] = transactionsResponse.IsSuccessStatusCode
+                ? await transactionsResponse.Content.ReadFromJsonAsync<List<InventoryTransactionViewModel>>() ?? new List<InventoryTransactionViewModel>()
+                : new List<InventoryTransactionViewModel>();
 
             return View(line);
         }

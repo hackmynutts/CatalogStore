@@ -21,6 +21,7 @@ namespace CatalogStore.BackendAPI.Services.Product
         public async Task<List<Models.Product.Product>> GetAllProductsAsync() => await _repository.GetAllProductsAsync();
         public async Task<List<Models.Product.Product>> GetActiveProductsAsync() => await _repository.GetActiveProductsAsync();
         public async Task<Models.Product.Product> GetProductAsync(int id) => await _repository.GetProductAsync(id);
+        public async Task<Models.Product.Product> GetByProductCode(string code) => await _repository.GetByProductCode(code);
         public async Task<int>AddAsync(AddProductDTO dto)
         {
             Models.Product.Product prod = new Models.Product.Product
@@ -30,7 +31,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 ProductDesc = dto.ProductDesc,
                 categoria = dto.categoria,
                 Price = dto.Price,
-                PriceCalcIVA = Math.Round((decimal)(dto.Price ?? 0 * IVA_RATE), 2),
+                PriceCalcIVA = Math.Round((dto.Price ?? 0) * IVA_RATE, 2),
                 UnidadMedida = dto.UnidadMedida,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
@@ -91,7 +92,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 existing.ProductDesc = dto.ProductDesc;
                 existing.categoria = dto.categoria;
                 existing.Price = dto.Price;
-                existing.PriceCalcIVA = Math.Round((decimal)(dto.Price ?? 0 * IVA_RATE), 2);
+                existing.PriceCalcIVA = Math.Round((dto.Price ?? 0) * IVA_RATE, 2);
                 existing.UnidadMedida = dto.UnidadMedida;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;

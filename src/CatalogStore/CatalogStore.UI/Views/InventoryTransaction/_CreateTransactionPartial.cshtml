@@ -1,0 +1,69 @@
+@using CatalogStore.UI.Models.InventoryTransaction
+@model RegisterInventoryTransactionViewModel
+@{
+    var line = ViewData["Line"] as CatalogStore.UI.Models.InventoryLine.InventoryLineViewModel;
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Registrar movimiento</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+@* data-available: el JS lo usa como tope del ajuste negativo (la API valida igual). *@
+<form id="createTransactionForm" data-available="@(line?.QuantityAvailable ?? 0)">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="InventoryLineID" />
+    <div class="modal-body">
+        @if (line != null)
+        {
+            <div class="mb-3">
+                <span class="info-field-label">Producto</span>
+                <span class="info-field-value">@(string.IsNullOrWhiteSpace(line.ProductCode) ? line.ProductName : $"{line.ProductCode} - {line.ProductName}")</span>
+            </div>
+            <div class="info-field-grid mb-3">
+                <div>
+                    <span class="info-field-label">Stock</span>
+                    <span class="info-field-value">@line.Quantity</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Reservado</span>
+                    <span class="info-field-value">@line.QuantityOnHold</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Disponible</span>
+                    <span class="info-field-value">@line.QuantityAvailable</span>
+                </div>
+            </div>
+        }
+
+        <div class="mb-3">
+            <label asp-for="Type" class="form-label">Tipo de movimiento</label>
+            @* Solo los tipos manuales; reservas y ventas llegan desde las órdenes. *@
+            <select asp-for="Type" class="form-select">
+                <option value="@((int)TransactionType.IncrementoStock)">Incremento de stock (entrada de mercadería)</option>
+                <option value="@((int)TransactionType.AjustePositivo)">Ajuste positivo (corrección de conteo)</option>
+                <option value="@((int)TransactionType.AjusteNegativo)">Ajuste negativo (faltante, daño, merma)</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="TransactionQuantity" class="form-label">Cantidad</label>
+            <input asp-for="TransactionQuantity" type="number" min="1" max="1000000" step="1" class="form-control" value="" required />
+            <div class="form-text d-none" id="transactionMaxHint">Máximo @(line?.QuantityAvailable ?? 0): no se puede ajustar lo que está reservado.</div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ReferenceID" class="form-label">Referencia <span class="text-muted">(opcional)</span></label>
+            <input asp-for="ReferenceID" class="form-control" maxlength="50" placeholder="N.º de factura o documento" />
+        </div>
+
+        <div class="mb-1">
+            <label asp-for="Reason" class="form-label">Razón <span class="text-danger d-none" id="transactionReasonRequired">*</span></label>
+            <textarea asp-for="Reason" class="form-control" rows="2" maxlength="250"></textarea>
+            <div class="form-text">Obligatoria en los ajustes.</div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Registrar</button>
+    </div>
+</form>

@@ -21,6 +21,15 @@ namespace CatalogStore.BackendAPI.DTO.CatalogExternal
     {
         [JsonPropertyName("producto")]
         public ExternalProductDTO Producto { get; set; } = new();
+        [JsonPropertyName("inventario")]
+        public ExternalInventoryDTO? Inventario { get; set; }
+    }
+    // Existencias del producto en el proveedor. Solo se usa el total; el detalle por sucursal no se mapea.
+    public class ExternalInventoryDTO
+    {
+        // decimal y no int: si el proveedor manda 79.0 o una fracción, se detecta y se reporta en vez de fallar la lectura.
+        [JsonPropertyName("total_disponible")]
+        public decimal TotalDisponible { get; set; }
     }
     public class ExternalProductDTO
     {

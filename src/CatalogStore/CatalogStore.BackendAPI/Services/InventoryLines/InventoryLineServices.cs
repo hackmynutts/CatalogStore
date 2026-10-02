@@ -55,7 +55,7 @@ namespace CatalogStore.BackendAPI.Services.InventoryLines
         };
         public async Task<OperationResult> AddAsync(AddInventoryLineDTO dto)
         {
-            const string module = "Administracion/Inventario";
+            const string module = "Administracion/Inventario/Lineas";
             try
             {
                 var inventory = await _inventoryServices.GetInventoryAsync(dto.InventoryID);
@@ -102,7 +102,7 @@ namespace CatalogStore.BackendAPI.Services.InventoryLines
         // Registra el rechazo de negocio en la bitácora y lo devuelve como resultado.
         private async Task<OperationResult> FailAddAsync(AddInventoryLineDTO dto, string error)
         {
-            await _eventlogServices.LogAsync(typeEvent.AddFail, "Administracion/Inventario", "InventoryLine",
+            await _eventlogServices.LogAsync(typeEvent.AddFail, "Administracion/Inventario/Lineas", "InventoryLine",
                 dto.InventoryID.ToString(), error, postData: dto);
             return OperationResult.Fail(error);
         }
@@ -114,7 +114,7 @@ namespace CatalogStore.BackendAPI.Services.InventoryLines
 
         private async Task<OperationResult> ApplyChangesAsync(int id, int? quantityRestock, int statusId, string modifiedBy, typeEvent ok, typeEvent fail)
         {
-            const string module = "Administracion/Inventario";
+            const string module = "Administracion/Inventario/Lineas";
             if (statusId is not (1 or 2))
                 return OperationResult.Fail("Estado inválido.");
 

@@ -28,6 +28,16 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
             await _context.SaveChangesAsync();
             return inventoryLine.InventoryLineID;
         }
+        // Con seguimiento: la carga de stock del proveedor modifica estas líneas. Clave = ProductID.
+        public async Task<Dictionary<int, Models.InventoryLine.InventoryLine>> GetByInventoryAndProductsAsync(int inventoryId, IEnumerable<int> productIds)
+        {
+            var ids = productIds.ToList();
+            return await _context.InventoryLines
+                .Where(il => il.InventoryID == inventoryId && ids.Contains(il.ProductID))
+                .ToDictionaryAsync(il => il.ProductID);
+        }
+        // No guarda: para procesos por lote que guardan todo junto con SaveChangesAsync.
+        public void Add(Models.InventoryLine.InventoryLine inventoryLine) => _context.InventoryLines.Add(inventoryLine);
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
         
     }

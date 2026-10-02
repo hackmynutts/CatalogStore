@@ -24,8 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTO\InventoryTransactions\" />
-    <Folder Include="Services\InventoryTransactions\" />
     <Folder Include="wwwroot\uploads\products\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>

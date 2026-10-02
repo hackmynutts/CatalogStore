@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Detalle de la línea";
     var inventoryName = ViewData["InventoryName"] as string ?? "Bodega";
+    var transactions = ViewData["Transactions"] as List<CatalogStore.UI.Models.InventoryTransaction.InventoryTransactionViewModel>
+        ?? new List<CatalogStore.UI.Models.InventoryTransaction.InventoryTransactionViewModel>();
 }
 
 <div class="detail-header">
@@ -12,7 +14,7 @@
             <div class="detail-subtitle">
                 @if (!string.IsNullOrWhiteSpace(Model.ProductCode))
                 {
-                    <span>@Model.ProductCode</span>
+                    <span><a asp-controller="Product" asp-action="Details" asp-route-id="@Model.ProductID">@Model.ProductCode</a></span>
                 }
                 <span>en @inventoryName</span>
                 @if (Model.StatusID == 1)
@@ -68,12 +70,16 @@
 
 <div class="row">
     <div class="col-12">
-        <div class="info-card info-card-placeholder">
-            <h2 class="info-card-title"><i class="fa-solid fa-right-left"></i> Transacciones <span class="info-card-soon">Próximamente</span></h2>
-            <div class="app-table-empty">
-                <i class="fa-solid fa-right-left"></i>
-                <span>Aquí se mostrarán las entradas, salidas, reservas y ajustes de este producto en la bodega.</span>
-            </div>
+        <div class="info-card">
+            <h2 class="info-card-title">
+                <i class="fa-solid fa-right-left"></i> Movimientos
+                @* Una línea inactiva no acepta movimientos (la API también lo rechaza). *@
+                @if (Model.StatusID == 1)
+                {
+                    <button type="button" class="btn btn-sm btn-brand ms-auto" style="width:auto; padding-left:16px; padding-right:16px;" id="btn-add-transaction" data-line-id="@Model.InventoryLineID"><i class="fa-solid fa-plus"></i> Registrar movimiento</button>
+                }
+            </h2>
+            <partial name="~/Views/InventoryTransaction/_TransactionsPartial.cshtml" model="transactions" />
         </div>
     </div>
 </div>
@@ -104,7 +110,7 @@
     </div>
 </div>
 
-<!-- Modal de edición (el mismo partial que usa la tabla de la bodega) -->
+<!-- Modal compartido: Editar (inventory-line.js) y Registrar movimiento (inventory-transaction.js) -->
 <div class="modal fade" id="lineModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content" id="lineModalContent"></div>
@@ -114,4 +120,5 @@
 
 @section Scripts {
     <script src="~/js/inventory-line.js" asp-append-version="true"></script>
+    <script src="~/js/inventory-transaction.js" asp-append-version="true"></script>
 }

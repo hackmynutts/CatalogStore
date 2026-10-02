@@ -66,6 +66,19 @@ namespace CatalogStore.UI.Controllers
             ResolveImageUrls(new[] { producto });
             return View(producto);
         }
+        // GET: ProductController/Details/5
+        public async Task<IActionResult> DetailsByCode(string code)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Product/code/{Uri.EscapeDataString(code)}");
+            if (!response.IsSuccessStatusCode)
+                return NotFound();
+
+            var producto = await response.Content.ReadFromJsonAsync<ProductViewModel>();
+            if (producto == null) return NotFound();
+            ResolveImageUrls(new[] { producto });
+            return RedirectToAction(nameof(Details), new { id = producto.ProductID });
+        }
 
         // GET: ProductController/IndexAdmin — todos, incluidos inactivos
         [Authorize(Roles = "Admin,AdminIT")]

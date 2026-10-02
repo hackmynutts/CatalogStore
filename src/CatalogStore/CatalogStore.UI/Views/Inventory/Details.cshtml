@@ -52,7 +52,13 @@
                 <i class="fa-solid fa-boxes-stacked"></i> Líneas de inventario
                 @if (canManage)
                 {
-                    <button type="button" class="btn btn-sm btn-brand ms-auto" style="width:auto; padding-left:16px; padding-right:16px;" id="btn-add-line"><i class="fa-solid fa-plus"></i> Agregar producto</button>
+                    <span class="ms-auto d-flex flex-wrap gap-2">
+                        @if (Model.StatusID == 1)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-primary" style="width:auto; padding-left:16px; padding-right:16px;" id="btn-import-stock" data-inventory-id="@Model.InventoryID"><i class="fa-solid fa-cloud-arrow-down"></i> Cargar stock del proveedor</button>
+                        }
+                        <button type="button" class="btn btn-sm btn-brand" style="width:auto; padding-left:16px; padding-right:16px;" id="btn-add-line"><i class="fa-solid fa-plus"></i> Agregar producto</button>
+                    </span>
                 }
             </h2>
             @* La tabla llega por AJAX desde InventoryLine/ByInventory, así se refresca sin recargar la página. *@
@@ -108,6 +114,7 @@
 @section Scripts {
     <script src="~/js/inventory.js" asp-append-version="true"></script>
     <script src="~/js/inventory-line.js" asp-append-version="true"></script>
+    <script src="~/js/inventory-stock-import.js" asp-append-version="true"></script>
 
     @if (canManage)
     {

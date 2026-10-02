@@ -3,6 +3,7 @@ using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Inventory;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
+using CatalogStore.BackendAPI.Repository.InventoryTransactions;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Repository.ProductImage;
 using CatalogStore.BackendAPI.Repository.Status;
@@ -13,6 +14,7 @@ using CatalogStore.BackendAPI.Services.DateManagement;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Inventory;
 using CatalogStore.BackendAPI.Services.InventoryLines;
+using CatalogStore.BackendAPI.Services.InventoryTransactions;
 using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using CatalogStore.BackendAPI.Services.ProductImage;
@@ -95,6 +97,9 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryServices, InventoryServices>();
 builder.Services.AddScoped<IInventoryLineRepository, InventoryLineRepository>(); 
 builder.Services.AddScoped<IInventoryLineServices, InventoryLineServices>();
+builder.Services.AddScoped<IInventoryTransactionRepository, InventoryTransactionRepository>();
+builder.Services.AddScoped<IInventoryTransactionServices, InventoryTransactionServices>();
+builder.Services.AddScoped<IStockImportServices, StockImportServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

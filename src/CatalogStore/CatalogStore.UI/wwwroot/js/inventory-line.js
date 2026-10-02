@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!container && !modalEl) return;
 
     const inventoryId = container ? container.getAttribute('data-inventory-id') : null;
-    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+    // getOrCreateInstance: en el detalle de la línea, inventory-transaction.js usa el mismo modal.
+    const modal = modalEl ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
     const modalContent = document.getElementById('lineModalContent');
     const addBtn = document.getElementById('btn-add-line');
 
