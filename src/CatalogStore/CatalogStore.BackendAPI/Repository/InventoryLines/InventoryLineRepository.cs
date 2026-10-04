@@ -17,6 +17,12 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
                 .OrderBy(il => il.Product.ProductName)
                 .Include(il => il.Product)
                 .ToListAsync();
+        public async Task<Models.InventoryLine.InventoryLine?> GetByProductAsync(int productId) =>
+            await _context.InventoryLines
+                .AsNoTracking()
+                .Where(il => il.ProductID == productId)
+                .Include(il => il.Product)
+                .FirstOrDefaultAsync();
         public async Task<Models.InventoryLine.InventoryLine?> GetByIdAsync(int inventoryLineId) => await _context.InventoryLines.AsNoTracking().Include(il => il.Product).FirstOrDefaultAsync(il => il.InventoryLineID == inventoryLineId);
 
         public async Task<Models.InventoryLine.InventoryLine?> GetByInventoryAndProductAsync(int inventoryId, int productId) => 

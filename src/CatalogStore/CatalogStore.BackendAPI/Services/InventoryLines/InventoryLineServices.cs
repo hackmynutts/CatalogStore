@@ -33,6 +33,11 @@ namespace CatalogStore.BackendAPI.Services.InventoryLines
             var line = await _inventoryLineRepository.GetByIdAsync(inventoryLineID);
             return line is null ? null : ToDto(line);
         }
+        public async Task<InventoryLineDTO?> GetByProductAsync(int productId)
+        {
+            var line = await _inventoryLineRepository.GetByProductAsync(productId);
+            return line is null ? null : ToDto(line);
+        }
 
         private static InventoryLineDTO ToDto(InventoryLine l) => new()
         {

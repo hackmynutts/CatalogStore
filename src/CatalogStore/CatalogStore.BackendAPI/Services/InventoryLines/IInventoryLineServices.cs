@@ -7,6 +7,7 @@ namespace CatalogStore.BackendAPI.Services.InventoryLines
     {
         Task<List<InventoryLineDTO>> GetByInventoryAsync(int inventoryID);
         Task<InventoryLineDTO?> GetByIdAsync(int inventoryLineID);
+        Task<InventoryLineDTO?> GetByProductAsync(int productId);
         Task<OperationResult> AddAsync(AddInventoryLineDTO dto);
         Task<OperationResult> UpdateAsync(UpdateInventoryLineDTO dto);
         Task<OperationResult> InactivateAsync(int inventoryLineID, string modifiedBy);

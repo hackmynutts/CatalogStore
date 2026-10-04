@@ -6,6 +6,7 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
     {
         Task<List<InventoryLine>> GetByInventoryAsync(int inventoryId);
         Task<InventoryLine?> GetByIdAsync(int inventoryLineId);
+        Task<InventoryLine?> GetByProductAsync(int productId);
         Task<InventoryLine?> GetByInventoryAndProductAsync(int inventoryId, int productId);
         Task<Dictionary<int, InventoryLine>> GetByInventoryAndProductsAsync(int inventoryId, IEnumerable<int> productIds);
         Task<int> AddAsync(InventoryLine inventoryLine);
