@@ -28,5 +28,6 @@ namespace CatalogStore.BackendAPI.Repository.Inventory
             _context.Inventories.Remove(inventory);
             return await _context.SaveChangesAsync() > 0;
         }
+        public async Task<bool> ExistAnyInventoryAsync() => await _context.Inventories.AnyAsync();
     }
 }

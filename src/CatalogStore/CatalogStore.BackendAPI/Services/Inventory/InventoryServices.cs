@@ -20,6 +20,18 @@ namespace CatalogStore.BackendAPI.Services.Inventory
         public async Task<Models.Inventory.Inventory> GetInventoryAsync(int ID) => await _repository.GetInventoryAsync(ID);
         public async Task<int> AddAsync(AddInventoryDTO inventory)
         {
+            bool exists = await _repository.ExistAnyInventoryAsync();
+            if (exists)
+            {
+                await _eventlogServices.LogAsync(
+                    typeEvent.AddFail,
+                    ModuleName,
+                    "Inventory",
+                    inventory.Name,
+                    "Ya existe un inventario registrado, no se permite crear otro.",
+                    postData: inventory);
+                throw new InvalidOperationException("Ya existe un inventario registrado, no se permite crear otro.");
+            }
             Models.Inventory.Inventory newInventory = new Models.Inventory.Inventory
             {
                 Name = inventory.Name,

@@ -8,6 +8,8 @@ using CatalogStore.BackendAPI.Models.ProductImage;
 using CatalogStore.BackendAPI.Models.Inventory;
 using CatalogStore.BackendAPI.Models.InventoryLine;
 using CatalogStore.BackendAPI.Models.InventoryTransaction;
+using CatalogStore.BackendAPI.Models.Order;
+using CatalogStore.BackendAPI.Models.OrderLine;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -21,6 +23,8 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<Inventory> Inventories { get; set; }
         public DbSet<InventoryLine> InventoryLines { get; set; }
         public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderLine> OrderLines { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -87,6 +91,13 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(150).IsRequired();
                 entity.Property(e => e.ProductDesc)
                     .HasMaxLength(250).IsRequired();
+                entity.Property(e => e.ProfitPercentage)
+                    .HasDefaultValue(1.07m)
+                    .HasPrecision(6, 4);
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_Product_ProfitPercentage_Valid", "[ProfitPercentage] >= 1 AND [ProfitPercentage] <= 10");
+                });
                 entity.Property(e => e.Price)
                     .HasPrecision(10,2);
                 entity.Property(e => e.PriceCalcIVA)
@@ -201,6 +212,76 @@ namespace CatalogStore.BackendAPI.Data
                     .HasForeignKey(e => e.InventoryLineID)
                     .HasConstraintName("FK_InventoryTransaction_InventoryLine_InventoryLineID")
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<Order>(entity =>
+            {
+                entity.Property(e => e.OrderNumber)
+                    .HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(500);
+                entity.Property(e => e.OrderTotalAmount)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.HasIndex(e => new { e.ClientID , e.CreatedOn})
+                    .HasDatabaseName("IX_Order_ClientID_CreatedOn");
+                entity.HasIndex(e => new { e.OrderStatus })
+                    .HasDatabaseName("IX_Order_OrderStatus");
+                entity.HasIndex(e => new { e.OrderNumber })
+                    .HasDatabaseName("IX_Order_OrderNumber")
+                    .IsUnique();
+                entity.HasOne(e => e.Client)
+                    .WithMany()
+                    .HasForeignKey(e => e.ClientID)
+                    .HasConstraintName("FK_Order_Client_ClientID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_Order_TotalAmount_NonNegative", "[OrderTotalAmount] >= 0");
+                });
+            }).HasSequence<int>("OrderNumberSeq").StartsAt(1).IncrementsBy(1);
+            builder.Entity<OrderLine>(entity =>
+            {
+                entity.Property(e => e.ProductCode)
+                    .HasMaxLength(20);
+                entity.Property(e => e.ProductName)
+                    .HasMaxLength(150).IsRequired();
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.Property(e => e.UnitPrice)
+                    .HasPrecision(10, 2);
+                entity.Property(e => e.UnitPriceIVA)
+                    .HasPrecision(10, 2);
+                entity.Property(e => e.LineTotalPrice)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.Discount)
+                    .HasPrecision(5, 2)
+                    .HasDefaultValue(0.0m);
+                entity.HasIndex(e => new { e.OrderID, e.ProductID })
+                    .HasDatabaseName("IX_OrderLine_OrderID_ProductID")
+                    .IsUnique();
+                entity.HasOne(e => e.Order)
+                    .WithMany(o => o.OrderLines)
+                    .HasForeignKey(e => e.OrderID)
+                    .HasConstraintName("FK_OrderLine_Order_OrderID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductID)
+                    .HasConstraintName("FK_OrderLine_Product_ProductID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_OrderLine_Quantity_Positive", "[Quantity] > 0");
+                    t.HasCheckConstraint("CK_OrderLine_UnitPrice_NonNegative", "[UnitPrice] >= 0");
+                    t.HasCheckConstraint("CK_OrderLine_UnitPriceIVA_NonNegative", "[UnitPriceIVA] >= 0");
+                    t.HasCheckConstraint("CK_OrderLine_LineTotalPrice_NonNegative", "[LineTotalPrice] >= 0");
+                    t.HasCheckConstraint("CK_OrderLine_Discount_Valid", "[Discount] >= 0 AND [Discount] <= 99.99");
+                });
             });
         }
     }

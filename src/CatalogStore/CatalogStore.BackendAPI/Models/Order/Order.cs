@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CatalogStore.BackendAPI.Models.Order
 {
@@ -13,6 +14,7 @@ namespace CatalogStore.BackendAPI.Models.Order
         [Display(Name = "Cancelada")]
         Cancelled = 3
     }
+    [Table("Order_TB")]
     public class Order
     {
         public int OrderID { get; set; }

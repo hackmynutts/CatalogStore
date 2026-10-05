@@ -8,5 +8,6 @@
         Task<int> AddAsync(Models.Inventory.Inventory inventory);
         Task<bool> UpdateAsync(Models.Inventory.Inventory inventory);
         Task<bool> DeleteAsync(int id);
+        Task<bool> ExistAnyInventoryAsync();
     }
 }

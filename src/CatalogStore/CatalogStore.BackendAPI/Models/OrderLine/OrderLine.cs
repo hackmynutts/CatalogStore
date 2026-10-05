@@ -1,5 +1,8 @@
-﻿namespace CatalogStore.BackendAPI.Models.OrderLine
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace CatalogStore.BackendAPI.Models.OrderLine
 {
+    [Table("OrderLine_TB")]
     public class OrderLine
     {
         public int OrderLineID { get; set; }
