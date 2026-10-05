@@ -15,6 +15,8 @@ namespace CatalogStore.BackendAPI.DTO.Product
         public string ProductDesc { get; set; } = string.Empty;
         [Display(Name ="Categoría")]
         public categoryType categoria { get; set; } = categoryType.General;
+        [Display(Name = "Porcentaje de ganancia")]
+        public decimal ProfitPercentage { get; set; } = 1.07m;
         [Display(Name ="Precio unitario")]
         public decimal? Price { get; set; }
         [Display(Name ="Precio con IVA")]

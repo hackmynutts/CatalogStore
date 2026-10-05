@@ -6,6 +6,7 @@ namespace CatalogStore.UI.Models.Product
         public string ProductName { get; set; } = string.Empty;
         public string ProductDesc { get; set; } = string.Empty;
         public int categoria { get; set; }
+        public decimal ProfitPercentage { get; set; } = 7m;
         public decimal? Price { get; set; }
         public int UnidadMedida { get; set; }
         public int StatusID { get; set; }

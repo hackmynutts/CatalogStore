@@ -110,6 +110,13 @@
                     <span class="info-field-label">Categoría</span>
                     <span class="info-field-value">@CategoriaLabel(Model.categoria)</span>
                 </div>
+                @if(User.IsInRole("Admin") || User.IsInRole("AdminIT"))
+                {
+                    <div>
+                        <span class="info-field-label">Porcentaje de ganancia</span>
+                        <span class="info-field-value">@Model.ProfitPercentage.ToString("N2") %</span>
+                    </div>
+                }
                 <div>
                     <span class="info-field-label">Precio unitario</span>
                     <span class="info-field-value">@(Model.Price.HasValue ? Model.Price.Value.ToString("N2") : "—")</span>

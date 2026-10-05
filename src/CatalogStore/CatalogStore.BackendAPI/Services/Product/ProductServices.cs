@@ -30,6 +30,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 ProductName = dto.ProductName,
                 ProductDesc = dto.ProductDesc,
                 categoria = dto.categoria,
+                ProfitPercentage = Math.Round(1 + dto.ProfitPercentage / 100m, 4),
                 Price = dto.Price,
                 PriceCalcIVA = Math.Round((dto.Price ?? 0) * IVA_RATE, 2),
                 UnidadMedida = dto.UnidadMedida,
@@ -77,6 +78,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                     existing.ProductName,
                     existing.ProductDesc,
                     existing.categoria,
+                    existing.ProfitPercentage,
                     existing.Price,
                     existing.PriceCalcIVA,
                     existing.UnidadMedida,
@@ -91,6 +93,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 existing.ProductName = dto.ProductName;
                 existing.ProductDesc = dto.ProductDesc;
                 existing.categoria = dto.categoria;
+                existing.ProfitPercentage = Math.Round(1 + dto.ProfitPercentage / 100m, 4);
                 existing.Price = dto.Price;
                 existing.PriceCalcIVA = Math.Round((dto.Price ?? 0) * IVA_RATE, 2);
                 existing.UnidadMedida = dto.UnidadMedida;
