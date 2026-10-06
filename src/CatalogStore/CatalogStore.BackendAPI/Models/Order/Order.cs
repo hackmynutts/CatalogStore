@@ -12,7 +12,13 @@ namespace CatalogStore.BackendAPI.Models.Order
         [Display(Name = "Completada")]
         Completed = 2,
         [Display(Name = "Cancelada")]
-        Cancelled = 3
+        Cancelled = 3,
+        [Display(Name = "Rechazada")]
+        Rejected = 4,
+        [Display(Name = "Devuelta")]
+        Returned = 5,
+        [Display(Name = "Despachada")]
+        Shipped = 6
     }
     [Table("Order_TB")]
     public class Order
