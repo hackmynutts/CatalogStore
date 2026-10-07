@@ -15,7 +15,7 @@ namespace CatalogStore.BackendAPI.DTO.Order
         [Display(Name = "Nombre del cliente")]
         public string ClientName { get; set; } = string.Empty;
         [Display(Name = "Estado")]
-        public OrderStatus OrderStatus { get; set; } = OrderStatus.Pending;
+        public OrderStatus OrderStatus { get; set; } = OrderStatus.InProcess;
         [Display(Name = "Nombre del estado")]
         public string OrderStatusName { get; set; } = string.Empty;
         [Display(Name = "Monto total")]

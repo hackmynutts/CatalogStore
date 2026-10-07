@@ -5,19 +5,19 @@ namespace CatalogStore.BackendAPI.Models.Order
 {
     public enum OrderStatus
     {
-        [Display(Name = "Pendiente")]
-        Pending = 0,
         [Display(Name = "En proceso")]
-        InProcess = 1,
+        InProcess= 0,
+        [Display(Name = "Pendiente")]
+        Pending = 1,
         [Display(Name = "Completada")]
         Completed = 2,
         [Display(Name = "Cancelada")]
         Cancelled = 3,
         [Display(Name = "Rechazada")]
         Rejected = 4,
-        [Display(Name = "Devuelta")]
+        [Display(Name = "Retornada")]
         Returned = 5,
-        [Display(Name = "Despachada")]
+        [Display(Name = "Enviada")]
         Shipped = 6
     }
     [Table("Order_TB")]

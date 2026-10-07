@@ -17,7 +17,7 @@ namespace CatalogStore.BackendAPI.DTO.Order
         [Display(Name = "Identificación del cliente")]
         public string ClientIdentification { get; set; } = string.Empty;
         [Display(Name = "Estado")]
-        public OrderStatus OrderStatus { get; set; } = OrderStatus.Pending;
+        public OrderStatus OrderStatus { get; set; } = OrderStatus.InProcess;
         // Texto en español (Humanizer + [Display]); la UI no necesita conocer el enum.
         [Display(Name = "Nombre del estado")]
         public string OrderStatusName { get; set; } = string.Empty;

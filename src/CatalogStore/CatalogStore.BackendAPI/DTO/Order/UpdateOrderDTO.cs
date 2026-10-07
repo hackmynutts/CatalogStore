@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CatalogStore.BackendAPI.DTO.Order
 {
-    // Solo los datos de cabecera. El estado cambia únicamente por start / complete / cancel (cada uno mueve stock),
-    // el total se recalcula con las líneas, y el usuario y la fecha de modificación los pone el servicio.
     public class UpdateOrderDTO
     {
         [Display(Name = "Cliente")]
