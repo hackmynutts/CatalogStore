@@ -225,6 +225,10 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
+                entity.HasIndex(e => e.ClientID)
+                    .IsUnique()
+                    .HasFilter($"[OrderStatus] = {(int)OrderStatus.InProcess}")
+                    .HasDatabaseName("IX_Order_ClientID_InProcess_UQ");
                 entity.HasIndex(e => new { e.ClientID , e.CreatedOn})
                     .HasDatabaseName("IX_Order_ClientID_CreatedOn");
                 entity.HasIndex(e => new { e.OrderStatus })

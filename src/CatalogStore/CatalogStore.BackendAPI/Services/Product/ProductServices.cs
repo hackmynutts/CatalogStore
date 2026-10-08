@@ -3,19 +3,22 @@ using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.EventLogs;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Services.EventLogs;
+using CatalogStore.BackendAPI.Services.Orders;
+using Microsoft.Extensions.Options;
 
 namespace CatalogStore.BackendAPI.Services.Product
 {
     public class ProductServices : IProductServices
     {
-        private const decimal IVA_RATE = 1.13m;
         private const string ModuleName = "Ventas/Productos";
         private const string ProductsTable = "Product";
         private readonly IProductRepository _repository;
+        private readonly IOptions<PricingOptions> _pricing;
         private readonly IEventlogServices _eventlogServices;
-        public ProductServices(IProductRepository repository, IEventlogServices eventlogServices)
+        public ProductServices(IProductRepository repository, IOptions<PricingOptions> pricing, IEventlogServices eventlogServices)
         {
             _repository = repository;
+            _pricing = pricing;
             _eventlogServices = eventlogServices;
         }
         public async Task<List<Models.Product.Product>> GetAllProductsAsync() => await _repository.GetAllProductsAsync();
@@ -32,7 +35,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 categoria = dto.categoria,
                 ProfitPercentage = Math.Round(1 + dto.ProfitPercentage / 100m, 4),
                 Price = dto.Price,
-                PriceCalcIVA = Math.Round((dto.Price ?? 0) * IVA_RATE, 2),
+                PriceCalcIVA = Math.Round((dto.Price ?? 0) * _pricing.Value.IvaRate, 2, MidpointRounding.AwayFromZero),
                 UnidadMedida = dto.UnidadMedida,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
@@ -95,7 +98,7 @@ namespace CatalogStore.BackendAPI.Services.Product
                 existing.categoria = dto.categoria;
                 existing.ProfitPercentage = Math.Round(1 + dto.ProfitPercentage / 100m, 4);
                 existing.Price = dto.Price;
-                existing.PriceCalcIVA = Math.Round((dto.Price ?? 0) * IVA_RATE, 2);
+                existing.PriceCalcIVA = Math.Round((dto.Price ?? 0) * _pricing.Value.IvaRate, 2, MidpointRounding.AwayFromZero);
                 existing.UnidadMedida = dto.UnidadMedida;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;

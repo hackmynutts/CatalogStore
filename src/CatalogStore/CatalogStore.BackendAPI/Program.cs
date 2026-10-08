@@ -15,6 +15,7 @@ using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Inventory;
 using CatalogStore.BackendAPI.Services.InventoryLines;
 using CatalogStore.BackendAPI.Services.InventoryTransactions;
+using CatalogStore.BackendAPI.Services.Orders;
 using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using CatalogStore.BackendAPI.Services.ProductImage;
@@ -73,6 +74,9 @@ builder.Services.AddHttpClient("ExternalCatalog", client =>
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+
+builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection("Pricing"));
+builder.Services.Configure<OrdersOptions>(builder.Configuration.GetSection("Orders"));
 
 builder.Services.AddSingleton<AppTimeProvider>();
 builder.Services.AddSingleton<TimeProvider>(sp => sp.GetRequiredService<AppTimeProvider>());
