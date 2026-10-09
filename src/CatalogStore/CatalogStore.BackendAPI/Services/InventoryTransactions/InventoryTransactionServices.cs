@@ -1,6 +1,7 @@
 using CatalogStore.BackendAPI.DTO.Common;
 using CatalogStore.BackendAPI.DTO.InventoryTransactions;
 using CatalogStore.BackendAPI.Models.EventLogs;
+using CatalogStore.BackendAPI.Models.InventoryLine;
 using CatalogStore.BackendAPI.Models.InventoryTransaction;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
 using CatalogStore.BackendAPI.Repository.InventoryTransactions;
@@ -33,9 +34,12 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
         public async Task<List<InventoryTransactionDTO>> GetByLineAsync(int inventoryLineId) =>
             (await _inventoryTransactionRepository.GetByLineAsync(inventoryLineId)).Select(ToDto).ToList();
 
+        // Movimiento suelto: carga la línea, lo aplica y guarda. Siempre guarda, sea cual sea el tipo.
         public async Task<OperationResult> RegisterAsync(RegisterInventoryTransactionDTO dto, string createdBy)
         {
-            var error = ValidateRequest(dto);
+            if (dto.InventoryLineID <= 0)
+                return OperationResult.Fail("La línea de inventario no es válida.");
+            var error = ValidateMovement(dto.Type, dto.TransactionQuantity, dto.ReferenceID, dto.Reason);
             if (error is not null)
                 return OperationResult.Fail(error);
 
@@ -52,50 +56,17 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
                 if (dto.Type == TransactionType.CargaInicial && await _inventoryTransactionRepository.HasTransactionsAsync(line.InventoryLineID))
                     return OperationResult.Fail("La línea ya tiene movimientos; usá un incremento de stock o un ajuste.");
 
-                var effect = GetEffect(dto.Type, dto.TransactionQuantity);
-                int qtyBefore = line.Quantity;
-                int onHoldBefore = line.QuantityOnHold;
-                int qtyAfter = qtyBefore + effect.Stock;
-                int onHoldAfter = onHoldBefore + effect.OnHold;
-
-                // Estas dos reglas cubren toda la tabla de efectos (son los mismos CHECK de la tabla):
-                // liberar o vender más de lo reservado, y reservar o ajustar por encima del disponible.
-                if (onHoldAfter < 0)
-                    return OperationResult.Fail($"No hay suficiente reservado. Solo hay {onHoldBefore} unidades reservadas.");
-                if (onHoldAfter > qtyAfter)
-                    return OperationResult.Fail($"No hay suficiente disponible. Solo hay {line.QuantityAvailable} unidades disponibles.");
-
                 var now = _time.GetUtcNow().UtcDateTime;
+                var (applyError, transaction) = ApplyCore(line, dto.Type, dto.TransactionQuantity,
+                    dto.ReferenceReason, dto.ReferenceID, dto.Reason, createdBy, now);
+                if (applyError is not null)
+                    return OperationResult.Fail(applyError);
 
-                line.Quantity = qtyAfter;
-                line.QuantityOnHold = onHoldAfter;
-                line.ModifiedBy = createdBy;
-                line.ModifiedOn = now;
-                if (dto.Type is TransactionType.CargaInicial or TransactionType.IncrementoStock)
-                    line.LastRestock = DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
-
-                var transaction = new InventoryTransaction
-                {
-                    InventoryLineID = line.InventoryLineID,
-                    Type = dto.Type,
-                    TransactionQuantity = dto.TransactionQuantity,
-                    QuantityBefore = qtyBefore,
-                    QuantityAfter = qtyAfter,
-                    OnHoldBefore = onHoldBefore,
-                    OnHoldAfter = onHoldAfter,
-                    ReferenceReason = dto.ReferenceReason,
-                    ReferenceID = CleanText(dto.ReferenceID),
-                    Reason = CleanText(dto.Reason),
-                    CreatedBy = createdBy,
-                    CreatedOn = now
-                };
-
-                // Add no guarda; el SaveChanges del repositorio de líneas guarda la línea y la transacción
+                // ApplyCore no guarda; el SaveChanges del repositorio de líneas guarda la línea y la transacción
                 // juntas porque los dos repositorios comparten el mismo DbContext del request.
-                _inventoryTransactionRepository.Add(transaction);
                 await _inventoryLineRepository.SaveChangesAsync();
 
-                return OperationResult.Ok(transaction.InventoryTransactionID);
+                return OperationResult.Ok(transaction!.InventoryTransactionID);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -118,19 +89,83 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
             }
         }
 
-        // Validaciones que no necesitan la base de datos. Se repiten aunque el DTO tenga atributos,
-        // porque otros servicios (órdenes, importación) llaman aquí sin pasar por el model binding.
-        private static string? ValidateRequest(RegisterInventoryTransactionDTO dto)
+        // Para procesos que mueven varias líneas a la vez (órdenes): valida y aplica el movimiento sobre una línea
+        // YA CARGADA con seguimiento, pero NO guarda. Quien llama guarda una sola vez al final, junto con su propia
+        // entidad, así que se guarda todo o nada.
+        // Si un movimiento falla después de haber aplicado otros, quien llama debe descartar los cambios pendientes
+        // (ChangeTracker.Clear) ANTES de loguear o responder: el log usa el mismo DbContext y guardaría lo pendiente.
+        public OperationResult ApplyMovement(InventoryLine line, TransactionType type, int quantity,
+            ReferenceType referenceReason, string? referenceId, string? reason, string user, DateTime now)
         {
-            if (dto.InventoryLineID <= 0)
-                return "La línea de inventario no es válida.";
-            if (dto.Type == TransactionType.None || !Enum.IsDefined(dto.Type))
+            var error = ValidateMovement(type, quantity, referenceId, reason);
+            if (error is not null)
+                return OperationResult.Fail(error);
+            // La regla "solo en una línea sin movimientos" necesita una consulta a la base; eso lo hace RegisterAsync.
+            if (type == TransactionType.CargaInicial)
+                return OperationResult.Fail("La carga inicial solo se registra con RegisterAsync.");
+            if (line.StatusID != 1)
+                return OperationResult.Fail("La línea de inventario no está activa.");
+
+            var (applyError, _) = ApplyCore(line, type, quantity, referenceReason, referenceId, reason, user, now);
+            return applyError is null ? OperationResult.Ok() : OperationResult.Fail(applyError);
+        }
+
+        // Núcleo compartido: calcula, valida las dos reglas de la tabla de efectos, modifica la línea y agrega la
+        // transacción al contexto. No consulta ni guarda. Devuelve el error o la transacción creada.
+        private (string? Error, InventoryTransaction? Transaction) ApplyCore(InventoryLine line, TransactionType type, int quantity,
+            ReferenceType referenceReason, string? referenceId, string? reason, string user, DateTime now)
+        {
+            var effect = GetEffect(type, quantity);
+            int qtyBefore = line.Quantity;
+            int onHoldBefore = line.QuantityOnHold;
+            int qtyAfter = qtyBefore + effect.Stock;
+            int onHoldAfter = onHoldBefore + effect.OnHold;
+
+            // Estas dos reglas cubren toda la tabla de efectos (son los mismos CHECK de la tabla):
+            // liberar o vender más de lo reservado, y reservar o ajustar por encima del disponible.
+            if (onHoldAfter < 0)
+                return ($"No hay suficiente reservado. Solo hay {onHoldBefore} unidades reservadas.", null);
+            if (onHoldAfter > qtyAfter)
+                return ($"No hay suficiente disponible. Solo hay {line.QuantityAvailable} unidades disponibles.", null);
+
+            line.Quantity = qtyAfter;
+            line.QuantityOnHold = onHoldAfter;
+            line.ModifiedBy = user;
+            line.ModifiedOn = now;
+            if (type is TransactionType.CargaInicial or TransactionType.IncrementoStock)
+                line.LastRestock = DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
+
+            var transaction = new InventoryTransaction
+            {
+                InventoryLineID = line.InventoryLineID,
+                Type = type,
+                TransactionQuantity = quantity,
+                QuantityBefore = qtyBefore,
+                QuantityAfter = qtyAfter,
+                OnHoldBefore = onHoldBefore,
+                OnHoldAfter = onHoldAfter,
+                ReferenceReason = referenceReason,
+                ReferenceID = CleanText(referenceId),
+                Reason = CleanText(reason),
+                CreatedBy = user,
+                CreatedOn = now
+            };
+
+            _inventoryTransactionRepository.Add(transaction);
+            return (null, transaction);
+        }
+
+        // Validaciones que no necesitan la base de datos ni la línea. Se repiten aunque el DTO tenga atributos,
+        // porque otros servicios (órdenes, importación) llaman aquí sin pasar por el model binding.
+        private static string? ValidateMovement(TransactionType type, int quantity, string? referenceId, string? reason)
+        {
+            if (type == TransactionType.None || !Enum.IsDefined(type))
                 return "El tipo de movimiento no es válido.";
-            if (dto.TransactionQuantity <= 0)
+            if (quantity <= 0)
                 return "La cantidad debe ser mayor a cero.";
-            if (dto.Type is TransactionType.AjustePositivo or TransactionType.AjusteNegativo && string.IsNullOrWhiteSpace(dto.Reason))
+            if (type is TransactionType.AjustePositivo or TransactionType.AjusteNegativo && string.IsNullOrWhiteSpace(reason))
                 return "Los ajustes requieren una razón.";
-            if (dto.Type is TransactionType.ProductoReservado or TransactionType.ProductoLiberado or TransactionType.Venta && string.IsNullOrWhiteSpace(dto.ReferenceID))
+            if (type is TransactionType.ProductoReservado or TransactionType.ProductoLiberado or TransactionType.Venta && string.IsNullOrWhiteSpace(referenceId))
                 return "Los movimientos de órdenes requieren el número de orden.";
             return null;
         }

@@ -24,8 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Repository\OrderLine\" />
-    <Folder Include="Repository\Order\" />
     <Folder Include="Services\OrderLine\" />
     <Folder Include="Services\Order\" />
     <Folder Include="wwwroot\uploads\products\" />
