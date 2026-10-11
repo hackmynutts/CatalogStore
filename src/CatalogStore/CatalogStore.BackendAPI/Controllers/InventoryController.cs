@@ -47,8 +47,16 @@ namespace CatalogStore.BackendAPI.Controllers
         public async Task<IActionResult> Post([FromBody] AddInventoryDTO inventory)
         {
             inventory.CreatedBy = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
-            int id = await _inventoryServices.AddAsync(inventory);
-            return CreatedAtAction(nameof(Get), new { id = id }, new { Id = id });
+            try
+            {
+                int id = await _inventoryServices.AddAsync(inventory);
+                return CreatedAtAction(nameof(Get), new { id = id }, new { Id = id });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Regla de una sola bodega: el servicio rechaza crear una segunda. Sin este catch salía como error 500.
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT api/<InventoryController>/5

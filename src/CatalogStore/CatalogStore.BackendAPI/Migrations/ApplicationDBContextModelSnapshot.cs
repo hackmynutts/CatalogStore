@@ -471,6 +471,9 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderID"));
 
+                    b.Property<bool>("ApplyIva")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ClientID")
                         .HasColumnType("int");
 

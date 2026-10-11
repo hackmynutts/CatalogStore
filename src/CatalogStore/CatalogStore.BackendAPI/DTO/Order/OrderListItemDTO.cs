@@ -14,6 +14,10 @@ namespace CatalogStore.BackendAPI.DTO.Order
         public int ClientID { get; set; }
         [Display(Name = "Nombre del cliente")]
         public string ClientName { get; set; } = string.Empty;
+        [Display(Name = "Conocido como")]
+        public string? ClientCC { get; set; }
+        [Display(Name = "Aplica IVA")]
+        public bool ApplyIva { get; set; } = true;
         [Display(Name = "Estado")]
         public OrderStatus OrderStatus { get; set; } = OrderStatus.InProcess;
         [Display(Name = "Nombre del estado")]

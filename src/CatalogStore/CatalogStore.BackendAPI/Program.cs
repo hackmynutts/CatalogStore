@@ -106,7 +106,7 @@ builder.Services.AddScoped<IInventoryTransactionRepository, InventoryTransaction
 builder.Services.AddScoped<IInventoryTransactionServices, InventoryTransactionServices>();
 builder.Services.AddScoped<IStockImportServices, StockImportServices>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-//builder.Services.AddScoped<IOrderServices, OrderServices>();
+builder.Services.AddScoped<IOrderServices, OrderServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

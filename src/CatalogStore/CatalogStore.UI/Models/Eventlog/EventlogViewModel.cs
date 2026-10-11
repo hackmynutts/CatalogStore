@@ -38,7 +38,15 @@ namespace CatalogStore.UI.Models.Eventlog
         [Display(Name = "Importación fallida")]
         ImportFail = 16,
         [Display(Name = "Error")]
-        Error = 17
+        Error = 17,
+        [Display(Name = "Completado")]
+        Complete = 18,
+        [Display(Name = "Completado fallido")]
+        CompleteFail = 19,
+        [Display(Name = "Cancelación")]
+        Cancel = 20,
+        [Display(Name = "Cancelación fallida")]
+        CancelFail = 21
     }
     public class EventlogViewModel
     {

@@ -28,6 +28,7 @@ namespace CatalogStore.BackendAPI.Models.Order
         public int ClientID { get; set; }
         public decimal OrderTotalAmount { get; set; } = 0;
         public OrderStatus OrderStatus { get; set; } = OrderStatus.InProcess;
+        public bool ApplyIva { get; set; } = true;
         public string? Notes { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }

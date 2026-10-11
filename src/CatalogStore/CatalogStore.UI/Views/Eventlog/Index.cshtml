@@ -6,7 +6,7 @@
     string BadgeClass(typeEvent t) => t switch
     {
         _ when t.ToString().EndsWith("Fail") || t == typeEvent.Error => "text-bg-danger",
-        typeEvent.Delete or typeEvent.Inactivate => "text-bg-warning",
+        typeEvent.Delete or typeEvent.Inactivate or typeEvent.Cancel => "text-bg-warning",
         typeEvent.Edit => "text-bg-primary",
         typeEvent.LogIn => "text-bg-info",
         typeEvent.LogOut => "text-bg-info-dark",

@@ -11,6 +11,8 @@ namespace CatalogStore.BackendAPI.Repository.Product
         Task<int> AddAsync(Models.Product.Product prod);
         Task<bool> UpdateAsync(Models.Product.Product prod);
         Task<bool> DeleteAsync(int id);
+        // Varios productos en una sola consulta, sin seguimiento (solo lectura). Lo usa el servicio de órdenes al completar.
+        Task<Dictionary<int, Models.Product.Product>> GetByIdsAsync(IEnumerable<int> productIds);
         // Soporte para la importación por lotes: las entidades se devuelven con seguimiento y se guardan juntas.
         Task<Dictionary<int, Models.Product.Product>> GetByExternalIdsAsync(IEnumerable<int> externalIds);
         Task AddRangeAsync(IEnumerable<Models.Product.Product> products);

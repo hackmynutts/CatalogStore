@@ -8,6 +8,11 @@ namespace CatalogStore.BackendAPI.Services.Orders
         // El precio unitario de la línea es Product.Price tal cual: el proveedor ya lo entrega con la ganancia incluida.
         // El servicio rechaza los productos sin precio antes de calcular: un 0 silencioso vendería gratis.
 
+        // Tarifa que se usa en el resto de los cálculos. Una orden sin IVA usa 1: PriceWithIva devuelve el mismo precio
+        // y LineIva da 0, así que no hace falta ningún "if" en el servicio.
+        public static decimal EffectiveIvaRate(bool applyIva, decimal ivaRate) =>
+            applyIva ? ivaRate : 1m;
+
         // Precio unitario para mostrar (con IVA). No entra en el total de la línea.
         public static decimal PriceWithIva(decimal unitPrice, decimal ivaRate) =>
             Round2(unitPrice * ivaRate);

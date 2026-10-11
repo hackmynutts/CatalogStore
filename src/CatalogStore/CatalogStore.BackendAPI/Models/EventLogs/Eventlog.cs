@@ -21,7 +21,12 @@ namespace CatalogStore.BackendAPI.Models.EventLogs
         InactivateFail = 14,
         Import = 15,
         ImportFail= 16,
-        Error = 17
+        Error = 17,
+        // Números explícitos y siempre al final: la bitácora guarda el número, insertar en medio cambiaría registros viejos.
+        Complete = 18,
+        CompleteFail = 19,
+        Cancel = 20,
+        CancelFail = 21
     }
 
     [Table("Eventlog_TB")]
