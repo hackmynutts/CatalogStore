@@ -5,10 +5,8 @@ namespace CatalogStore.BackendAPI.Services.Orders
     // subtotal + IVA y no cantidad × precio con IVA.
     public static class OrderPricing
     {
-        // Precio de venta sin IVA = costo del producto × factor de ganancia (1.07 = 7 %).
-        // El servicio rechaza los productos sin precio antes de llamar aquí: un 0 silencioso vendería gratis.
-        public static decimal UnitPrice(decimal price, decimal profitFactor) =>
-            Round2(price * profitFactor);
+        // El precio unitario de la línea es Product.Price tal cual: el proveedor ya lo entrega con la ganancia incluida.
+        // El servicio rechaza los productos sin precio antes de calcular: un 0 silencioso vendería gratis.
 
         // Precio unitario para mostrar (con IVA). No entra en el total de la línea.
         public static decimal PriceWithIva(decimal unitPrice, decimal ivaRate) =>

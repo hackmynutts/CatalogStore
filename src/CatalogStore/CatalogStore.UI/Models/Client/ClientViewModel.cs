@@ -10,6 +10,8 @@
         public string ClientAddress { get; set; } = string.Empty;
         public string? Cabys { get; set; }
         public string? DeliveryPartner { get; set; }
+        public string? CC { get; set; }
+        public int? Credito { get; set; }
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }

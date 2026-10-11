@@ -1,5 +1,4 @@
 using CatalogStore.UI.Models.ProductImage;
-using System.Text.Json.Serialization;
 
 namespace CatalogStore.UI.Models.Product
 {
@@ -10,11 +9,8 @@ namespace CatalogStore.UI.Models.Product
         public string ProductName { get; set; } = string.Empty;
         public string ProductDesc { get; set; } = string.Empty;
         public int categoria { get; set; }
-        [JsonPropertyName("profitPercentage")]
-        public decimal ProfitMultiplier { get; set; } = 1.07m;
-
-        [JsonIgnore]
-        public decimal ProfitPercentage => Math.Round((ProfitMultiplier - 1) * 100, 2);
+        // Solo viene con valor para administradores; el backend lo manda null a los vendedores.
+        public decimal? CostPrice { get; set; }
         public decimal? Price { get; set; }
         // Mismo nombre que en el backend para que el JSON ("priceCalcIVA") se mapee solo.
         // Nunca es null: los productos sin precio tienen Price = null y PriceCalcIVA = 0.

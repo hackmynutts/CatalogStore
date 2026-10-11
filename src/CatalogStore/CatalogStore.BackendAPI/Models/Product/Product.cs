@@ -39,8 +39,9 @@ namespace CatalogStore.BackendAPI.Models.Product
         public string ProductName { get; set; } = string.Empty;
         public string ProductDesc{ get; set; } = string.Empty;
         public categoryType categoria { get; set; } = categoryType.General;
-        public decimal ProfitPercentage { get; set; } = 1.07m;
         public decimal? Price { get; set; }
+        // Costo de compra: lo escribe un administrador a mano, nunca viene del API del proveedor ni se muestra a vendedores.
+        public decimal? CostPrice { get; set; }
         public decimal PriceCalcIVA { get; set; }
         public Unit UnidadMedida { get; set; } = Unit.Pieza;
         public int StatusID { get; set; }

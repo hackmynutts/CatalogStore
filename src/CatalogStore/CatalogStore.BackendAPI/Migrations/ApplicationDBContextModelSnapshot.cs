@@ -144,6 +144,10 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CC")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
                     b.Property<string>("Cabys")
                         .HasColumnType("nvarchar(max)");
 
@@ -197,6 +201,9 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CC")
+                        .HasDatabaseName("IX_Client_CC");
 
                     b.HasIndex("StatusID");
 
@@ -578,6 +585,10 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
@@ -615,6 +626,10 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductID"));
+
+                    b.Property<decimal?>("CostPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -656,12 +671,6 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<decimal>("ProfitPercentage")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(6, 4)
-                        .HasColumnType("decimal(6,4)")
-                        .HasDefaultValue(1.07m);
-
                     b.Property<int>("StatusID")
                         .HasColumnType("int");
 
@@ -685,7 +694,7 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     b.ToTable("Products_TB", "dbo", t =>
                         {
-                            t.HasCheckConstraint("CK_Product_ProfitPercentage_Valid", "[ProfitPercentage] >= 1 AND [ProfitPercentage] <= 10");
+                            t.HasCheckConstraint("CK_Product_CostPrice_NonNegative", "[CostPrice] IS NULL OR [CostPrice] >= 0");
                         });
                 });
 

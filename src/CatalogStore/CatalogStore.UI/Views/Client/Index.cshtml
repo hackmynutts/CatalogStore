@@ -42,6 +42,7 @@
             <th>Nombre</th>
             <th>Teléfono</th>
             <th>Correo</th>
+            <th>Conocido Como</th>
             <th>Cabys</th>
             <th>Encomiendas de entrega</th>
             <th>Estado</th>
@@ -63,6 +64,7 @@
                 <td>@c.ClientName</td>
                 <td>@c.ClientPhone</td>
                 <td>@c.ClientEmail</td>
+                <td>@(string.IsNullOrEmpty(c.CC) ? "—" : c.CC)</td>
                 <td>@(string.IsNullOrEmpty(c.Cabys) ? "—" : c.Cabys)</td>
                 <td>@(string.IsNullOrEmpty(c.DeliveryPartner) ? "—" : c.DeliveryPartner)</td>
                 <td>

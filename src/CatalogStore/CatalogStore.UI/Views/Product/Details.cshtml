@@ -113,8 +113,8 @@
                 @if(User.IsInRole("Admin") || User.IsInRole("AdminIT"))
                 {
                     <div>
-                        <span class="info-field-label">Porcentaje de ganancia</span>
-                        <span class="info-field-value">@Model.ProfitPercentage.ToString("N2") %</span>
+                        <span class="info-field-label">Precio costo</span>
+                        <span class="info-field-value">@(Model.CostPrice.HasValue ? Model.CostPrice.Value.ToString("N2") : "—")</span>
                     </div>
                 }
                 <div>

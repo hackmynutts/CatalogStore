@@ -107,6 +107,9 @@ namespace CatalogStore.UI.Controllers
                 ClientEmail = cliente.ClientEmail,
                 ClientAddress = cliente.ClientAddress,
                 Cabys = cliente.Cabys,
+                DeliveryPartner = cliente.DeliveryPartner,
+                CC = cliente.CC,
+                Credito = cliente.Credito ?? 0,
                 StatusID = cliente.StatusID
             };
 

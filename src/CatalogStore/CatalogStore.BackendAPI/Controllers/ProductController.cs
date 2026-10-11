@@ -37,6 +37,7 @@ namespace CatalogStore.BackendAPI.Controllers
         public async Task<IActionResult> GetActive()
         {
             List<Product> lista = await _productServices.GetActiveProductsAsync();
+            foreach (var p in lista) HideCostFromSellers(p);
             return Ok(lista);
         }
 
@@ -47,6 +48,7 @@ namespace CatalogStore.BackendAPI.Controllers
         {
             Product  producto = await _productServices.GetProductAsync(id);
             if (producto == null) return NotFound();
+            HideCostFromSellers(producto);
             return Ok(producto);
         }
         // GET api/<ProductController>/5
@@ -56,7 +58,15 @@ namespace CatalogStore.BackendAPI.Controllers
         {
             Product  producto = await _productServices.GetByProductCode(code);
             if (producto == null) return NotFound();
+            HideCostFromSellers(producto);
             return Ok(producto);
+        }
+
+        // El costo es solo para administradores. Es seguro modificar la entidad porque estas lecturas son AsNoTracking:
+        // nada de esto vuelve a la base.
+        private void HideCostFromSellers(Product product)
+        {
+            if (!User.IsInRole("Admin") && !User.IsInRole("AdminIT")) product.CostPrice = null;
         }
 
         // POST api/<ProductController>

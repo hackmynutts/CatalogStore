@@ -73,6 +73,8 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(250).IsRequired();
                 entity.Property(e => e.ClientAddress)
                     .HasMaxLength(350);
+                entity.HasIndex( e => e.CC)
+                    .HasDatabaseName("IX_Client_CC");
                 entity.Property(e => e.CreatedBy)
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.CC)
@@ -93,12 +95,11 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(150).IsRequired();
                 entity.Property(e => e.ProductDesc)
                     .HasMaxLength(250).IsRequired();
-                entity.Property(e => e.ProfitPercentage)
-                    .HasDefaultValue(1.07m)
-                    .HasPrecision(6, 4);
+                entity.Property(e => e.CostPrice)
+                    .HasPrecision(10, 2);
                 entity.ToTable(t =>
                 {
-                    t.HasCheckConstraint("CK_Product_ProfitPercentage_Valid", "[ProfitPercentage] >= 1 AND [ProfitPercentage] <= 10");
+                    t.HasCheckConstraint("CK_Product_CostPrice_NonNegative", "[CostPrice] IS NULL OR [CostPrice] >= 0");
                 });
                 entity.Property(e => e.Price)
                     .HasPrecision(10,2);
@@ -261,6 +262,8 @@ namespace CatalogStore.BackendAPI.Data
                 entity.Property(e => e.UnitPrice)
                     .HasPrecision(10, 2);
                 entity.Property(e => e.UnitPriceIVA)
+                    .HasPrecision(10, 2);
+                entity.Property(e => e.UnitCost)
                     .HasPrecision(10, 2);
                 entity.Property(e => e.LineTotalPrice)
                     .HasPrecision(12, 2);

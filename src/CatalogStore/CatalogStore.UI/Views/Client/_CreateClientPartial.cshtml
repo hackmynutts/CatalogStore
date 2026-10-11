@@ -38,6 +38,11 @@
             <input asp-for="ClientEmail" type="email" class="form-control" />
         </div>
 
+        <div class="mb-3">
+            <label asp-for="CC" class="form-label">Conocido Como</label>
+            <input asp-for="CC" class="form-control" />
+        </div>
+
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label class="form-label">Provincia</label>
@@ -61,6 +66,18 @@
         <div class="mb-3">
             <label asp-for="DeliveryPartner" class="form-label">Encomienda de Entrega</label>
             <input asp-for="DeliveryPartner" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Credito" class="form-label">Crédito</label>
+            <select asp-for="Credito" class="form-select">
+                <option value="0">Contado</option>
+                <option value="1">1 semana</option>
+                <option value="2">2 semanas</option>
+                <option value="3">3 semanas</option>
+                <option value="4">1 mes</option>
+                <option value="5">1 mes y medio</option>
+            </select>
         </div>
     </div>
     <div class="modal-footer">

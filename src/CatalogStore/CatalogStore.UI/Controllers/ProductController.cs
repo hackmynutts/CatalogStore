@@ -135,7 +135,7 @@ namespace CatalogStore.UI.Controllers
                 ProductName = producto.ProductName,
                 ProductDesc = producto.ProductDesc,
                 categoria = producto.categoria,
-                ProfitPercentage = producto.ProfitPercentage,
+                CostPrice = producto.CostPrice,
                 Price = producto.Price,
                 UnidadMedida = producto.UnidadMedida,
                 StatusID = producto.StatusID
@@ -189,7 +189,7 @@ namespace CatalogStore.UI.Controllers
                 ProductName = producto.ProductName,
                 ProductDesc = producto.ProductDesc,
                 categoria = producto.categoria,
-                ProfitPercentage = producto.ProfitPercentage,
+                CostPrice = producto.CostPrice,
                 Price = producto.Price,
                 UnidadMedida = producto.UnidadMedida,
                 StatusID = producto.StatusID

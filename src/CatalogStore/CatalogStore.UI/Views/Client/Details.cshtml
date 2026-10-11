@@ -3,6 +3,16 @@
     ViewData["Title"] = "Detalle del cliente";
     bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor");
     bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    string CreditoLabel(int? c) => c switch
+    {
+        0 => "Contado",
+        1 => "1 semana",
+        2 => "2 semanas",
+        3 => "3 semanas",
+        4 => "1 mes",
+        5 => "1 mes y medio",
+        _ => "—"
+    };
     var initials = string.Join("", Model.ClientName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
 }
 
@@ -38,6 +48,14 @@
         <div class="info-card">
             <h2 class="info-card-title"><i class="fa-solid fa-address-card"></i> Datos de contacto</h2>
             <div class="info-field-grid">
+                <div>
+                    <span class="info-field-label">Conocido Como</span>
+                    <span class="info-field-value">@(string.IsNullOrEmpty(Model.CC) ? "—" : Model.CC)</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Crédito</span>
+                    <span class="info-field-value">@CreditoLabel(Model.Credito)</span>
+                </div>
                 <div>
                     <span class="info-field-label">Teléfono</span>
                     <span class="info-field-value">@Model.ClientPhone</span>

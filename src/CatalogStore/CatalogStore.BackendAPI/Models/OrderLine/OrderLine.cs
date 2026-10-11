@@ -13,6 +13,8 @@ namespace CatalogStore.BackendAPI.Models.OrderLine
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal UnitPriceIVA { get; set; }
+        // Costo del producto al momento de completar la orden (null si el producto no tenía costo); sirve para calcular la ganancia de ventas viejas.
+        public decimal? UnitCost { get; set; }
         public decimal LineTotalPrice { get; set; }
         public decimal Discount { get; set; } = 0.0m;
         public string CreatedBy { get; set; } = string.Empty;

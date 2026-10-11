@@ -47,6 +47,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 Credito = dto.Credito,
                 Cabys = dto.cabys,
                 DeliveryPartner = dto.DeliveryPartner,
+                CC = dto.CC,
                 StatusID = 1,
                 CreatedBy = dto.CreatedBy,
                 CreatedOn = DateTime.UtcNow
@@ -110,6 +111,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.Credito,
                     existing.Cabys,
                     existing.DeliveryPartner,
+                    existing.CC,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
@@ -124,6 +126,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                 existing.Credito = dto.Credito;
                 existing.Cabys = dto.cabys;
                 existing.DeliveryPartner = dto.DeliveryPartner;
+                existing.CC = dto.CC;
                 existing.StatusID = dto.StatusID;
                 existing.ModifiedBy = dto.ModifiedBy;
                 existing.ModifiedOn = DateTime.UtcNow;
@@ -183,6 +186,7 @@ namespace CatalogStore.BackendAPI.Services.Client
                     existing.Credito,
                     existing.Cabys,
                     existing.DeliveryPartner,
+                    existing.CC,
                     existing.StatusID,
                     existing.CreatedBy,
                     existing.CreatedOn,
