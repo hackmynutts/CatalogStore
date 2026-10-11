@@ -12,6 +12,7 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
         Task<int> AddAsync(InventoryLine inventoryLine);
         void Add(InventoryLine inventoryLine);
         Task<InventoryLine?> GetForUpdateAsync(int inventoryLineId);
-        Task<int> SaveChangesAsync();
+        Task<int> SaveChangesAsync(); 
+        Task<Dictionary<int, InventoryLine>> GetForUpdateByProductsAsync(IEnumerable<int> productIds);
     }
 }

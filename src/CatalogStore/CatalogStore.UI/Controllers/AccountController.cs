@@ -18,8 +18,11 @@ namespace CatalogStore.UI.Controllers
             _httpClientFactory = httpClientFactory;
         }
         [HttpGet]
-        public ActionResult Login()
+        public ActionResult Login(bool expired = false)
         {
+            // Llega con ?expired=true cuando SessionExpiredFilter o session-guard.js detectan que el token ya no sirve.
+            if (expired)
+                ViewData["LoginError"] = "Tu sesión expiró. Iniciá sesión de nuevo para continuar.";
             return View();
         }
 

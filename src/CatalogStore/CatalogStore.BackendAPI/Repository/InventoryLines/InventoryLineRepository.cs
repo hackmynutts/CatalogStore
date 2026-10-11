@@ -1,4 +1,5 @@
 ﻿using CatalogStore.BackendAPI.Data;
+using CatalogStore.BackendAPI.Models.InventoryLine;
 using Microsoft.EntityFrameworkCore;
 
 namespace CatalogStore.BackendAPI.Repository.InventoryLines
@@ -10,25 +11,25 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
         {
             _context = context;
         }
-        public async Task<List<Models.InventoryLine.InventoryLine>> GetByInventoryAsync(int inventoryId) =>
+        public async Task<List<InventoryLine>> GetByInventoryAsync(int inventoryId) =>
             await _context.InventoryLines
                 .AsNoTracking()
                 .Where(il => il.InventoryID == inventoryId)
                 .OrderBy(il => il.Product.ProductName)
                 .Include(il => il.Product)
                 .ToListAsync();
-        public async Task<Models.InventoryLine.InventoryLine?> GetByProductAsync(int productId) =>
+        public async Task<InventoryLine?> GetByProductAsync(int productId) =>
             await _context.InventoryLines
                 .AsNoTracking()
                 .Where(il => il.ProductID == productId)
                 .Include(il => il.Product)
                 .FirstOrDefaultAsync();
-        public async Task<Models.InventoryLine.InventoryLine?> GetByIdAsync(int inventoryLineId) => await _context.InventoryLines.AsNoTracking().Include(il => il.Product).FirstOrDefaultAsync(il => il.InventoryLineID == inventoryLineId);
+        public async Task<InventoryLine?> GetByIdAsync(int inventoryLineId) => await _context.InventoryLines.AsNoTracking().Include(il => il.Product).FirstOrDefaultAsync(il => il.InventoryLineID == inventoryLineId);
 
-        public async Task<Models.InventoryLine.InventoryLine?> GetByInventoryAndProductAsync(int inventoryId, int productId) => 
+        public async Task<InventoryLine?> GetByInventoryAndProductAsync(int inventoryId, int productId) => 
             await _context.InventoryLines.AsNoTracking().FirstOrDefaultAsync(il => il.InventoryID == inventoryId && il.ProductID == productId);
-        public async Task<Models.InventoryLine.InventoryLine?> GetForUpdateAsync(int inventoryLineId) => await _context.InventoryLines.FirstOrDefaultAsync(il => il.InventoryLineID == inventoryLineId);
-        public async Task<int> AddAsync(Models.InventoryLine.InventoryLine inventoryLine)
+        public async Task<InventoryLine?> GetForUpdateAsync(int inventoryLineId) => await _context.InventoryLines.FirstOrDefaultAsync(il => il.InventoryLineID == inventoryLineId);
+        public async Task<int> AddAsync(InventoryLine inventoryLine)
         {
             await _context.InventoryLines.AddAsync(inventoryLine);
             await _context.SaveChangesAsync();
@@ -43,8 +44,14 @@ namespace CatalogStore.BackendAPI.Repository.InventoryLines
                 .ToDictionaryAsync(il => il.ProductID);
         }
         // No guarda: para procesos por lote que guardan todo junto con SaveChangesAsync.
-        public void Add(Models.InventoryLine.InventoryLine inventoryLine) => _context.InventoryLines.Add(inventoryLine);
+        public void Add(InventoryLine inventoryLine) => _context.InventoryLines.Add(inventoryLine);
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
-        
+        public Task<Dictionary<int, InventoryLine>> GetForUpdateByProductsAsync(IEnumerable<int> productIds)
+        {
+            var ids = productIds.ToList();
+            return _context.InventoryLines
+                .Where(il => ids.Contains(il.ProductID))
+                .ToDictionaryAsync(il => il.ProductID);
+        }
     }
 }

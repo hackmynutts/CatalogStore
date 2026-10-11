@@ -75,6 +75,8 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(350);
                 entity.Property(e => e.CreatedBy)
                     .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.CC)
+                    .HasMaxLength(140);
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
                 entity.HasOne(e => e.Status)

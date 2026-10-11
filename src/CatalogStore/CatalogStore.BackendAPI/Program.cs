@@ -4,6 +4,7 @@ using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Inventory;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
 using CatalogStore.BackendAPI.Repository.InventoryTransactions;
+using CatalogStore.BackendAPI.Repository.Orders;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Repository.ProductImage;
 using CatalogStore.BackendAPI.Repository.Status;
@@ -104,6 +105,8 @@ builder.Services.AddScoped<IInventoryLineServices, InventoryLineServices>();
 builder.Services.AddScoped<IInventoryTransactionRepository, InventoryTransactionRepository>();
 builder.Services.AddScoped<IInventoryTransactionServices, InventoryTransactionServices>();
 builder.Services.AddScoped<IStockImportServices, StockImportServices>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+//builder.Services.AddScoped<IOrderServices, OrderServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

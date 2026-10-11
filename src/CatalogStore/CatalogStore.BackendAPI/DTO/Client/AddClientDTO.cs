@@ -25,6 +25,8 @@ namespace CatalogStore.BackendAPI.DTO.Client
         public string? cabys { get; set; }
         [Display(Name = "Encomienda de Entrega")]
         public string? DeliveryPartner { get; set; }
+        [Display(Name = "Conocido Como")]
+        public string? CC { get; set; }
         [Display(Name = "Creado por")]
         public string CreatedBy { get; set; } = string.Empty;
         [Display(Name = "Creado el")]

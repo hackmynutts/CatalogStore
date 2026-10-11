@@ -1,3 +1,4 @@
+using CatalogStore.UI.Filters;
 using CatalogStore.UI.Handlers;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
@@ -7,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options => options.Filters.Add<SessionExpiredFilter>());
 builder.Services.AddTransient<JwtDelegatingHandler>();
 builder.Services.AddHttpClient("BackendApi", client =>
 {

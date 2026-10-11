@@ -61,8 +61,17 @@ namespace CatalogStore.BackendAPI.Services.Auth
 
             try
             {
-                var principal = new JwtSecurityTokenHandler().ValidateToken(token, validationParameters, out var validatedToken);
+                // MapInboundClaims = false: por defecto el handler renombra "sub" a ClaimTypes.NameIdentifier y el
+                // FindFirst("sub") de abajo devolvía null, así que la renovación del token respondía siempre 401.
+                var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+                var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
                 if (validatedToken is not JwtSecurityToken jwt || !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                    return null;
+
+                // Un token vencido solo se puede renovar durante un tiempo; pasado ese límite hay que volver a
+                // iniciar sesión. Sin este tope, un token viejo (o robado) generaría tokens nuevos para siempre.
+                var maxAge = TimeSpan.FromHours(_configuration.GetValue<int?>("Jwt:MaxRefreshAgeHours") ?? 8);
+                if (DateTime.UtcNow - jwt.ValidTo > maxAge)
                     return null;
 
                 var sub = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
