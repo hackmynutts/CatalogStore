@@ -17,6 +17,8 @@ namespace CatalogStore.BackendAPI.Repository.Orders
         public async Task<Order?> GetForUpdateAsync(int orderId) => await _dbContext.Orders.Include(o => o.OrderLines).FirstOrDefaultAsync(o => o.OrderID == orderId);
         public async Task<Order?> GetOrderByNumberAsync(string orderNumber) => await _dbContext.Orders.AsNoTracking().Include(o => o.OrderLines).Include(o => o.Client).FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
         public async Task<Order?> GetInProcessByClientForUpdateAsync(int clientId) => await _dbContext.Orders.Include(o => o.OrderLines).FirstOrDefaultAsync(o => o.ClientID == clientId && o.OrderStatus == OrderStatus.InProcess);
+        // Solo lectura (barra del catálogo / perfil del cliente): sin seguimiento y con el cliente para armar el DTO.
+        public async Task<Order?> GetInProcessByClientAsync(int clientId) => await _dbContext.Orders.AsNoTracking().Include(o => o.OrderLines).Include(o => o.Client).FirstOrDefaultAsync(o => o.ClientID == clientId && o.OrderStatus == OrderStatus.InProcess);
         public void AddOrder(Order order) => _dbContext.Orders.Add(order);
         public void RemoveLine(OrderLine orderLine) => _dbContext.OrderLines.Remove(orderLine);
         public Task<int>SaveChangesAsync() => _dbContext.SaveChangesAsync();

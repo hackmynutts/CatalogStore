@@ -1,0 +1,117 @@
+@model List<CatalogStore.UI.Models.Order.OrderListItemViewModel>
+@using CatalogStore.UI.Models.Order
+@{
+    ViewData["Title"] = "Órdenes";
+    var status = ViewData["Status"] as OrderStatus?;
+    var clientId = ViewData["ClientId"] as int?;
+    var clientName = ViewData["ClientName"] as string;
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+
+    // Pestañas de estado: conservan el filtro de cliente si lo hay.
+    var tabs = new (OrderStatus? Value, string Label)[]
+    {
+        (null, "Todas"),
+        (OrderStatus.InProcess, "En proceso"),
+        (OrderStatus.Pending, "Pendientes"),
+        (OrderStatus.Completed, "Completadas"),
+        (OrderStatus.Cancelled, "Canceladas")
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0">@(isAdmin ? "Órdenes" : "Mis órdenes")</h1>
+        @if (clientId.HasValue)
+        {
+            <div class="order-list-filter">
+                Cliente: <strong>@(clientName ?? $"#{clientId}")</strong>
+                <a asp-action="Index" asp-route-status="@(status.HasValue ? (int?)status.Value : null)" class="order-list-filter-clear">Quitar filtro <i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+            </div>
+        }
+    </div>
+    <a asp-controller="Product" asp-action="Catalog" class="btn btn-brand btn-brand-auto"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Nueva orden desde el catálogo</a>
+</div>
+
+<nav class="catalog-filter-pills mb-3" aria-label="Filtrar por estado">
+    @foreach (var tab in tabs)
+    {
+        var active = tab.Value == status;
+        <a class="catalog-pill @(active ? "active" : "")" aria-current="@(active ? "page" : null)"
+           asp-action="Index" asp-route-status="@(tab.Value.HasValue ? (int?)tab.Value.Value : null)" asp-route-clientId="@clientId">@tab.Label</a>
+    }
+</nav>
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="orderTable" data-column="all" placeholder="Buscar por número, cliente o vendedor..." />
+</div>
+
+<div class="table-responsive">
+<table id="orderTable" class="table app-table">
+    <thead>
+        <tr>
+            <th>Número</th>
+            <th>Cliente</th>
+            <th>Estado</th>
+            <th class="text-end">Productos</th>
+            <th class="text-end">Total</th>
+            <th>Vendedor</th>
+            <th>Creada el</th>
+            <th class="sorter-false filter-false">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var o in Model)
+        {
+            <tr>
+                <td><a asp-action="Details" asp-route-id="@o.OrderID" class="order-number-link">@o.OrderNumber</a></td>
+                <td>
+                    @o.ClientName
+                    @if (!string.IsNullOrEmpty(o.ClientCC))
+                    {
+                        <span class="text-muted">(@o.ClientCC)</span>
+                    }
+                </td>
+                <td><span class="badge @OrderStatusStyle.BadgeClass(o.OrderStatus)">@o.OrderStatusName</span></td>
+                <td class="text-end">@o.LineCount</td>
+                <td class="text-end order-amount">
+                    ₡@o.OrderTotalAmount.ToString("N2")
+                    @if (!o.ApplyIva)
+                    {
+                        <span class="order-no-iva">sin IVA</span>
+                    }
+                </td>
+                <td>@o.CreatedBy</td>
+                <td data-text="@o.CreatedOn.ToString("yyyy-MM-dd HH:mm")">@o.CreatedOn.ToString("g")</td>
+                <td class="text-end">
+                    <div class="action-buttons">
+                        <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" aria-label="Ver detalle de @o.OrderNumber" asp-action="Details" asp-route-id="@o.OrderID"><i class="fa-solid fa-eye"></i></a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+
+<div id="orderTable-pager" class="app-table-pager">
+    <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+    <span class="pagedisplay"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+    <select class="pagesize">
+        <option value="10" selected>10 / página</option>
+        <option value="25">25 / página</option>
+        <option value="50">50 / página</option>
+        <option value="100">100 / página</option>
+    </select>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-file-invoice"></i>
+        <span>No hay órdenes para mostrar con este filtro.</span>
+    </div>
+}

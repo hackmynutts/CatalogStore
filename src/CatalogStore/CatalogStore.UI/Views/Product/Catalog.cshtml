@@ -13,11 +13,26 @@
     };
 
     var categoriasPresentes = Model.Select(p => p.categoria).Distinct().OrderBy(c => c).ToList();
+    // Solo los roles que arman órdenes ven el "+" y la barra de orden activa.
+    bool canOrder = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor");
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Catálogo de productos</h1>
 </div>
+
+@if (canOrder)
+{
+    <form id="orderTokenForm" hidden>@Html.AntiForgeryToken()</form>
+
+    @* Barra de la orden activa: la llena order-catalog.js. Sticky para que siga visible al recorrer el catálogo. *@
+    <section class="order-bar" id="orderBar" aria-live="polite" aria-label="Orden activa">
+        <div class="order-bar-loading">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Cargando orden activa…</span>
+        </div>
+    </section>
+}
 
 <div class="app-table-search-wrap mb-3">
     <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
@@ -44,40 +59,62 @@ else
     <div class="catalog-grid" id="catalogGrid">
         @foreach (var p in Model)
         {
-            <div class="catalog-card" data-categoria="@p.categoria" data-name="@p.ProductName.ToLowerInvariant()" data-code="@(p.ProductCode ?? string.Empty)">
-                @if (!p.Images.Any())
-                {
-                    <div class="catalog-card-media">
-                        <div class="product-media-placeholder catalog-media-placeholder">
-                            <i class="fa-solid fa-image"></i>
+            <div class="catalog-card" data-categoria="@p.categoria" data-name="@p.ProductName.ToLowerInvariant()" data-code="@(p.ProductCode ?? string.Empty)" data-product-id="@p.ProductID">
+                <div class="catalog-card-media-wrap">
+                    @if (!p.Images.Any())
+                    {
+                        <div class="catalog-card-media">
+                            <div class="product-media-placeholder catalog-media-placeholder">
+                                <i class="fa-solid fa-image"></i>
+                            </div>
                         </div>
-                    </div>
-                }
-                else if (p.Images.Count == 1)
-                {
-                    <div class="catalog-card-media">
-                        <img src="@p.Images[0].Url" class="d-block w-100 catalog-card-img" alt="@p.ProductName" />
-                    </div>
-                }
-                else
-                {
-                    <div id="catalogCarousel-@p.ProductID" class="carousel slide catalog-card-media" data-bs-ride="false">
-                        <div class="carousel-inner">
-                            @for (int i = 0; i < p.Images.Count; i++)
-                            {
-                                <div class="carousel-item @(i == 0 ? "active" : "")">
-                                    <img src="@p.Images[i].Url" class="d-block w-100 catalog-card-img" alt="@p.ProductName" />
-                                </div>
-                            }
+                    }
+                    else if (p.Images.Count == 1)
+                    {
+                        <div class="catalog-card-media">
+                            <img src="@p.Images[0].Url" class="d-block w-100 catalog-card-img" alt="@p.ProductName" loading="lazy" />
                         </div>
-                        <button class="carousel-control-prev" type="button" data-bs-target="#catalogCarousel-@p.ProductID" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#catalogCarousel-@p.ProductID" data-bs-slide="next">
-                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        </button>
-                    </div>
-                }
+                    }
+                    else
+                    {
+                        <div id="catalogCarousel-@p.ProductID" class="carousel slide catalog-card-media" data-bs-ride="false">
+                            <div class="carousel-inner">
+                                @for (int i = 0; i < p.Images.Count; i++)
+                                {
+                                    <div class="carousel-item @(i == 0 ? "active" : "")">
+                                        <img src="@p.Images[i].Url" class="d-block w-100 catalog-card-img" alt="@p.ProductName" loading="lazy" />
+                                    </div>
+                                }
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#catalogCarousel-@p.ProductID" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#catalogCarousel-@p.ProductID" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    }
+
+                    @if (canOrder)
+                    {
+                        @* Cantidad que ya está en la orden activa (la muestra order-catalog.js). *@
+                        <span class="catalog-card-qty" data-qty-for="@p.ProductID" hidden></span>
+
+                        @if (p.Price.HasValue)
+                        {
+                            <button type="button" class="catalog-add-btn" data-product-id="@p.ProductID" data-product-name="@p.ProductName"
+                                    aria-label="Agregar @p.ProductName a la orden" title="Agregar a la orden">
+                                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="catalog-add-btn" disabled aria-label="@p.ProductName no tiene precio" title="Sin precio: no se puede vender">
+                                <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                            </button>
+                        }
+                    }
+                </div>
                 <div class="catalog-card-body">
                     <span class="catalog-card-category">@CategoriaLabel(p.categoria)</span>
                     <h3 class="catalog-card-title">@p.ProductName</h3>
@@ -97,6 +134,47 @@ else
     </div>
 }
 
+@if (canOrder)
+{
+    @* Panel lateral con el detalle de la orden activa. *@
+    @* data-bs-scroll="true" apaga la trampa de foco del offcanvas: si no, los avisos de SweetAlert abiertos encima no reciben el foco del teclado. *@
+    <div class="offcanvas offcanvas-end order-panel" tabindex="-1" id="orderPanel" aria-labelledby="orderPanelTitle" data-bs-scroll="true">
+        <div class="offcanvas-header order-panel-header">
+            <div>
+                <h2 class="order-panel-title" id="orderPanelTitle">Orden</h2>
+                <div class="order-panel-sub" id="orderPanelSub"></div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body order-panel-body" id="orderPanelBody"></div>
+        <div class="order-panel-footer" id="orderPanelFooter"></div>
+    </div>
+
+    @* Selector de cliente: se abre cuando no hay orden activa. *@
+    <div class="modal fade" id="orderClientModal" tabindex="-1" aria-labelledby="orderClientModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderClientModalTitle">¿Para qué cliente es la orden?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="order-client-hint" id="orderClientHint">Si el cliente ya tiene una orden en proceso, el producto se agrega a esa.</p>
+                    <div class="app-table-search-wrap mb-3">
+                        <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+                        <input type="text" class="app-table-search" id="orderClientSearch" placeholder="Nombre, conocido como o cédula" aria-label="Buscar cliente" autocomplete="off" />
+                    </div>
+                    <div class="order-client-list" id="orderClientList" role="list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script src="~/js/product-catalog.js" asp-append-version="true"></script>
+    @if (canOrder)
+    {
+        <script src="~/js/order-catalog.js" asp-append-version="true"></script>
+    }
 }

@@ -1,0 +1,215 @@
+@model CatalogStore.UI.Models.Order.OrderViewModel
+@using CatalogStore.UI.Models.Order
+@{
+    ViewData["Title"] = $"Orden {Model.OrderNumber}";
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool inProcess = Model.OrderStatus == OrderStatus.InProcess;
+    bool pending = Model.OrderStatus == OrderStatus.Pending;
+    bool canCancel = inProcess || pending;
+    bool isActiveOrder = ViewData["IsActiveOrder"] as bool? == true;
+}
+
+<form id="orderDetailsTokenForm" hidden>@Html.AntiForgeryToken()</form>
+
+<div class="detail-header" id="orderDetails" data-order-id="@Model.OrderID" data-order-number="@Model.OrderNumber"
+     data-client-id="@Model.ClientID" data-total="₡@Model.OrderTotalAmount.ToString("N2")">
+    <div class="detail-header-left">
+        <div class="detail-avatar"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></div>
+        <div>
+            <h1 class="detail-title">Orden @Model.OrderNumber</h1>
+            <div class="detail-subtitle">
+                <span class="badge @OrderStatusStyle.BadgeClass(Model.OrderStatus)">@Model.OrderStatusName</span>
+                <span>Creada el @Model.CreatedOn.ToString("g") por @Model.CreatedBy</span>
+                @if (isActiveOrder)
+                {
+                    <span class="badge badge-order badge-order-active" title="El + del catálogo agrega a esta orden">Orden activa</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="detail-actions">
+        @if (inProcess)
+        {
+            <button type="button" class="btn btn-sm btn-outline-brand" data-action="activate"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar productos</button>
+            <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="submit" @(Model.Lines.Count == 0 ? "disabled" : "")><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar a revisión</button>
+        }
+        @if (pending)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="reopen"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Devolver a edición</button>
+            <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="complete"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Completar</button>
+        }
+        @if (canCancel)
+        {
+            <button type="button" class="btn btn-sm btn-outline-danger" data-action="cancel"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancelar</button>
+        }
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver</a>
+    </div>
+</div>
+
+@if (pending)
+{
+    <div class="order-state-note">
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        <span>Orden en revisión: los productos están reservados y no se pueden modificar. Para cambiarla, devolvela a edición.</span>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-boxes-stacked"></i> Productos <span class="order-card-count">@Model.Lines.Count</span></h2>
+
+            @if (!Model.Lines.Any())
+            {
+                <div class="app-table-empty">
+                    <i class="fa-solid fa-basket-shopping"></i>
+                    <span>La orden todavía no tiene productos.@(inProcess ? " Usá \"Agregar productos\" para elegirlos en el catálogo." : "")</span>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table app-table order-lines-table" id="orderLinesTable">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-end @(inProcess ? "sorter-false" : "")">Cantidad</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-end @(inProcess ? "sorter-false" : "")">Desc. %</th>
+                                <th class="text-end d-none d-xl-table-cell">Subtotal</th>
+                                <th class="text-end d-none d-xl-table-cell">IVA</th>
+                                <th class="text-end">Total</th>
+                                @if (inProcess)
+                                {
+                                    <th class="sorter-false"><span class="visually-hidden">Acciones</span></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in Model.Lines)
+                            {
+                                <tr data-line-id="@l.OrderLineID" data-quantity="@l.Quantity" data-discount="@l.Discount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                    <td>
+                                        <span class="order-line-name">@l.ProductName</span>
+                                        <span class="order-line-meta d-block">@l.ProductCode</span>
+                                    </td>
+                                    <td class="text-end">
+                                        @if (inProcess)
+                                        {
+                                            <input type="number" class="form-control form-control-sm order-input" min="1" max="1000000" step="1" value="@l.Quantity"
+                                                   data-field="quantity" aria-label="Cantidad de @l.ProductName" inputmode="numeric" />
+                                        }
+                                        else
+                                        {
+                                            @l.Quantity
+                                        }
+                                    </td>
+                                    <td class="text-end order-amount">₡@l.UnitPrice.ToString("N2")</td>
+                                    <td class="text-end">
+                                        @if (inProcess)
+                                        {
+                                            <input type="number" class="form-control form-control-sm order-input" min="0" max="99.99" step="0.01"
+                                                   value="@l.Discount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   data-field="discount" aria-label="Descuento de @l.ProductName en porcentaje" inputmode="decimal" />
+                                        }
+                                        else
+                                        {
+                                            @(l.Discount > 0 ? l.Discount.ToString("0.##") + " %" : "—")
+                                        }
+                                    </td>
+                                    <td class="text-end order-amount d-none d-xl-table-cell">₡@l.LineSubtotal.ToString("N2")</td>
+                                    <td class="text-end order-amount d-none d-xl-table-cell">₡@l.LineIVA.ToString("N2")</td>
+                                    <td class="text-end order-amount fw-bold">₡@l.LineTotalPrice.ToString("N2")</td>
+                                    @if (inProcess)
+                                    {
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-action="remove-line" title="Quitar" aria-label="Quitar @l.ProductName">
+                                                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (inProcess)
+                {
+                    <p class="order-hint">
+                        Los cambios de cantidad y descuento se guardan al salir del campo.
+                        @if (!isAdmin)
+                        {
+                            <span>Como vendedor podés dar hasta 5 % de descuento.</span>
+                        }
+                    </p>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-receipt"></i> Resumen</h2>
+            <dl class="order-totals">
+                <div><dt>Subtotal</dt><dd>₡@Model.Subtotal.ToString("N2")</dd></div>
+                <div><dt>IVA</dt><dd>₡@Model.IvaTotal.ToString("N2")</dd></div>
+                <div class="order-totals-total"><dt>Total</dt><dd>₡@Model.OrderTotalAmount.ToString("N2")</dd></div>
+            </dl>
+            @if (inProcess)
+            {
+                <div class="form-check form-switch order-iva-switch mt-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="orderApplyIva" @(Model.ApplyIva ? "checked" : "")>
+                    <label class="form-check-label" for="orderApplyIva">Aplicar IVA</label>
+                </div>
+            }
+            else if (!Model.ApplyIva)
+            {
+                <p class="order-hint mt-2 mb-0"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Orden sin IVA.</p>
+            }
+        </div>
+
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-user"></i> Cliente</h2>
+            <div class="info-field-grid order-client-grid">
+                <div>
+                    <span class="info-field-label">Nombre</span>
+                    <a class="info-field-value order-client-link" asp-controller="Client" asp-action="Details" asp-route-id="@Model.ClientID">@Model.ClientName</a>
+                </div>
+                <div>
+                    <span class="info-field-label">Conocido como</span>
+                    <span class="info-field-value">@(string.IsNullOrEmpty(Model.ClientCC) ? "—" : Model.ClientCC)</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Cédula</span>
+                    <span class="info-field-value">@Model.ClientIdentification</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-note-sticky"></i> Notas</h2>
+            @if (inProcess)
+            {
+                <label for="orderNotes" class="visually-hidden">Notas de la orden</label>
+                <textarea id="orderNotes" class="form-control" rows="3" maxlength="500" placeholder="Ej. entregar el lunes, enviar por encomienda...">@Model.Notes</textarea>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted"><span id="orderNotesCount">@(Model.Notes?.Length ?? 0)</span>/500</small>
+                    <button type="button" class="btn btn-sm btn-outline-brand" data-action="save-notes">Guardar notas</button>
+                </div>
+            }
+            else
+            {
+                <p class="mb-0 @(string.IsNullOrEmpty(Model.Notes) ? "text-muted" : "")">@(string.IsNullOrEmpty(Model.Notes) ? "Sin notas." : Model.Notes)</p>
+            }
+        </div>
+
+        @if (Model.ModifiedOn.HasValue)
+        {
+            <p class="order-hint">Última modificación: @Model.ModifiedOn.Value.ToString("g") por @Model.ModifiedBy</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/order-details.js" asp-append-version="true"></script>
+}

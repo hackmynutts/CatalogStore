@@ -1,4 +1,5 @@
 using CatalogStore.UI.Models.Client;
+using CatalogStore.UI.Models.Order;
 using CatalogStore.UI.Models.Status;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,13 @@ namespace CatalogStore.UI.Controllers
 
             var cliente = await response.Content.ReadFromJsonAsync<ClientViewModel>();
             if (cliente == null) return NotFound();
+
+            // Órdenes del cliente para la tarjeta "Órdenes" (el vendedor recibe solo las suyas; lo filtra la API).
+            // Si falla, la tarjeta muestra el estado vacío: no se rompe el detalle del cliente.
+            var ordersResponse = await client.GetAsync($"api/Order?clientId={id}");
+            ViewData["Orders"] = ordersResponse.IsSuccessStatusCode
+                ? await ordersResponse.Content.ReadFromJsonAsync<List<OrderListItemViewModel>>() ?? new()
+                : new List<OrderListItemViewModel>();
             return View(cliente);
         }
 

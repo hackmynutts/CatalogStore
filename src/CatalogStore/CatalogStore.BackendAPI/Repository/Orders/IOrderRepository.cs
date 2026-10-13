@@ -10,6 +10,7 @@ namespace CatalogStore.BackendAPI.Repository.Orders
         Task<Order?> GetForUpdateAsync(int orderId);
         Task<Order?> GetOrderByNumberAsync(string orderNumber);
         Task<Order?> GetInProcessByClientForUpdateAsync(int clientId);
+        Task<Order?> GetInProcessByClientAsync(int clientId);
         void AddOrder(Order order);
         void RemoveLine(OrderLine orderLine);
         Task<int> SaveChangesAsync();
