@@ -18,12 +18,14 @@ namespace CatalogStore.BackendAPI.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("dbo")
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.HasSequence<int>("OrderNumberSeq");
+
+            modelBuilder.HasSequence<int>("SaleNumberSeq");
 
             modelBuilder.Entity("CatalogStore.BackendAPI.Data.ApplicationRole", b =>
                 {
@@ -744,6 +746,227 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.ToTable("ProductImages_TB", "dbo");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
+                {
+                    b.Property<int>("SalesHeaderID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesHeaderID"));
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<bool>("ApplyIva")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Balance")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasComputedColumnSql("[TotalAmount] - [AmountPaid]", true);
+
+                    b.Property<string>("ClientAddress")
+                        .IsRequired()
+                        .HasMaxLength(350)
+                        .HasColumnType("nvarchar(350)");
+
+                    b.Property<string>("ClientCC")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<string>("ClientEmail")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<int>("ClientID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClientIdentification")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountTotal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("IvaTotal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrderID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentTerm")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("SaleDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SaleNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Seller")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.HasKey("SalesHeaderID");
+
+                    b.HasIndex("DueDate")
+                        .HasDatabaseName("IX_SalesHeader_DueDate");
+
+                    b.HasIndex("OrderID")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SalesHeader_OrderID");
+
+                    b.HasIndex("SaleNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SalesHeader_SaleNumber");
+
+                    b.HasIndex("ClientID", "SaleDate")
+                        .HasDatabaseName("IX_SalesHeader_ClientID_SaleDate");
+
+                    b.HasIndex("PaymentStatus", "DueDate")
+                        .HasDatabaseName("IX_SalesHeader_PaymentStatus_DueDate");
+
+                    b.ToTable("SalesHeader_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NonNegative", "[AmountPaid] >= 0");
+
+                            t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NotAboveTotal", "[AmountPaid] <= [TotalAmount]");
+                        });
+                });
+
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesLine.SalesLine", b =>
+                {
+                    b.Property<int>("SalesLineID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesLineID"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Discount")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("LineIva")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("LineSubtotal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("LineTotalPrice")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SalesHeaderID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("UnitPriceIVA")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("SalesLineID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("SalesHeaderID", "ProductID")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SalesLine_SalesHeaderID_ProductID");
+
+                    b.ToTable("SalesLine_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalesLine_Discount_Valid", "[Discount] >= 0 AND [Discount] <= 99.99");
+
+                            t.HasCheckConstraint("CK_SalesLine_LineTotalPrice_NonNegative", "[LineTotalPrice] >= 0");
+
+                            t.HasCheckConstraint("CK_SalesLine_Quantity_Positive", "[Quantity] > 0");
+
+                            t.HasCheckConstraint("CK_SalesLine_UnitPriceIVA_NonNegative", "[UnitPriceIVA] >= 0");
+
+                            t.HasCheckConstraint("CK_SalesLine_UnitPrice_NonNegative", "[UnitPrice] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.Status.Status", b =>
                 {
                     b.Property<int>("StatusID")
@@ -1001,6 +1224,48 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
+                {
+                    b.HasOne("CatalogStore.BackendAPI.Models.Client.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesHeader_Client_ClientID");
+
+                    b.HasOne("CatalogStore.BackendAPI.Models.Order.Order", "Order")
+                        .WithOne()
+                        .HasForeignKey("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", "OrderID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesHeader_Order_OrderID");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesLine.SalesLine", b =>
+                {
+                    b.HasOne("CatalogStore.BackendAPI.Models.Product.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesLine_Product_ProductID");
+
+                    b.HasOne("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", "SalesHeader")
+                        .WithMany("Lines")
+                        .HasForeignKey("SalesHeaderID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesLine_SalesHeader_SalesHeaderID");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesHeader");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("CatalogStore.BackendAPI.Data.ApplicationRole", null)
@@ -1060,6 +1325,11 @@ namespace CatalogStore.BackendAPI.Migrations
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.Product.Product", b =>
                 {
                     b.Navigation("Images");
+                });
+
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

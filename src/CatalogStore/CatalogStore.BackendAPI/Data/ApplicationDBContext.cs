@@ -10,6 +10,8 @@ using CatalogStore.BackendAPI.Models.InventoryLine;
 using CatalogStore.BackendAPI.Models.InventoryTransaction;
 using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
+using CatalogStore.BackendAPI.Models.SalesHeader;
+using CatalogStore.BackendAPI.Models.SalesLine;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -25,6 +27,8 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderLine> OrderLines { get; set; }
+        public DbSet<SalesHeader> SalesHeaders { get; set; }
+        public DbSet<SalesLine> SalesLines { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -290,6 +294,110 @@ namespace CatalogStore.BackendAPI.Data
                     t.HasCheckConstraint("CK_OrderLine_UnitPriceIVA_NonNegative", "[UnitPriceIVA] >= 0");
                     t.HasCheckConstraint("CK_OrderLine_LineTotalPrice_NonNegative", "[LineTotalPrice] >= 0");
                     t.HasCheckConstraint("CK_OrderLine_Discount_Valid", "[Discount] >= 0 AND [Discount] <= 99.99");
+                });
+            });
+            builder.Entity<SalesHeader>(entity =>
+            {
+                entity.Property(e => e.SaleNumber)
+                    .HasMaxLength(20);
+                entity.Property(e => e.ClientIdentification)
+                    .HasMaxLength(20);
+                entity.Property(e => e.ClientName)
+                    .HasMaxLength(250);
+                entity.Property(e => e.ClientAddress)
+                    .HasMaxLength(350).IsRequired();
+                entity.Property(e => e.ClientEmail)
+                    .HasMaxLength(250);
+                entity.Property(e => e.ClientCC)
+                    .HasMaxLength(140);
+                entity.Property(e => e.Subtotal)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.DiscountTotal)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.IvaTotal)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.TotalAmount)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.AmountPaid)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.Balance)
+                    .HasPrecision(12, 2)
+                    .HasComputedColumnSql("[TotalAmount] - [AmountPaid]", stored: true);
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(500);
+                entity.Property(e => e.Seller)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.HasIndex(e => e.SaleNumber)
+                    .HasDatabaseName("IX_SalesHeader_SaleNumber")
+                    .IsUnique(); 
+                entity.HasIndex(e => new { e.OrderID })
+                    .HasDatabaseName("IX_SalesHeader_OrderID")
+                    .IsUnique();
+                entity.HasOne(e => e.Order)
+                    .WithOne()
+                    .HasForeignKey<SalesHeader>(e => e.OrderID)
+                    .HasConstraintName("FK_SalesHeader_Order_OrderID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.ClientID, e.SaleDate })
+                    .HasDatabaseName("IX_SalesHeader_ClientID_SaleDate");
+                entity.HasOne(e => e.Client)
+                    .WithMany()
+                    .HasForeignKey(e => e.ClientID)
+                    .HasConstraintName("FK_SalesHeader_Client_ClientID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.DueDate})
+                    .HasDatabaseName("IX_SalesHeader_DueDate");
+                entity.HasIndex(e => new { e.PaymentStatus, e.DueDate })
+                    .HasDatabaseName("IX_SalesHeader_PaymentStatus_DueDate");
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NonNegative", "[AmountPaid] >= 0");
+                    t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NotAboveTotal", "[AmountPaid] <= [TotalAmount]");
+                });
+            }).HasSequence<int>("SaleNumberSeq").StartsAt(1).IncrementsBy(1);
+            builder.Entity<SalesLine>(entity =>
+            {
+                entity.Property(e => e.ProductCode)
+                    .HasMaxLength(20);
+                entity.Property(e => e.ProductName)
+                    .HasMaxLength(150).IsRequired();
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.UnitPrice)
+                    .HasPrecision(10, 2);
+                entity.Property(e => e.UnitPriceIVA)
+                    .HasPrecision(10, 2);
+                entity.Property(e => e.Discount)
+                    .HasPrecision(5, 2);
+                entity.Property(e => e.LineSubtotal)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.LineIva)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.LineTotalPrice)
+                    .HasPrecision(12, 2);
+                entity.HasIndex(e => new { e.SalesHeaderID, e.ProductID })
+                    .HasDatabaseName("IX_SalesLine_SalesHeaderID_ProductID").IsUnique();
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductID)
+                    .HasConstraintName("FK_SalesLine_Product_ProductID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.SalesHeader)
+                    .WithMany(h => h.Lines)
+                    .HasForeignKey(e => e.SalesHeaderID)
+                    .HasConstraintName("FK_SalesLine_SalesHeader_SalesHeaderID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_SalesLine_Quantity_Positive", "[Quantity] > 0");
+                    t.HasCheckConstraint("CK_SalesLine_UnitPrice_NonNegative", "[UnitPrice] >= 0");
+                    t.HasCheckConstraint("CK_SalesLine_UnitPriceIVA_NonNegative", "[UnitPriceIVA] >= 0");
+                    t.HasCheckConstraint("CK_SalesLine_LineTotalPrice_NonNegative", "[LineTotalPrice] >= 0");
+                    t.HasCheckConstraint("CK_SalesLine_Discount_Valid", "[Discount] >= 0 AND [Discount] <= 99.99");
                 });
             });
         }
