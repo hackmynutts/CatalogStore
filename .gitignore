@@ -430,3 +430,6 @@ FodyWeavers.xsd
 
 # Configuración local del asistente de importación de imágenes (rutas y correo de cada desarrollador)
 tools/ImportImages/*.local.json
+
+# Imágenes de productos subidas desde el sistema: son datos, no código (se respaldan con la base, no en git)
+src/CatalogStore/CatalogStore.BackendAPI/wwwroot/images/products/
