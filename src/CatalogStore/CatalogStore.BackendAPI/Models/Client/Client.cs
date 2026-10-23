@@ -18,10 +18,26 @@ namespace CatalogStore.BackendAPI.Models.Client
         [Display(Name ="1 mes y medio")]
         M15 = 5
     }
+    // Tipo de identificación según el catálogo de Hacienda: el número del enum ES el código (01, 02...),
+    // así la factura electrónica lo envía con ((int)tipo).ToString("D2") sin tabla de traducción.
+    public enum IdentificationType
+    {
+        [Display(Name = "Cédula física")]
+        Fisica = 1,
+        [Display(Name = "Cédula jurídica")]
+        Juridica = 2,
+        [Display(Name = "DIMEX")]
+        Dimex = 3,
+        [Display(Name = "NITE")]
+        Nite = 4,
+        [Display(Name = "Extranjero")]
+        Extranjero = 5
+    }
     [Table("Client_TB")]
     public class Client
     {
         public int Id { get; set; }
+        public IdentificationType IdentificationType { get; set; } = IdentificationType.Fisica;
         public string Identification { get; set; } = string.Empty;
         public string ClientName { get; set; } = string.Empty;
         public string ClientPhone { get; set; } = string.Empty;

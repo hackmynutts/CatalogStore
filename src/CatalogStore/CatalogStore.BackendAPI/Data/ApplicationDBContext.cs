@@ -104,7 +104,11 @@ namespace CatalogStore.BackendAPI.Data
                 entity.ToTable(t =>
                 {
                     t.HasCheckConstraint("CK_Product_CostPrice_NonNegative", "[CostPrice] IS NULL OR [CostPrice] >= 0");
+                    // CABYS: vacío mientras no se carga, o exactamente 13 dígitos.
+                    t.HasCheckConstraint("CK_Product_CabysCode_Format", "[CabysCode] IS NULL OR (LEN([CabysCode]) = 13 AND [CabysCode] NOT LIKE '%[^0-9]%')");
                 });
+                entity.Property(e => e.CabysCode)
+                    .HasMaxLength(13);
                 entity.Property(e => e.Price)
                     .HasPrecision(10,2);
                 entity.Property(e => e.PriceCalcIVA)
@@ -302,6 +306,8 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(20);
                 entity.Property(e => e.ClientIdentification)
                     .HasMaxLength(20);
+                entity.Property(e => e.ClientPhone)
+                    .HasMaxLength(10);
                 entity.Property(e => e.ClientName)
                     .HasMaxLength(250);
                 entity.Property(e => e.ClientAddress)

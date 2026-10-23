@@ -44,6 +44,9 @@ namespace CatalogStore.BackendAPI.Models.Product
         public decimal? CostPrice { get; set; }
         public decimal PriceCalcIVA { get; set; }
         public Unit UnidadMedida { get; set; } = Unit.Pieza;
+        // Código CABYS de Hacienda (13 dígitos) para la factura electrónica. Opcional mientras se cargan;
+        // sin él la línea no se puede facturar. No confundir con Client.Cabys, que es la actividad económica.
+        public string? CabysCode { get; set; }
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }

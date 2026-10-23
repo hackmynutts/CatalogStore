@@ -192,6 +192,9 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<int>("IdentificationType")
+                        .HasColumnType("int");
+
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(140)
                         .HasColumnType("nvarchar(140)");
@@ -632,6 +635,10 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductID"));
 
+                    b.Property<string>("CabysCode")
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
+
                     b.Property<decimal?>("CostPrice")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
@@ -699,6 +706,8 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     b.ToTable("Products_TB", "dbo", t =>
                         {
+                            t.HasCheckConstraint("CK_Product_CabysCode_Format", "[CabysCode] IS NULL OR (LEN([CabysCode]) = 13 AND [CabysCode] NOT LIKE '%[^0-9]%')");
+
                             t.HasCheckConstraint("CK_Product_CostPrice_NonNegative", "[CostPrice] IS NULL OR [CostPrice] >= 0");
                         });
                 });
@@ -789,10 +798,18 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<int>("ClientIdentificationType")
+                        .HasColumnType("int");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClientPhone")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()

@@ -7,6 +7,7 @@ using CatalogStore.BackendAPI.Repository.InventoryTransactions;
 using CatalogStore.BackendAPI.Repository.Orders;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Repository.ProductImage;
+using CatalogStore.BackendAPI.Repository.Sales;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
 using CatalogStore.BackendAPI.Services.Client;
@@ -20,6 +21,7 @@ using CatalogStore.BackendAPI.Services.Orders;
 using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using CatalogStore.BackendAPI.Services.ProductImage;
+using CatalogStore.BackendAPI.Services.Sales;
 using CatalogStore.BackendAPI.Services.Status;
 using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -107,6 +109,8 @@ builder.Services.AddScoped<IInventoryTransactionServices, InventoryTransactionSe
 builder.Services.AddScoped<IStockImportServices, StockImportServices>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderServices, OrderServices>();
+builder.Services.AddScoped<ISalesRepository, SalesRepository>();
+builder.Services.AddScoped<ISalesServices, SalesServices>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

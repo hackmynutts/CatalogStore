@@ -24,6 +24,8 @@ namespace CatalogStore.BackendAPI.Models.SalesHeader
         public int ClientID { get; set; }
         public string ClientName { get; set; } = string.Empty;
         public string ClientIdentification { get; set; } = string.Empty;
+        public IdentificationType ClientIdentificationType { get; set; } = IdentificationType.Fisica;
+        public string ClientPhone { get; set; } = string.Empty;
         public string? ClientCC { get; set; } = string.Empty;
         public string ClientEmail { get; set; } = string.Empty;
         public string ClientAddress { get; set; } = string.Empty;
