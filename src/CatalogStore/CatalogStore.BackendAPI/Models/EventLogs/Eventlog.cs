@@ -26,7 +26,11 @@ namespace CatalogStore.BackendAPI.Models.EventLogs
         Complete = 18,
         CompleteFail = 19,
         Cancel = 20,
-        CancelFail = 21
+        CancelFail = 21,
+        Order = 22,
+        OrderFail = 23,
+        Sale = 24,
+        SaleFail = 25
     }
 
     [Table("Eventlog_TB")]

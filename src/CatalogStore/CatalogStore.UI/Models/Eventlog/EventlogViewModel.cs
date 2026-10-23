@@ -46,7 +46,15 @@ namespace CatalogStore.UI.Models.Eventlog
         [Display(Name = "Cancelación")]
         Cancel = 20,
         [Display(Name = "Cancelación fallida")]
-        CancelFail = 21
+        CancelFail = 21,
+        [Display(Name = "Orden creada")]
+        Order = 22,
+        [Display(Name = "Orden fallida")]
+        OrderFail = 23,
+        [Display(Name = "Venta creada")]
+        Sale = 24,
+        [Display(Name = "Venta fallida")]
+        SaleFail = 25
     }
     public class EventlogViewModel
     {

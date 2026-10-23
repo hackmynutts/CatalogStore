@@ -1,18 +1,22 @@
 using CatalogStore.BackendAPI.DTO.Common;
 using CatalogStore.BackendAPI.DTO.Order;
 using CatalogStore.BackendAPI.DTO.OrderLine;
+using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.EventLogs;
 using CatalogStore.BackendAPI.Models.InventoryLine;
 using CatalogStore.BackendAPI.Models.InventoryTransaction;
 using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
+using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
 using CatalogStore.BackendAPI.Repository.Orders;
 using CatalogStore.BackendAPI.Repository.Product;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.InventoryTransactions;
+using CatalogStore.BackendAPI.Services.Sales;
 using Humanizer;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -43,7 +47,9 @@ namespace CatalogStore.BackendAPI.Services.Orders
         private readonly IOptions<PricingOptions> _pricing;
         private readonly IOptions<OrdersOptions> _ordersOptions;
         private readonly TimeProvider _time;
-        public OrderServices(IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices, IProductRepository productRepository, IClientServices clientServices, IEventlogServices eventlogServices, IOptions<PricingOptions> pricingOptions, IOptions<OrdersOptions> ordersOptions, TimeProvider time)
+        private readonly ISalesServices _salesServices;
+        public OrderServices(IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices, IProductRepository productRepository, 
+                                IClientServices clientServices, IEventlogServices eventlogServices, IOptions<PricingOptions> pricingOptions, IOptions<OrdersOptions> ordersOptions, TimeProvider time, ISalesServices salesServices)
         {
             _orderRepository = orderRepository;
             _inventoryLineRepository = inventoryLineRepository;
@@ -54,13 +60,14 @@ namespace CatalogStore.BackendAPI.Services.Orders
             _pricing = pricingOptions;
             _ordersOptions = ordersOptions;
             _time = time;
+            _salesServices = salesServices;
         }
 
         // ───────────────────────── Crear / abrir ─────────────────────────
 
         // Botón "Iniciar orden" del perfil del cliente: si ya tiene una en proceso la devuelve, si no crea una vacía.
         public Task<OperationResult> StartAsync(int clientId, string user, bool isAdmin) =>
-            WithRetryAsync(() => StartCoreAsync(clientId, user, isAdmin), clientId.ToString(), "iniciar una orden");
+            WithRetryAsync(() => StartCoreAsync(clientId, user, isAdmin), clientId.ToString(), "iniciar una orden", typeEvent.OrderFail);
 
         private async Task<OperationResult> StartCoreAsync(int clientId, string user, bool isAdmin)
         {
@@ -85,7 +92,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
 
         // "+" del catálogo sin orden activa: busca la orden InProcess del cliente o la crea, y agrega la línea.
         public Task<OperationResult> AddItemAsync(int clientId, AddOrderLineDTO dto, string user, bool isAdmin) =>
-            WithRetryAsync(() => AddItemCoreAsync(clientId, dto, user, isAdmin), clientId.ToString(), "agregar un producto a la orden");
+            WithRetryAsync(() => AddItemCoreAsync(clientId, dto, user, isAdmin), clientId.ToString(), "agregar un producto a la orden", typeEvent.OrderFail);
 
         // "+" con orden activa, o agregar desde la pantalla de la orden: la orden ya se conoce.
         public Task<OperationResult> AddLineAsync(int orderId, AddOrderLineDTO dto, string user, bool isAdmin) =>
@@ -462,9 +469,11 @@ namespace CatalogStore.BackendAPI.Services.Orders
 
             order.OrderStatus = OrderStatus.Completed;
             Touch(order, user, now);
+            var sale = await _salesServices.CreateFromOrderAsync(order, user, now);
             await _orderRepository.SaveChangesAsync();
 
             await LogStatusChangeAsync(typeEvent.Complete, order, OrderStatus.Pending, "completada");
+            await LogSaleCreatedAsync(sale, order.OrderNumber);
             return OperationResult.Ok(order.OrderID);
         }
 
@@ -755,7 +764,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
         // Solo se registra la creación de la orden: cada línea agregada ya deja su ProductoReservado en el kardex.
         // Se pasa un objeto anónimo y no la entidad: Order → OrderLines → Order es un ciclo que el serializador no soporta.
         private Task LogOrderCreatedAsync(Order order) =>
-            _eventlogServices.LogAsync(typeEvent.Add, ModuleName, OrdersTable, order.OrderID.ToString(),
+            _eventlogServices.LogAsync(typeEvent.Order, ModuleName, OrdersTable, order.OrderID.ToString(),
                 $"Orden {order.OrderNumber} creada.",
                 postData: new
                 {
@@ -767,6 +776,39 @@ namespace CatalogStore.BackendAPI.Services.Orders
                     order.OrderTotalAmount,
                     order.CreatedBy,
                     order.CreatedOn
+                });
+        private Task LogSaleCreatedAsync(SalesHeader sale, string orderNo) =>
+            _eventlogServices.LogAsync(typeEvent.Sale, "Ventas/Ventas", "SalesHeader", sale.SalesHeaderID.ToString(),
+                $"Venta {sale.SaleNumber} creada sobre la orden {orderNo}.",
+                postData: new
+                {
+                    sale.SalesHeaderID,
+                    sale.OrderID,
+                    sale.SaleNumber,
+                    sale.ClientID,
+                    sale.ClientIdentificationType,
+                    sale.ClientIdentification,
+                    sale.ClientName,
+                    sale.ClientEmail,
+                    sale.ClientPhone,
+                    sale.ClientAddress,
+                    sale.ClientCC,
+                    sale.SaleDate,
+                    sale.Seller,
+                    sale.ApplyIva,
+                    sale.Notes,
+                    sale.PaymentTerm,
+                    sale.DueDate,
+                    sale.CreatedBy,
+                    sale.CreatedOn,
+                    sale.TotalAmount,
+                    sale.Subtotal,
+                    sale.IvaTotal,
+                    sale.DiscountTotal,
+                    // Las entidades SalesLine no: cada una apunta de vuelta a la venta (SalesHeader) y el serializador
+                    // entra en un ciclo. Como este log va DESPUÉS del SaveChanges, la orden quedaría completada pero el
+                    // método respondería con error. Se proyecta solo lo necesario.
+                    Lines = sale.Lines.Select(l => new { l.ProductID, l.ProductCode, l.Quantity, l.UnitPrice, l.Discount, l.LineTotalPrice })
                 });
     }
 }
