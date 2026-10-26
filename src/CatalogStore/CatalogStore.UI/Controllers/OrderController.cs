@@ -1,5 +1,7 @@
+using CatalogStore.UI.Handlers;
 using CatalogStore.UI.Models.Client;
 using CatalogStore.UI.Models.Order;
+using CatalogStore.UI.Models.Sales;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
@@ -61,6 +63,14 @@ namespace CatalogStore.UI.Controllers
                 return NotFound();
 
             ViewData["IsActiveOrder"] = ReadActiveOrderId() == order.OrderID;
+
+            // Una orden completada tiene su venta: se enlaza desde la cabecera.
+            if (order.OrderStatus == OrderStatus.Completed)
+            {
+                var saleResponse = await client.GetAsync($"api/Sale/by-order/{order.OrderID}");
+                if (saleResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                    ViewData["Sale"] = await saleResponse.Content.ReadFromJsonAsync<SaleViewModel>();
+            }
             return View(order);
         }
 
@@ -110,7 +120,18 @@ namespace CatalogStore.UI.Controllers
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.PostAsync($"api/Order/{orderId}/complete", null);
-            return await ToJsonAsync(response, "No se pudo completar la orden.");
+            if (!response.IsSuccessStatusCode)
+                return await ToJsonAsync(response, "No se pudo completar la orden.");
+
+            // Al completar nace la venta: se manda directo a ella para registrar el pago.
+            var saleResponse = await client.GetAsync($"api/Sale/by-order/{orderId}");
+            if (saleResponse.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var sale = await saleResponse.Content.ReadFromJsonAsync<SaleViewModel>();
+                if (sale is not null)
+                    return Json(new { success = true, saleNumber = sale.SaleNumber, redirectUrl = Url.Action("Details", "Sales", new { id = sale.SalesHeaderID, created = true }) });
+            }
+            return Json(new { success = true });
         }
 
         // POST: Order/Cancel — libera lo reservado. Si era la orden activa, se suelta.
@@ -317,28 +338,7 @@ namespace CatalogStore.UI.Controllers
                 : Json(new { success = false, message = await ReadErrorAsync(response, fallback) });
 
         // La API responde { message } en reglas de negocio y ProblemDetails { errors: { campo: [..] } } en validaciones.
-        private static async Task<string> ReadErrorAsync(HttpResponseMessage response, string fallback)
-        {
-            if (response.StatusCode == HttpStatusCode.Forbidden)
-                return "No tenés permiso para esta acción.";
-            try
-            {
-                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                var root = doc.RootElement;
-                if (root.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
-                    return message.GetString() ?? fallback;
-                if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Object)
-                {
-                    var list = errors.EnumerateObject()
-                        .SelectMany(e => e.Value.EnumerateArray().Select(v => v.GetString()))
-                        .Where(s => !string.IsNullOrWhiteSpace(s));
-                    var joined = string.Join(" ", list);
-                    if (joined.Length > 0)
-                        return joined;
-                }
-            }
-            catch (JsonException) { }
-            return fallback;
-        }
+        private static Task<string> ReadErrorAsync(HttpResponseMessage response, string fallback) =>
+            ApiErrorReader.ReadAsync(response, fallback);
     }
 }

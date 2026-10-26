@@ -13,7 +13,9 @@ namespace CatalogStore.BackendAPI.Models.InventoryTransaction
         ProductoLiberado = 4,
         Venta = 5,
         AjustePositivo = 6,
-        AjusteNegativo = 7
+        AjusteNegativo = 7,
+        [Display(Name = "Devolución por anulación")]
+        Devolucion = 8
     }
     public enum ReferenceType
     {
@@ -21,7 +23,8 @@ namespace CatalogStore.BackendAPI.Models.InventoryTransaction
         [Display(Name = "Importación de Proveedor")]
         ImportacionProveedor= 1,
         Orden = 2,
-        AjusteManual = 3
+        AjusteManual = 3,
+        Venta = 4
     }
     [Table("InventoryTransaction_TB")]
     public class InventoryTransaction

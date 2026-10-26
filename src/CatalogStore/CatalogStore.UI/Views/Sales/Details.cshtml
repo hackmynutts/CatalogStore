@@ -1,0 +1,301 @@
+@model CatalogStore.UI.Models.Sales.SaleViewModel
+@using CatalogStore.UI.Models.Sales
+@{
+    ViewData["Title"] = $"Venta {Model.SaleNumber}";
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool justCreated = ViewData["JustCreated"] as bool? == true;
+    bool canPay = Model.Balance > 0 && Model.PaymentStatus != PaymentStatus.Voided;
+    var pct = SalesUi.PaidPercent(Model.AmountPaid, Model.TotalAmount);
+    var vigentes = Model.Payments.Count(p => !p.IsVoided);
+    // Hoy en Costa Rica (el servidor puede estar en otra zona): límite del selector de fecha de pago.
+    var todayLocal = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "America/Costa_Rica"));
+}
+
+<form id="salesDetailsTokenForm" hidden>@Html.AntiForgeryToken()</form>
+
+@if (justCreated)
+{
+    <div class="order-state-note order-state-note-done" role="status">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        <span>La orden <strong>@Model.OrderNumber</strong> se completó y generó esta venta. Registrá el pago cuando el cliente pague.</span>
+    </div>
+}
+
+<div class="detail-header" id="saleDetails" data-sale-id="@Model.SalesHeaderID" data-sale-number="@Model.SaleNumber">
+    <div class="detail-header-left">
+        <div class="detail-avatar"><i class="fa-solid fa-receipt" aria-hidden="true"></i></div>
+        <div>
+            <h1 class="detail-title">Venta @Model.SaleNumber</h1>
+            <div class="detail-subtitle">
+                <span class="badge @SalesUi.StatusBadge(Model.PaymentStatus)">@Model.PaymentStatusName</span>
+                @if (Model.IsOverdue)
+                {
+                    <span class="badge badge-overdue">@(Model.DaysOverdue == 1 ? "1 día vencida" : $"{Model.DaysOverdue} días vencida")</span>
+                }
+                <span>@Model.SaleDate.ToString("dd/MM/yyyy HH:mm") · Orden <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderID">@Model.OrderNumber</a></span>
+            </div>
+        </div>
+    </div>
+    <div class="detail-actions">
+        @if (canPay)
+        {
+            <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Registrar pago
+            </button>
+        }
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver</a>
+    </div>
+</div>
+
+@* Cuatro indicadores del mismo tamaño: cuánto se vendió, cuánto entró, cuánto falta y cuándo vence *@
+<section class="kpi-grid mb-4" aria-label="Estado de cobro">
+    <div class="kpi-tile">
+        <span class="kpi-label">Total</span>
+        <span class="kpi-value">@SalesUi.Money(Model.TotalAmount)</span>
+        <span class="kpi-meta">@(Model.ApplyIva ? "IVA incluido" : "Sin IVA")</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Cobrado</span>
+        <span class="kpi-value kpi-value-ok">@SalesUi.Money(Model.AmountPaid)</span>
+        <div class="pay-progress pay-progress-lg" role="progressbar" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100" aria-label="Cobrado @pct %">
+            <div class="pay-progress-bar @(pct >= 100 ? "is-complete" : "")" style="width:@pct%"></div>
+        </div>
+        <span class="kpi-meta">@pct% · @(vigentes == 1 ? "1 abono" : $"{vigentes} abonos")</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Saldo</span>
+        <span class="kpi-value @(Model.Balance > 0 ? (Model.IsOverdue ? "kpi-value-danger" : "kpi-value-warn") : "kpi-value-ok")">@SalesUi.Money(Model.Balance)</span>
+        <span class="kpi-meta">@(Model.Balance > 0 ? "Pendiente de cobro" : "Sin saldo pendiente")</span>
+    </div>
+    <div class="kpi-tile @(Model.IsOverdue ? "kpi-tile-alert" : "")">
+        <span class="kpi-label">Vence</span>
+        <span class="kpi-value @(Model.IsOverdue ? "kpi-value-danger" : "")">@Model.DueDate.ToString("dd/MM/yyyy")</span>
+        <span class="kpi-meta">@Model.PaymentTermName</span>
+    </div>
+</section>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-boxes-stacked"></i> Productos <span class="order-card-count">@Model.Lines.Count</span></h2>
+            <div class="table-responsive">
+                <table class="table app-table order-lines-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-end">Cantidad</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-end">Desc. %</th>
+                            <th class="text-end d-none d-xxl-table-cell">Subtotal</th>
+                            <th class="text-end d-none d-xxl-table-cell">IVA</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in Model.Lines)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="order-line-name">@l.ProductName</span>
+                                    <span class="order-line-meta d-block">@l.ProductCode</span>
+                                </td>
+                                <td class="text-end">@l.Quantity</td>
+                                <td class="text-end order-amount">@SalesUi.Money(l.UnitPrice)</td>
+                                <td class="text-end">@(l.Discount > 0 ? l.Discount.ToString("0.##") + " %" : "—")</td>
+                                <td class="text-end order-amount d-none d-xxl-table-cell">@SalesUi.Money(l.LineSubtotal)</td>
+                                <td class="text-end order-amount d-none d-xxl-table-cell">@SalesUi.Money(l.LineIva)</td>
+                                <td class="text-end order-amount fw-bold">@SalesUi.Money(l.LineTotalPrice)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h2 class="info-card-title">
+                <i class="fa-solid fa-money-bill-wave"></i> Abonos
+                <span class="order-card-count">@vigentes</span>
+            </h2>
+            @if (!Model.Payments.Any())
+            {
+                <div class="app-table-empty">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>Todavía no hay abonos.@(canPay ? " Usá \"Registrar pago\" cuando el cliente pague." : "")</span>
+                </div>
+            }
+            else
+            {
+                <ul class="payment-list">
+                    @foreach (var p in Model.Payments)
+                    {
+                        <li class="payment-item @(p.IsVoided ? "is-voided" : "")">
+                            <div class="payment-icon" aria-hidden="true">
+                                <i class="fa-solid @(p.PaymentMethod switch { PaymentMethod.Efectivo => "fa-money-bills", PaymentMethod.SinpeMovil => "fa-mobile-screen", PaymentMethod.Tarjeta => "fa-credit-card", PaymentMethod.Transferencia => "fa-building-columns", PaymentMethod.Cheque => "fa-money-check", _ => "fa-coins" })"></i>
+                            </div>
+                            <div class="payment-info">
+                                <span class="payment-title">
+                                    @p.PaymentMethodName
+                                    @if (!string.IsNullOrEmpty(p.Reference))
+                                    {
+                                        <span class="payment-ref">· Ref. @p.Reference</span>
+                                    }
+                                    @if (p.IsVoided)
+                                    {
+                                        <span class="badge badge-pay badge-pay-voided">Anulado</span>
+                                    }
+                                </span>
+                                <span class="payment-meta">Pagó el @p.PaymentDate.ToString("dd/MM/yyyy") · registrado por @p.CreatedBy</span>
+                                @if (!string.IsNullOrEmpty(p.Notes))
+                                {
+                                    <span class="payment-meta">@p.Notes</span>
+                                }
+                                @if (p.IsVoided)
+                                {
+                                    <span class="payment-void-reason">Anulado por @p.VoidedBy el @p.VoidedOn?.ToString("dd/MM/yyyy HH:mm"): @p.VoidedReason</span>
+                                }
+                            </div>
+                            <span class="payment-amount">@SalesUi.Money(p.Amount)</span>
+                            @if (isAdmin && !p.IsVoided)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-danger payment-void" data-action="void-payment"
+                                        data-payment-id="@p.SalesPaymentID" data-amount="@SalesUi.Money(p.Amount)"
+                                        title="Anular abono" aria-label="Anular abono de @SalesUi.Money(p.Amount)">
+                                    <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-receipt"></i> Resumen</h2>
+            <dl class="order-totals">
+                <div><dt>Subtotal</dt><dd>@SalesUi.Money(Model.Subtotal + Model.DiscountTotal)</dd></div>
+                @if (Model.DiscountTotal > 0)
+                {
+                    <div><dt>Descuentos</dt><dd>− @SalesUi.Money(Model.DiscountTotal)</dd></div>
+                }
+                <div><dt>IVA</dt><dd>@SalesUi.Money(Model.IvaTotal)</dd></div>
+                <div class="order-totals-total"><dt>Total</dt><dd>@SalesUi.Money(Model.TotalAmount)</dd></div>
+                <div><dt>Cobrado</dt><dd>− @SalesUi.Money(Model.AmountPaid)</dd></div>
+                <div class="order-totals-total"><dt>Saldo</dt><dd>@SalesUi.Money(Model.Balance)</dd></div>
+            </dl>
+        </div>
+
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-user"></i> Cliente</h2>
+            <div class="info-field-grid order-client-grid">
+                <div>
+                    <span class="info-field-label">Nombre</span>
+                    <a class="info-field-value order-client-link" asp-controller="Client" asp-action="Details" asp-route-id="@Model.ClientID">@Model.ClientName</a>
+                    @if (!string.IsNullOrEmpty(Model.ClientCC))
+                    {
+                        <span class="payment-meta">Conocido como @Model.ClientCC</span>
+                    }
+                </div>
+                <div>
+                    <span class="info-field-label">@Model.ClientIdentificationTypeName</span>
+                    <span class="info-field-value">@Model.ClientIdentification</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Contacto</span>
+                    <span class="info-field-value">@Model.ClientPhone</span>
+                    <span class="payment-meta">@Model.ClientEmail</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Dirección</span>
+                    <span class="info-field-value fw-normal">@(string.IsNullOrEmpty(Model.ClientAddress) ? "—" : Model.ClientAddress)</span>
+                </div>
+            </div>
+            <p class="order-hint mb-0">Datos del cliente al momento de la venta.</p>
+        </div>
+
+        <div class="info-card">
+            <h2 class="info-card-title"><i class="fa-solid fa-circle-info"></i> Detalles</h2>
+            <div class="info-field-grid order-client-grid">
+                <div>
+                    <span class="info-field-label">Vendedor</span>
+                    <span class="info-field-value">@Model.Seller</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Completada por</span>
+                    <span class="info-field-value">@Model.CreatedBy</span>
+                </div>
+                <div>
+                    <span class="info-field-label">Notas</span>
+                    <span class="info-field-value fw-normal">@(string.IsNullOrEmpty(Model.Notes) ? "—" : Model.Notes)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (canPay)
+{
+    @* Registrar pago. Monto precargado con el saldo; fecha por defecto hoy, sin futuras ni anteriores a la venta. *@
+    <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <form class="modal-content" id="paymentForm" novalidate>
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="paymentModalTitle">Registrar pago</h5>
+                        <span class="payment-meta">@Model.SaleNumber · @Model.ClientName · saldo <strong>@SalesUi.Money(Model.Balance)</strong></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="payAmount" class="form-label">Monto <span class="text-danger" aria-hidden="true">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₡</span>
+                            <input type="number" class="form-control order-amount" id="payAmount" name="amount" min="0.01" max="@Model.Balance.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                   step="0.01" value="@Model.Balance.ToString(System.Globalization.CultureInfo.InvariantCulture)" required inputmode="decimal" aria-describedby="payAmountHelp payAmountError" />
+                            <button type="button" class="btn btn-outline-secondary" id="payFullBalance" style="width:auto;">Saldo completo</button>
+                        </div>
+                        <div class="form-text" id="payAmountHelp">Máximo @SalesUi.Money(Model.Balance). Un monto menor queda como abono parcial.</div>
+                        <div class="invalid-feedback d-block" id="payAmountError" hidden></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            <label for="payMethod" class="form-label">Método <span class="text-danger" aria-hidden="true">*</span></label>
+                            <select class="form-select" id="payMethod" name="paymentMethod" required>
+                                @foreach (var m in SalesUi.PaymentMethods)
+                                {
+                                    <option value="@((int)m.Value)">@m.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label for="payDate" class="form-label">Fecha de pago</label>
+                            <input type="date" class="form-control" id="payDate" name="paymentDate"
+                                   value="@todayLocal.ToString("yyyy-MM-dd")" max="@todayLocal.ToString("yyyy-MM-dd")" min="@Model.SaleDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="payReference" class="form-label">Referencia</label>
+                        <input type="text" class="form-control" id="payReference" name="reference" maxlength="75" placeholder="Nº de comprobante SINPE, transferencia o cheque" autocomplete="off" />
+                    </div>
+                    <div class="mb-1">
+                        <label for="payNotes" class="form-label">Notas</label>
+                        <textarea class="form-control" id="payNotes" name="notes" rows="2" maxlength="250"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="width:auto;">Cancelar</button>
+                    <button type="submit" class="btn btn-brand btn-brand-auto" id="paySubmit">
+                        <i class="fa-solid fa-check" aria-hidden="true"></i> Registrar pago
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/sales-details.js" asp-append-version="true"></script>
+}

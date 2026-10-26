@@ -1,23 +1,36 @@
-﻿using CatalogStore.BackendAPI.Models.Client;
+﻿using CatalogStore.BackendAPI.DTO.Common;
+using CatalogStore.BackendAPI.DTO.Sales;
+using CatalogStore.BackendAPI.Models.Client;
+using CatalogStore.BackendAPI.Models.EventLogs;
 using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
 using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
+using CatalogStore.BackendAPI.Models.SalesPayment;
 using CatalogStore.BackendAPI.Repository.Sales;
 using CatalogStore.BackendAPI.Services.Client;
+using CatalogStore.BackendAPI.Services.EventLogs;
 using CatalogStore.BackendAPI.Services.Orders;
+using Humanizer;
+using Microsoft.EntityFrameworkCore;
 
 namespace CatalogStore.BackendAPI.Services.Sales
 {
     public class SalesServices : ISalesServices
     {
+        private const string ModuleName = "Ventas/Ventas";
+        private const string SalesTable = "SalesHeader";
+        // Público: el controller lo usa para responder 404 en vez de 400.
+        public const string NotFoundMessage = "Venta no encontrada.";
         private readonly ISalesRepository _salesRepository;
         private readonly IClientServices _clientServices;
+        private readonly IEventlogServices _eventlogServices;
         private readonly TimeProvider _time;
-        public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, TimeProvider time)
+        public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, IEventlogServices eventlogServices, TimeProvider time)
         {
             _salesRepository = salesRepository;
             _clientServices= clientServices;
+            _eventlogServices = eventlogServices;
             _time = time;
         }
         public async Task<SalesHeader> CreateFromOrderAsync(Order order, string createdBy, DateTime now)
@@ -88,6 +101,279 @@ namespace CatalogStore.BackendAPI.Services.Sales
 
             _salesRepository.AddSale(sale);
             return sale;
+        }
+
+        // ───────────────────────── Lectura ─────────────────────────
+
+        public async Task<SaleDTO?> GetAsync(int salesHeaderId, string user, bool isAdmin)
+        {
+            var sale = await _salesRepository.GetByIdAsync(salesHeaderId);
+            return sale is null || !CanAccess(sale, user, isAdmin) ? null : Map(sale);
+        }
+
+        public async Task<SaleDTO?> GetByOrderAsync(int orderId, string user, bool isAdmin)
+        {
+            var sale = await _salesRepository.GetByOrderIdAsync(orderId);
+            return sale is null || !CanAccess(sale, user, isAdmin) ? null : Map(sale);
+        }
+
+        // El vendedor recibe siempre solo sus ventas, aunque no lo pida.
+        public async Task<List<SaleListItemDTO>> GetListAsync(PaymentStatus? status, int? clientId, bool overdueOnly, string user, bool isAdmin)
+        {
+            var today = TodayLocal();
+            var rows = await _salesRepository.GetListAsync(status, clientId, isAdmin ? null : user, overdueOnly ? today : null);
+            return rows.Select(r =>
+            {
+                var (isOverdue, daysOverdue) = Overdue(r.Sale, today);
+                return new SaleListItemDTO
+                {
+                    SalesHeaderID = r.Sale.SalesHeaderID,
+                    SaleNumber = r.Sale.SaleNumber,
+                    OrderID = r.Sale.OrderID,
+                    ClientID = r.Sale.ClientID,
+                    ClientName = r.Sale.ClientName,
+                    ClientCC = r.Sale.ClientCC,
+                    Seller = r.Sale.Seller,
+                    SaleDate = r.Sale.SaleDate,
+                    ApplyIva = r.Sale.ApplyIva,
+                    TotalAmount = r.Sale.TotalAmount,
+                    AmountPaid = r.Sale.AmountPaid,
+                    Balance = r.Sale.Balance,
+                    PaymentTermName = r.Sale.PaymentTerm.Humanize(),
+                    DueDate = r.Sale.DueDate,
+                    PaymentStatus = r.Sale.PaymentStatus,
+                    PaymentStatusName = r.Sale.PaymentStatus.Humanize(),
+                    IsOverdue = isOverdue,
+                    DaysOverdue = daysOverdue,
+                    LineCount = r.LineCount
+                };
+            }).ToList();
+        }
+
+        // ───────────────────────── Abonos ─────────────────────────
+
+        // Registra un abono. Lo pagado se RECALCULA desde los abonos vigentes (no se suma al valor anterior):
+        // así AmountPaid nunca se desincroniza. Dos abonos a la vez chocan con el RowVersion de la venta.
+        public async Task<OperationResult> RegisterPaymentAsync(int salesHeaderId, AddSalePaymentDTO dto, string user, bool isAdmin)
+        {
+            try
+            {
+                var now = _time.GetUtcNow().UtcDateTime;
+                var sale = await _salesRepository.GetForUpdateAsync(salesHeaderId);
+                if (sale is null || !CanAccess(sale, user, isAdmin))
+                    return OperationResult.Fail(NotFoundMessage);
+                if (sale.PaymentStatus == PaymentStatus.Voided)
+                    return OperationResult.Fail($"La venta {sale.SaleNumber} está anulada y no acepta abonos.");
+                if (dto.PaymentMethod is null || !Enum.IsDefined(dto.PaymentMethod.Value))
+                    return OperationResult.Fail("Seleccione un método de pago válido.");
+                if (dto.Amount <= 0)
+                    return OperationResult.Fail("El monto debe ser mayor a cero.");
+
+                var balance = sale.TotalAmount - PaidAmount(sale);
+                if (balance <= 0)
+                    return OperationResult.Fail($"La venta {sale.SaleNumber} ya está pagada.");
+                if (dto.Amount > balance)
+                    return OperationResult.Fail($"El abono (₡{dto.Amount:N2}) supera el saldo pendiente (₡{balance:N2}).");
+
+                var (paymentDate, dateError) = ResolvePaymentDate(dto.PaymentDate, sale, now);
+                if (dateError is not null)
+                    return OperationResult.Fail(dateError);
+
+                var payment = new SalesPayment
+                {
+                    Amount = dto.Amount,
+                    PaymentMethod = dto.PaymentMethod.Value,
+                    Reference = string.IsNullOrWhiteSpace(dto.Reference) ? null : dto.Reference.Trim(),
+                    PaymentDate = paymentDate,
+                    Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim(),
+                    CreatedBy = user,
+                    CreatedOn = now
+                };
+                sale.Payments.Add(payment);
+                RecalculatePayments(sale, user, now);
+                await _salesRepository.SaveChangesAsync();
+
+                await _eventlogServices.LogAsync(typeEvent.Add, ModuleName, "SalesPayment", payment.SalesPaymentID.ToString(),
+                    $"Abono de ₡{payment.Amount:N2} ({payment.PaymentMethod.Humanize()}) registrado en {sale.SaleNumber}. Saldo: ₡{sale.TotalAmount - sale.AmountPaid:N2}.",
+                    postData: new { payment.SalesPaymentID, sale.SalesHeaderID, sale.SaleNumber, payment.Amount, payment.PaymentMethod, payment.Reference, payment.PaymentDate, sale.AmountPaid, sale.PaymentStatus });
+                return OperationResult.Ok(sale.SalesHeaderID);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _salesRepository.DiscardChanges();
+                return OperationResult.Fail("La venta cambió mientras se procesaba (otro abono al mismo tiempo). Revisá el saldo e intentá de nuevo.");
+            }
+            catch (Exception ex)
+            {
+                // DiscardChanges antes del log: LogAsync guarda con el mismo contexto y se llevaría los cambios a medias.
+                _salesRepository.DiscardChanges();
+                await _eventlogServices.LogAsync(typeEvent.Error, ModuleName, SalesTable, salesHeaderId.ToString(),
+                    "Excepción no controlada al registrar un abono.", stackTrace: ex.ToString());
+                throw;
+            }
+        }
+
+        // Anula un abono (solo admin). No se borra: queda marcado con quién, cuándo y por qué, y deja de contar.
+        public async Task<OperationResult> VoidPaymentAsync(int salesHeaderId, int salesPaymentId, VoidSalePaymentDTO dto, string user, bool isAdmin)
+        {
+            if (!isAdmin)
+                return OperationResult.Fail("Solo un administrador puede anular abonos.");
+            try
+            {
+                var now = _time.GetUtcNow().UtcDateTime;
+                var sale = await _salesRepository.GetForUpdateAsync(salesHeaderId);
+                if (sale is null)
+                    return OperationResult.Fail(NotFoundMessage);
+
+                var payment = sale.Payments.FirstOrDefault(p => p.SalesPaymentID == salesPaymentId);
+                if (payment is null)
+                    return OperationResult.Fail("El abono no pertenece a esta venta.");
+                if (payment.IsVoided)
+                    return OperationResult.Fail("El abono ya estaba anulado.");
+                var reason = dto.Reason?.Trim();
+                if (string.IsNullOrEmpty(reason))
+                    return OperationResult.Fail("Indique el motivo de la anulación.");
+
+                // Los cuatro campos juntos: el CHECK CK_SalesPayment_Void_Consistent rechaza un anulado incompleto.
+                payment.IsVoided = true;
+                payment.VoidedBy = user;
+                payment.VoidedOn = now;
+                payment.VoidedReason = reason;
+                RecalculatePayments(sale, user, now);
+                await _salesRepository.SaveChangesAsync();
+
+                await _eventlogServices.LogAsync(typeEvent.Cancel, ModuleName, "SalesPayment", payment.SalesPaymentID.ToString(),
+                    $"Abono de ₡{payment.Amount:N2} anulado en {sale.SaleNumber}. Motivo: {reason}",
+                    preData: new { IsVoided = false },
+                    postData: new { payment.SalesPaymentID, sale.SaleNumber, payment.Amount, payment.VoidedReason, sale.AmountPaid, sale.PaymentStatus });
+                return OperationResult.Ok(sale.SalesHeaderID);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _salesRepository.DiscardChanges();
+                return OperationResult.Fail("La venta cambió mientras se procesaba. Revisá el saldo e intentá de nuevo.");
+            }
+            catch (Exception ex)
+            {
+                _salesRepository.DiscardChanges();
+                await _eventlogServices.LogAsync(typeEvent.CancelFail, ModuleName, SalesTable, salesHeaderId.ToString(),
+                    "Excepción no controlada al anular un abono.", stackTrace: ex.ToString());
+                throw;
+            }
+        }
+
+        // ───────────────────────── Helpers ─────────────────────────
+
+        // Admin ve y cobra cualquier venta; el vendedor solo las suyas.
+        private static bool CanAccess(SalesHeader sale, string user, bool isAdmin) => isAdmin || sale.Seller == user;
+
+        private DateOnly TodayLocal() => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
+
+        private static decimal PaidAmount(SalesHeader sale) => sale.Payments.Where(p => !p.IsVoided).Sum(p => p.Amount);
+
+        // Lo pagado y el estado salen siempre de la lista de abonos vigentes.
+        private static void RecalculatePayments(SalesHeader sale, string user, DateTime now)
+        {
+            sale.AmountPaid = PaidAmount(sale);
+            sale.PaymentStatus = sale.AmountPaid <= 0 ? PaymentStatus.Pending
+                : sale.AmountPaid >= sale.TotalAmount ? PaymentStatus.Paid
+                : PaymentStatus.PartiallyPaid;
+            sale.ModifiedBy = user;
+            sale.ModifiedOn = now;
+        }
+
+        // La fecha llega como día local (Costa Rica). Hoy: la hora exacta del registro. Otro día: mediodía local de
+        // ese día pasado a UTC (mediodía para que ninguna conversión de zona lo corra al día anterior o siguiente).
+        private (DateTime Date, string? Error) ResolvePaymentDate(DateOnly? requested, SalesHeader sale, DateTime now)
+        {
+            var today = TodayLocal();
+            var date = requested ?? today;
+            if (date > today)
+                return (default, "La fecha de pago no puede ser futura.");
+            var saleLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc), _time.LocalTimeZone);
+            var saleLocalDate = DateOnly.FromDateTime(saleLocal);
+            if (date < saleLocalDate)
+                return (default, $"La fecha de pago no puede ser anterior a la venta ({saleLocalDate:dd/MM/yyyy}).");
+            if (date == today)
+                return (now, null);
+            var localNoon = date.ToDateTime(new TimeOnly(12, 0), DateTimeKind.Unspecified);
+            return (TimeZoneInfo.ConvertTimeToUtc(localNoon, _time.LocalTimeZone), null);
+        }
+
+        private static (bool IsOverdue, int Days) Overdue(SalesHeader sale, DateOnly today)
+        {
+            var hasBalance = sale.PaymentStatus is PaymentStatus.Pending or PaymentStatus.PartiallyPaid;
+            return hasBalance && sale.DueDate < today ? (true, today.DayNumber - sale.DueDate.DayNumber) : (false, 0);
+        }
+
+        private SaleDTO Map(SalesHeader sale)
+        {
+            var (isOverdue, daysOverdue) = Overdue(sale, TodayLocal());
+            return new SaleDTO
+            {
+                SalesHeaderID = sale.SalesHeaderID,
+                SaleNumber = sale.SaleNumber,
+                OrderID = sale.OrderID,
+                OrderNumber = sale.Order?.OrderNumber ?? string.Empty,
+                ClientID = sale.ClientID,
+                ClientName = sale.ClientName,
+                ClientIdentification = sale.ClientIdentification,
+                ClientIdentificationType = sale.ClientIdentificationType,
+                ClientIdentificationTypeName = sale.ClientIdentificationType.Humanize(),
+                ClientCC = sale.ClientCC,
+                ClientEmail = sale.ClientEmail,
+                ClientPhone = sale.ClientPhone,
+                ClientAddress = sale.ClientAddress,
+                Seller = sale.Seller,
+                SaleDate = sale.SaleDate,
+                ApplyIva = sale.ApplyIva,
+                Subtotal = sale.Subtotal,
+                DiscountTotal = sale.DiscountTotal,
+                IvaTotal = sale.IvaTotal,
+                TotalAmount = sale.TotalAmount,
+                PaymentTerm = sale.PaymentTerm,
+                PaymentTermName = sale.PaymentTerm.Humanize(),
+                DueDate = sale.DueDate,
+                AmountPaid = sale.AmountPaid,
+                Balance = sale.Balance,
+                PaymentStatus = sale.PaymentStatus,
+                PaymentStatusName = sale.PaymentStatus.Humanize(),
+                IsOverdue = isOverdue,
+                DaysOverdue = daysOverdue,
+                Notes = sale.Notes,
+                CreatedBy = sale.CreatedBy,
+                CreatedOn = sale.CreatedOn,
+                Lines = sale.Lines.OrderBy(l => l.SalesLineID).Select(l => new SaleLineDTO
+                {
+                    SalesLineID = l.SalesLineID,
+                    ProductID = l.ProductID,
+                    ProductCode = l.ProductCode,
+                    ProductName = l.ProductName,
+                    Quantity = l.Quantity,
+                    UnitPrice = l.UnitPrice,
+                    UnitPriceIVA = l.UnitPriceIVA,
+                    Discount = l.Discount,
+                    LineSubtotal = l.LineSubtotal,
+                    LineIva = l.LineIva,
+                    LineTotalPrice = l.LineTotalPrice
+                }).ToList(),
+                Payments = sale.Payments.OrderBy(p => p.PaymentDate).ThenBy(p => p.SalesPaymentID).Select(p => new SalePaymentDTO
+                {
+                    SalesPaymentID = p.SalesPaymentID,
+                    Amount = p.Amount,
+                    PaymentMethod = p.PaymentMethod,
+                    PaymentMethodName = p.PaymentMethod.Humanize(),
+                    Reference = p.Reference,
+                    PaymentDate = p.PaymentDate,
+                    Notes = p.Notes,
+                    IsVoided = p.IsVoided,
+                    VoidedBy = p.VoidedBy,
+                    VoidedOn = p.VoidedOn,
+                    VoidedReason = p.VoidedReason,
+                    CreatedBy = p.CreatedBy,
+                    CreatedOn = p.CreatedOn
+                }).ToList()
+            };
         }
     }
 }

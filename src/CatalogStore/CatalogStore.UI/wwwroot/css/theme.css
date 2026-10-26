@@ -1778,6 +1778,297 @@ body.order-busy main {
     font-size: 0.9rem;
 }
 
+/* ==========================================================================
+   Ventas: indicadores, estados de pago, progreso de cobro y abonos
+   (Sales/Index, Sales/Details, tarjeta "Ventas" del cliente, nota en la orden)
+   ========================================================================== */
+
+/* Nota verde (orden completada / venta recién creada) — misma forma que .order-state-note */
+.order-state-note-done {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.order-state-note-done a {
+    color: #14532d;
+    font-weight: 700;
+}
+
+/* Cuatro indicadores del mismo ancho; en pantallas medianas y en celular, 2x2 */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.kpi-tile {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 118px;
+    border-top: 3px solid transparent;
+}
+
+.kpi-tile-alert {
+    border-top-color: var(--danger);
+}
+
+.kpi-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.kpi-value {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text-color);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+
+.kpi-value-ok { color: #166534; }
+.kpi-value-warn { color: #8a5a00; }
+.kpi-value-danger { color: #b42318; }
+
+.kpi-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: auto;
+}
+
+@media (max-width: 991.98px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* En celular sigue en 2x2 (simétrico y corto), con números más chicos */
+@media (max-width: 575.98px) {
+    .kpi-grid {
+        gap: 10px;
+    }
+
+    .kpi-tile {
+        min-height: 0;
+        padding: 14px;
+    }
+
+    .kpi-value {
+        font-size: 1.05rem;
+    }
+}
+
+/* Estado de pago: color + texto (nunca solo color) */
+.badge-pay {
+    font-weight: 600;
+    font-size: 0.72rem;
+    padding: 5px 10px;
+    border-radius: 999px;
+}
+
+.badge-pay-pending {
+    background: #fbf3df;
+    color: #7a5a12;
+}
+
+.badge-pay-partial {
+    background: #e0ecff;
+    color: #1d4ed8;
+}
+
+.badge-pay-paid {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-pay-voided {
+    background: #f1f1f2;
+    color: var(--text-muted);
+}
+
+.badge-overdue {
+    background: var(--danger-bg);
+    color: #9b1c1c;
+    font-weight: 700;
+    font-size: 0.72rem;
+    padding: 5px 10px;
+    border-radius: 999px;
+}
+
+/* Barra de cobro */
+.pay-progress {
+    height: 6px;
+    background: #eef0f3;
+    border-radius: 999px;
+    overflow: hidden;
+    min-width: 90px;
+}
+
+.pay-progress-lg {
+    height: 8px;
+    margin: 6px 0 2px;
+}
+
+.pay-progress-bar {
+    height: 100%;
+    background: var(--brand-primary);
+    border-radius: 999px;
+    transition: width 300ms ease;
+}
+
+.pay-progress-bar.is-complete {
+    background: #16a34a;
+}
+
+.pay-progress-text {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 3px;
+}
+
+.sales-table td {
+    vertical-align: middle;
+}
+
+/* Cliente legible en una o dos líneas; fechas sin cortes */
+.sales-table td:nth-child(2) {
+    min-width: 190px;
+}
+
+.sales-table td:nth-child(3),
+.sales-table td:nth-child(8) {
+    white-space: nowrap;
+}
+
+.sales-table tbody tr.sales-row-overdue td:first-child {
+    box-shadow: inset 3px 0 0 var(--danger);
+}
+
+/* Lista de abonos */
+.payment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.payment-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.payment-item:last-child {
+    border-bottom: none;
+}
+
+.payment-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.payment-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.payment-title {
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.payment-ref {
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.payment-meta {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.payment-void-reason {
+    font-size: 0.8rem;
+    color: #9b1c1c;
+    margin-top: 2px;
+}
+
+.payment-amount {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--text-color);
+}
+
+.payment-void {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.payment-item.is-voided .payment-icon {
+    background: #f1f1f2;
+    color: var(--text-muted);
+}
+
+.payment-item.is-voided .payment-amount {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+/* Saldo del cliente en su perfil */
+.client-debt {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: #f6f7f9;
+    margin-bottom: 12px;
+}
+
+.client-debt.has-debt {
+    background: #fbf3df;
+}
+
+.client-debt.has-overdue {
+    background: var(--danger-bg);
+}
+
+.client-debt-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-color);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .order-bar.pulse {
         animation: none;
@@ -1787,5 +2078,9 @@ body.order-busy main {
     .catalog-add-btn:hover {
         transition: none;
         transform: none;
+    }
+
+    .pay-progress-bar {
+        transition: none;
     }
 }

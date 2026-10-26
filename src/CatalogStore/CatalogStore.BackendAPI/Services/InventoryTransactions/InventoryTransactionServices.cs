@@ -167,6 +167,8 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
                 return "Los ajustes requieren una razón.";
             if (type is TransactionType.ProductoReservado or TransactionType.ProductoLiberado or TransactionType.Venta && string.IsNullOrWhiteSpace(referenceId))
                 return "Los movimientos de órdenes requieren el número de orden.";
+            if (type is TransactionType.Devolucion && string.IsNullOrWhiteSpace(referenceId))
+                return "Los movimientos de devolución de una venta requieren el número de la venta.";
             return null;
         }
 
@@ -178,6 +180,7 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
             TransactionType.ProductoLiberado => (0, -q),
             TransactionType.Venta => (-q, -q),
             TransactionType.AjusteNegativo => (-q, 0),
+            TransactionType.Devolucion => (q,0),
             _ => throw new ArgumentOutOfRangeException(nameof(type))
         };
 

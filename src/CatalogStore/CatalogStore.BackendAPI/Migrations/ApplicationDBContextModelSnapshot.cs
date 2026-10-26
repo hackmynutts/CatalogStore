@@ -877,6 +877,17 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)");
 
+                    b.Property<string>("VoidedBy")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime?>("VoidedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VoidedReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.HasKey("SalesHeaderID");
 
                     b.HasIndex("DueDate")
@@ -901,6 +912,8 @@ namespace CatalogStore.BackendAPI.Migrations
                             t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NonNegative", "[AmountPaid] >= 0");
 
                             t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NotAboveTotal", "[AmountPaid] <= [TotalAmount]");
+
+                            t.HasCheckConstraint("CK_SalesHeader_Void_Consistent", "([PaymentStatus] != 3 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) OR ([PaymentStatus] = 3 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
                         });
                 });
 
@@ -981,6 +994,72 @@ namespace CatalogStore.BackendAPI.Migrations
                             t.HasCheckConstraint("CK_SalesLine_UnitPriceIVA_NonNegative", "[UnitPriceIVA] >= 0");
 
                             t.HasCheckConstraint("CK_SalesLine_UnitPrice_NonNegative", "[UnitPrice] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesPayment.SalesPayment", b =>
+                {
+                    b.Property<int>("SalesPaymentID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesPaymentID"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsVoided")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(75)
+                        .HasColumnType("nvarchar(75)");
+
+                    b.Property<int>("SalesHeaderID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VoidedBy")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime?>("VoidedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VoidedReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.HasKey("SalesPaymentID");
+
+                    b.HasIndex("SalesHeaderID", "PaymentDate")
+                        .HasDatabaseName("IX_SalesPayment_SalesHeaderID_PaymentDate");
+
+                    b.ToTable("SalesPayment_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalesPayment_Amount_Positive", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_SalesPayment_Method_Valid", "[PaymentMethod] IN (1,2,3,4,6,7,99)");
+
+                            t.HasCheckConstraint("CK_SalesPayment_Void_Consistent", "([IsVoided] = 0 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) OR ([IsVoided] = 1 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
                         });
                 });
 
@@ -1283,6 +1362,18 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Navigation("SalesHeader");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesPayment.SalesPayment", b =>
+                {
+                    b.HasOne("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", "SalesHeader")
+                        .WithMany("Payments")
+                        .HasForeignKey("SalesHeaderID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesPayment_SalesHeader_SalesHeaderID");
+
+                    b.Navigation("SalesHeader");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("CatalogStore.BackendAPI.Data.ApplicationRole", null)
@@ -1347,6 +1438,8 @@ namespace CatalogStore.BackendAPI.Migrations
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
                 {
                     b.Navigation("Lines");
+
+                    b.Navigation("Payments");
                 });
 #pragma warning restore 612, 618
         }

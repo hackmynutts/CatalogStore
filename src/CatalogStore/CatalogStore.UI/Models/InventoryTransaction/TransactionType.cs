@@ -11,6 +11,7 @@ namespace CatalogStore.UI.Models.InventoryTransaction
         ProductoLiberado = 4,
         Venta = 5,
         AjustePositivo = 6,
-        AjusteNegativo = 7
+        AjusteNegativo = 7,
+        Devolucion = 8
     }
 }

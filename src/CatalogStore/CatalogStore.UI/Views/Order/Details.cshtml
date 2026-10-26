@@ -42,9 +42,27 @@
         {
             <button type="button" class="btn btn-sm btn-outline-danger" data-action="cancel"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancelar</button>
         }
+        @if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel orderSale)
+        {
+            <a asp-controller="Sales" asp-action="Details" asp-route-id="@orderSale.SalesHeaderID" class="btn btn-sm btn-brand btn-brand-auto">
+                <i class="fa-solid fa-receipt" aria-hidden="true"></i> Ver venta @orderSale.SaleNumber
+            </a>
+        }
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver</a>
     </div>
 </div>
+
+@if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel completedSale)
+{
+    <div class="order-state-note order-state-note-done">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        <span>
+            Orden completada: generó la venta <a asp-controller="Sales" asp-action="Details" asp-route-id="@completedSale.SalesHeaderID">@completedSale.SaleNumber</a>
+            · <span class="badge @CatalogStore.UI.Models.Sales.SalesUi.StatusBadge(completedSale.PaymentStatus)">@completedSale.PaymentStatusName</span>
+            · saldo @CatalogStore.UI.Models.Sales.SalesUi.Money(completedSale.Balance)
+        </span>
+    </div>
+}
 
 @if (pending)
 {
@@ -76,8 +94,8 @@
                                 <th class="text-end @(inProcess ? "sorter-false" : "")">Cantidad</th>
                                 <th class="text-end">Precio</th>
                                 <th class="text-end @(inProcess ? "sorter-false" : "")">Desc. %</th>
-                                <th class="text-end d-none d-xl-table-cell">Subtotal</th>
-                                <th class="text-end d-none d-xl-table-cell">IVA</th>
+                                <th class="text-end d-none d-xxl-table-cell">Subtotal</th>
+                                <th class="text-end d-none d-xxl-table-cell">IVA</th>
                                 <th class="text-end">Total</th>
                                 @if (inProcess)
                                 {
@@ -117,8 +135,8 @@
                                             @(l.Discount > 0 ? l.Discount.ToString("0.##") + " %" : "—")
                                         }
                                     </td>
-                                    <td class="text-end order-amount d-none d-xl-table-cell">₡@l.LineSubtotal.ToString("N2")</td>
-                                    <td class="text-end order-amount d-none d-xl-table-cell">₡@l.LineIVA.ToString("N2")</td>
+                                    <td class="text-end order-amount d-none d-xxl-table-cell">₡@l.LineSubtotal.ToString("N2")</td>
+                                    <td class="text-end order-amount d-none d-xxl-table-cell">₡@l.LineIVA.ToString("N2")</td>
                                     <td class="text-end order-amount fw-bold">₡@l.LineTotalPrice.ToString("N2")</td>
                                     @if (inProcess)
                                     {

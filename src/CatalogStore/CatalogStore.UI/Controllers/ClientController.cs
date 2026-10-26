@@ -56,6 +56,12 @@ namespace CatalogStore.UI.Controllers
             ViewData["Orders"] = ordersResponse.IsSuccessStatusCode
                 ? await ordersResponse.Content.ReadFromJsonAsync<List<OrderListItemViewModel>>() ?? new()
                 : new List<OrderListItemViewModel>();
+
+            // Ventas del cliente para la tarjeta "Ventas" (mismo criterio: el vendedor ve solo las suyas).
+            var salesResponse = await client.GetAsync($"api/Sale?clientId={id}");
+            ViewData["Sales"] = salesResponse.IsSuccessStatusCode
+                ? await salesResponse.Content.ReadFromJsonAsync<List<CatalogStore.UI.Models.Sales.SaleListItemViewModel>>() ?? new()
+                : new List<CatalogStore.UI.Models.Sales.SaleListItemViewModel>();
             return View(cliente);
         }
 

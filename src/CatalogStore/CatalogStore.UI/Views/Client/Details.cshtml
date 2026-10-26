@@ -4,6 +4,9 @@
     bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor");
     bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
     var clientOrders = ViewData["Orders"] as List<CatalogStore.UI.Models.Order.OrderListItemViewModel> ?? new();
+    var clientSales = ViewData["Sales"] as List<CatalogStore.UI.Models.Sales.SaleListItemViewModel> ?? new();
+    var clientDebt = clientSales.Where(s => s.PaymentStatus != CatalogStore.UI.Models.Sales.PaymentStatus.Voided).Sum(s => s.Balance);
+    var clientOverdue = clientSales.Where(s => s.IsOverdue).Sum(s => s.Balance);
     string CreditoLabel(int? c) => c switch
     {
         0 => "Contado",
@@ -111,7 +114,7 @@
                             <a asp-controller="Order" asp-action="Details" asp-route-id="@o.OrderID" class="client-order-item">
                                 <span class="client-order-main">
                                     <span class="client-order-number">@o.OrderNumber</span>
-                                    <span class="client-order-meta">@o.CreatedOn.ToString("g") · @(o.LineCount == 1 ? "1 producto" : $"{o.LineCount} productos")</span>
+                                    <span class="client-order-meta">@o.CreatedOn.ToString("dd/MM/yyyy") · @(o.LineCount == 1 ? "1 producto" : $"{o.LineCount} productos")</span>
                                 </span>
                                 <span class="client-order-side">
                                     <span class="badge @CatalogStore.UI.Models.Order.OrderStatusStyle.BadgeClass(o.OrderStatus)">@o.OrderStatusName</span>
@@ -126,12 +129,55 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="info-card info-card-placeholder">
-            <h2 class="info-card-title"><i class="fa-solid fa-cart-shopping"></i> Ventas <span class="info-card-soon">Próximamente</span></h2>
-            <div class="app-table-empty">
-                <i class="fa-solid fa-cart-shopping"></i>
-                <span>Este cliente todavía no tiene ventas registradas.</span>
-            </div>
+        <div class="info-card">
+            <h2 class="info-card-title">
+                <i class="fa-solid fa-receipt"></i> Ventas
+                @if (clientSales.Any())
+                {
+                    <a class="order-card-link" asp-controller="Sales" asp-action="Index" asp-route-clientId="@Model.Id">Ver todas (@clientSales.Count)</a>
+                }
+            </h2>
+            @if (!clientSales.Any())
+            {
+                <div class="app-table-empty">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Este cliente todavía no tiene ventas registradas.</span>
+                </div>
+            }
+            else
+            {
+                <div class="client-debt @(clientOverdue > 0 ? "has-overdue" : clientDebt > 0 ? "has-debt" : "")">
+                    <div>
+                        <span class="info-field-label">Saldo pendiente</span>
+                        <span class="client-debt-value">₡@clientDebt.ToString("N2")</span>
+                    </div>
+                    @if (clientOverdue > 0)
+                    {
+                        <span class="badge badge-overdue">₡@clientOverdue.ToString("N2") vencido</span>
+                    }
+                    else if (clientDebt == 0)
+                    {
+                        <span class="badge badge-pay badge-pay-paid">Al día</span>
+                    }
+                </div>
+                <ul class="client-order-list">
+                    @foreach (var s in clientSales.Take(5))
+                    {
+                        <li>
+                            <a asp-controller="Sales" asp-action="Details" asp-route-id="@s.SalesHeaderID" class="client-order-item">
+                                <span class="client-order-main">
+                                    <span class="client-order-number">@s.SaleNumber</span>
+                                    <span class="client-order-meta">@s.SaleDate.ToString("dd/MM/yyyy") · vence @s.DueDate.ToString("dd/MM/yyyy")</span>
+                                </span>
+                                <span class="client-order-side">
+                                    <span class="badge @CatalogStore.UI.Models.Sales.SalesUi.StatusBadge(s.PaymentStatus)">@s.PaymentStatusName</span>
+                                    <span class="client-order-total">₡@s.TotalAmount.ToString("N2")</span>
+                                </span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
         </div>
     </div>
 </div>

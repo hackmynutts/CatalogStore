@@ -46,10 +46,14 @@ namespace CatalogStore.BackendAPI.Models.SalesHeader
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
+        public string? VoidedBy { get; set; }
+        public DateTime? VoidedOn { get; set; }
+        public string? VoidedReason { get; set; }
         [Timestamp]
         public byte[] RowVersion { get; set; } = null!;
         public Models.Client.Client Client { get; set; } = null!;
         public Models.Order.Order Order { get; set; } = null!;
         public ICollection<Models.SalesLine.SalesLine> Lines { get; set; } = new List<Models.SalesLine.SalesLine>();
+        public ICollection<Models.SalesPayment.SalesPayment> Payments { get; set; } = new List<Models.SalesPayment.SalesPayment>();
     }
 }

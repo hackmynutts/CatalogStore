@@ -12,6 +12,7 @@ using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
 using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
+using CatalogStore.BackendAPI.Models.SalesPayment;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -29,6 +30,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<OrderLine> OrderLines { get; set; }
         public DbSet<SalesHeader> SalesHeaders { get; set; }
         public DbSet<SalesLine> SalesLines { get; set; }
+        public DbSet<SalesPayment> SalesPayments { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -337,6 +339,10 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
+                entity.Property(e => e.VoidedBy)
+                    .HasMaxLength(140);
+                entity.Property(e => e.VoidedReason)
+                    .HasMaxLength(250);
                 entity.HasIndex(e => e.SaleNumber)
                     .HasDatabaseName("IX_SalesHeader_SaleNumber")
                     .IsUnique(); 
@@ -363,6 +369,9 @@ namespace CatalogStore.BackendAPI.Data
                 {
                     t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NonNegative", "[AmountPaid] >= 0");
                     t.HasCheckConstraint("CK_SalesHeader_AmountPaid_NotAboveTotal", "[AmountPaid] <= [TotalAmount]");
+                    t.HasCheckConstraint("CK_SalesHeader_Void_Consistent",
+                                        "([PaymentStatus] != 3 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) " +
+                                        "OR ([PaymentStatus] = 3 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
                 });
             }).HasSequence<int>("SaleNumberSeq").StartsAt(1).IncrementsBy(1);
             builder.Entity<SalesLine>(entity =>
@@ -404,6 +413,36 @@ namespace CatalogStore.BackendAPI.Data
                     t.HasCheckConstraint("CK_SalesLine_UnitPriceIVA_NonNegative", "[UnitPriceIVA] >= 0");
                     t.HasCheckConstraint("CK_SalesLine_LineTotalPrice_NonNegative", "[LineTotalPrice] >= 0");
                     t.HasCheckConstraint("CK_SalesLine_Discount_Valid", "[Discount] >= 0 AND [Discount] <= 99.99");
+                });
+            });
+            builder.Entity<SalesPayment>(entity =>
+            {
+                entity.Property(e => e.Amount)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.Reference)
+                    .HasMaxLength(75);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.Property(e => e.VoidedBy)
+                    .HasMaxLength(140);
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(250);
+                entity.Property(e => e.VoidedReason)
+                    .HasMaxLength(250);
+                entity.HasOne(e => e.SalesHeader)
+                    .WithMany(h => h.Payments)
+                    .HasForeignKey(e => e.SalesHeaderID)
+                    .HasConstraintName("FK_SalesPayment_SalesHeader_SalesHeaderID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.SalesHeaderID, e.PaymentDate })
+                    .HasDatabaseName("IX_SalesPayment_SalesHeaderID_PaymentDate");
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_SalesPayment_Amount_Positive", "[Amount] > 0");
+                    t.HasCheckConstraint("CK_SalesPayment_Method_Valid", "[PaymentMethod] IN (1,2,3,4,6,7,99)");
+                    t.HasCheckConstraint("CK_SalesPayment_Void_Consistent",
+                                        "([IsVoided] = 0 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) " +
+                                        "OR ([IsVoided] = 1 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
                 });
             });
         }

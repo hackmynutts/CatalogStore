@@ -1,0 +1,177 @@
+@model List<CatalogStore.UI.Models.Sales.SaleListItemViewModel>
+@using CatalogStore.UI.Models.Sales
+@{
+    ViewData["Title"] = "Ventas";
+    var status = ViewData["Status"] as PaymentStatus?;
+    var clientId = ViewData["ClientId"] as int?;
+    var overdue = ViewData["Overdue"] as bool? == true;
+    var clientName = ViewData["ClientName"] as string;
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+
+    // Indicadores del conjunto que se está viendo (con los filtros aplicados). Las anuladas no suman.
+    var vigentes = Model.Where(s => s.PaymentStatus != PaymentStatus.Voided).ToList();
+    var totalVendido = vigentes.Sum(s => s.TotalAmount);
+    var totalCobrado = vigentes.Sum(s => s.AmountPaid);
+    var porCobrar = vigentes.Sum(s => s.Balance);
+    var vencidas = vigentes.Where(s => s.IsOverdue).ToList();
+
+    // Pestañas: estado de pago o "vencidas". Conservan el filtro de cliente.
+    var tabs = new (PaymentStatus? Status, bool Overdue, string Label)[]
+    {
+        (null, false, "Todas"),
+        (PaymentStatus.Pending, false, "Pendientes"),
+        (PaymentStatus.PartiallyPaid, false, "Parciales"),
+        (PaymentStatus.Paid, false, "Pagadas"),
+        (null, true, "Vencidas")
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0">@(isAdmin ? "Ventas" : "Mis ventas")</h1>
+        @if (clientId.HasValue)
+        {
+            <div class="order-list-filter">
+                Cliente: <strong>@(clientName ?? $"#{clientId}")</strong>
+                <a asp-action="Index" asp-route-status="@(status.HasValue ? (int?)status.Value : null)" asp-route-overdue="@(overdue ? "true" : null)" class="order-list-filter-clear">Quitar filtro <i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+            </div>
+        }
+    </div>
+    <a asp-controller="Order" asp-action="Index" asp-route-status="1" class="btn btn-outline-brand btn-sm" style="width:auto;">
+        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Órdenes por completar
+    </a>
+</div>
+
+@* Indicadores: cuatro tarjetas del mismo tamaño *@
+<section class="kpi-grid mb-4" aria-label="Resumen de ventas">
+    <div class="kpi-tile">
+        <span class="kpi-label">Vendido</span>
+        <span class="kpi-value">@SalesUi.Money(totalVendido)</span>
+        <span class="kpi-meta">@(vigentes.Count == 1 ? "1 venta" : $"{vigentes.Count} ventas")</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Cobrado</span>
+        <span class="kpi-value kpi-value-ok">@SalesUi.Money(totalCobrado)</span>
+        <span class="kpi-meta">@SalesUi.PaidPercent(totalCobrado, totalVendido)% del total</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Por cobrar</span>
+        <span class="kpi-value @(porCobrar > 0 ? "kpi-value-warn" : "")">@SalesUi.Money(porCobrar)</span>
+        <span class="kpi-meta">@vigentes.Count(s => s.Balance > 0) con saldo</span>
+    </div>
+    <div class="kpi-tile @(vencidas.Any() ? "kpi-tile-alert" : "")">
+        <span class="kpi-label">Vencido</span>
+        <span class="kpi-value @(vencidas.Any() ? "kpi-value-danger" : "")">@SalesUi.Money(vencidas.Sum(s => s.Balance))</span>
+        <span class="kpi-meta">@(vencidas.Count == 1 ? "1 venta vencida" : $"{vencidas.Count} ventas vencidas")</span>
+    </div>
+</section>
+
+<nav class="catalog-filter-pills mb-3" aria-label="Filtrar ventas">
+    @foreach (var tab in tabs)
+    {
+        var active = tab.Overdue ? overdue : (!overdue && tab.Status == status);
+        <a class="catalog-pill @(active ? "active" : "")" aria-current="@(active ? "page" : null)"
+           asp-action="Index"
+           asp-route-status="@(tab.Status.HasValue ? (int?)tab.Status.Value : null)"
+           asp-route-overdue="@(tab.Overdue ? "true" : null)"
+           asp-route-clientId="@clientId">@tab.Label</a>
+    }
+</nav>
+
+<div class="app-table-search-wrap">
+    <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+    <input type="text" class="app-table-search" data-table-search="salesTable" data-column="all" placeholder="Buscar por número, cliente o vendedor..." aria-label="Buscar ventas" />
+</div>
+
+<div class="table-responsive">
+<table id="salesTable" class="table app-table sales-table">
+    <thead>
+        <tr>
+            <th>Venta</th>
+            <th>Cliente</th>
+            <th>Fecha</th>
+            <th class="text-end">Total</th>
+            <th class="sorter-false">Cobrado</th>
+            <th class="text-end">Saldo</th>
+            <th>Estado</th>
+            <th>Vence</th>
+            @if (isAdmin)
+            {
+                <th>Vendedor</th>
+            }
+            <th class="sorter-false filter-false"><span class="visually-hidden">Acciones</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var s in Model)
+        {
+            var pct = SalesUi.PaidPercent(s.AmountPaid, s.TotalAmount);
+            <tr class="@(s.IsOverdue ? "sales-row-overdue" : "")">
+                <td><a asp-action="Details" asp-route-id="@s.SalesHeaderID" class="order-number-link">@s.SaleNumber</a></td>
+                <td>
+                    @s.ClientName
+                    @if (!string.IsNullOrEmpty(s.ClientCC))
+                    {
+                        <span class="text-muted">(@s.ClientCC)</span>
+                    }
+                </td>
+                <td data-text="@s.SaleDate.ToString("yyyy-MM-dd HH:mm")">@s.SaleDate.ToString("dd/MM/yyyy")</td>
+                <td class="text-end order-amount">
+                    @SalesUi.Money(s.TotalAmount)
+                    @if (!s.ApplyIva)
+                    {
+                        <span class="order-no-iva">sin IVA</span>
+                    }
+                </td>
+                <td>
+                    <div class="pay-progress" role="progressbar" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100" aria-label="Cobrado @pct %">
+                        <div class="pay-progress-bar @(pct >= 100 ? "is-complete" : "")" style="width:@pct%"></div>
+                    </div>
+                    <span class="pay-progress-text">@SalesUi.Money(s.AmountPaid)</span>
+                </td>
+                <td class="text-end order-amount @(s.Balance > 0 ? "fw-bold" : "text-muted")">@SalesUi.Money(s.Balance)</td>
+                <td>
+                    <span class="badge @SalesUi.StatusBadge(s.PaymentStatus)">@s.PaymentStatusName</span>
+                    @if (s.IsOverdue)
+                    {
+                        <span class="badge badge-overdue" title="Venció el @s.DueDate.ToString("dd/MM/yyyy")">@(s.DaysOverdue == 1 ? "1 día vencida" : $"{s.DaysOverdue} días vencida")</span>
+                    }
+                </td>
+                <td data-text="@s.DueDate.ToString("yyyy-MM-dd")">
+                    @s.DueDate.ToString("dd/MM/yyyy")
+                    <span class="order-no-iva">@s.PaymentTermName</span>
+                </td>
+                @if (isAdmin)
+                {
+                    <td>@s.Seller</td>
+                }
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" aria-label="Ver detalle de @s.SaleNumber" asp-action="Details" asp-route-id="@s.SalesHeaderID"><i class="fa-solid fa-eye"></i></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+
+<div id="salesTable-pager" class="app-table-pager">
+    <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+    <span class="pagedisplay"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+    <select class="pagesize" aria-label="Filas por página">
+        <option value="10" selected>10 / página</option>
+        <option value="25">25 / página</option>
+        <option value="50">50 / página</option>
+        <option value="100">100 / página</option>
+    </select>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-receipt"></i>
+        <span>@(overdue ? "No hay ventas vencidas." : "No hay ventas para mostrar con este filtro.") Las ventas se crean al completar una orden.</span>
+    </div>
+}
