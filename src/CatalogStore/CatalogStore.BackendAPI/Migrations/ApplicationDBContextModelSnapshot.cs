@@ -619,6 +619,128 @@ namespace CatalogStore.BackendAPI.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.Invoice.Invoice", b =>
+                {
+                    b.Property<int>("InvoiceID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InvoiceID"));
+
+                    b.Property<string>("Clave")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Consecutive")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HaciendaMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("HaciendaStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("IssuedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PdfUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PdfUrlTicket")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<int?>("ReferenceInvoiceID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResponseText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SalesHeaderID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SecurityCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<DateTime?>("SentOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("XmlBase64")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("InvoiceID");
+
+                    b.HasIndex("Clave")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Invoice_Clave")
+                        .HasFilter("[Clave] IS NOT NULL");
+
+                    b.HasIndex("ReferenceInvoiceID");
+
+                    b.HasIndex("SalesHeaderID")
+                        .HasDatabaseName("IX_Invoice_SalesHeaderID");
+
+                    b.HasIndex("SalesHeaderID", "DocumentType")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Invoice_Sale_DocType_Active")
+                        .HasFilter("[Status] IN (0,1,2,4)");
+
+                    b.ToTable("Invoice_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Invoice_Clave_Format", "[Clave] IS NULL OR (LEN([Clave]) = 50 AND [Clave] NOT LIKE '%[^0-9]%')");
+
+                            t.HasCheckConstraint("CK_Invoice_DocType_Valid", "[DocumentType] IN (1,3,4)");
+
+                            t.HasCheckConstraint("CK_Invoice_Reference_Consistent", "([DocumentType] = 3 AND [ReferenceInvoiceID] IS NOT NULL) OR ([DocumentType] <> 3 AND [ReferenceInvoiceID] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Invoice_Status_Valid", "[Status] IN (0,1,2,3,4,5)");
+                        });
+                });
+
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.Order.Order", b =>
                 {
                     b.Property<int>("OrderID")
@@ -1415,6 +1537,26 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasConstraintName("FK_InventoryTransaction_InventoryLine_InventoryLineID");
 
                     b.Navigation("InventoryLine");
+                });
+
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.Invoice.Invoice", b =>
+                {
+                    b.HasOne("CatalogStore.BackendAPI.Models.Invoice.Invoice", "ReferenceInvoice")
+                        .WithMany()
+                        .HasForeignKey("ReferenceInvoiceID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_Invoice_Invoice_ReferenceInvoiceID");
+
+                    b.HasOne("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", "SalesHeader")
+                        .WithMany()
+                        .HasForeignKey("SalesHeaderID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Invoice_SalesHeader_SalesHeaderID");
+
+                    b.Navigation("ReferenceInvoice");
+
+                    b.Navigation("SalesHeader");
                 });
 
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.Order.Order", b =>

@@ -2565,3 +2565,336 @@ body.order-busy main {
 .goal-profile {
     scroll-margin-top: 16px;
 }
+
+/* ---------- CABYS de productos (.cabys-*) ---------- */
+
+.cabys-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 560px;
+}
+
+.cabys-code {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+}
+
+/* Selector del catálogo oficial (SweetAlert) */
+.cabys-picker-intro {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0 0 8px;
+}
+
+.cabys-picker-input {
+    width: 100% !important;
+    margin: 0 0 12px !important;
+    box-sizing: border-box;
+}
+
+.cabys-picker-results {
+    max-height: 340px;
+    overflow-y: auto;
+    text-align: left;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.cabys-picker-empty {
+    padding: 18px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.cabys-option {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.cabys-option:last-child {
+    border-bottom: 0;
+}
+
+.cabys-option:hover,
+.cabys-option:has(input:checked) {
+    background: var(--brand-primary-light);
+}
+
+.cabys-option input {
+    margin-top: 5px;
+    accent-color: var(--brand-primary);
+}
+
+.cabys-option-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cabys-option-code {
+    font-weight: 700;
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.cabys-option-tax {
+    margin-left: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f2f4;
+    color: #4b5563;
+}
+
+.cabys-option-desc {
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.cabys-option-cat {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.cabys-picker-tax {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #8a5a00;
+    min-height: 1.2em;
+}
+
+/* ---------- Facturación electrónica (.invoice-*) ---------- */
+
+.invoice-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.invoice-item {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.invoice-item:last-child {
+    border-bottom: 0;
+}
+
+.invoice-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.invoice-title {
+    font-weight: 700;
+}
+
+.invoice-meta {
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.invoice-clave {
+    margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: var(--text-color);
+    overflow-wrap: anywhere;
+}
+
+.invoice-note {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.invoice-note.is-warn {
+    background: #fff4d6;
+    color: #8a5a00;
+}
+
+.invoice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.invoice-actions .btn {
+    width: auto;
+}
+
+.invoice-start {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.invoice-hint {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Estado del comprobante (texto siempre visible, no solo color) */
+.badge-inv {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f1f2f4;
+    color: #4b5563;
+}
+
+.badge-inv-ok { background: #dcfce7; color: #166534; }
+.badge-inv-wait { background: var(--brand-primary-light); color: var(--brand-primary-dark); }
+.badge-inv-warn { background: #fff4d6; color: #8a5a00; }
+.badge-inv-bad { background: var(--danger-bg); color: #b42318; }
+
+/* Diálogo de revisión */
+.invoice-summary {
+    text-align: left;
+    margin: 12px 0 8px;
+}
+
+.invoice-summary > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.92rem;
+}
+
+.invoice-summary dt { font-weight: 600; color: var(--text-muted); }
+.invoice-summary dd { margin: 0; text-align: right; }
+.invoice-summary .is-total { font-size: 1.05rem; font-weight: 700; }
+.invoice-summary .is-total dt { color: var(--text-color); }
+.invoice-summary select { min-width: 190px; }
+
+.invoice-errors {
+    text-align: left;
+    margin: 12px 0 0;
+    padding: 10px 12px 10px 30px;
+    border-radius: var(--radius-sm);
+    background: var(--danger-bg);
+    color: #b42318;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.invoice-warning {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: #fff4d6;
+    color: #8a5a00;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: left;
+}
+
+/* ---------- Reportes (.report-*) ---------- */
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.report-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+}
+
+.report-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-title i {
+    color: var(--brand-primary);
+    width: 20px;
+    text-align: center;
+}
+
+.report-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.report-form {
+    margin-top: auto;
+}
+
+.report-form .form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.report-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.report-chip {
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-color);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.report-chip:hover,
+.report-chip.is-active {
+    background: var(--brand-primary-light);
+    border-color: var(--brand-primary);
+    color: var(--brand-primary-dark);
+}
+
+.report-chip:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--brand-primary-light);
+}
+
+.report-btn {
+    width: 100%;
+}

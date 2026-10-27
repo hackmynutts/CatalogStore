@@ -1,9 +1,13 @@
-using CatalogStore.BackendAPI.Data;
+﻿using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.Email;
 using CatalogStore.BackendAPI.Services.Email;
 using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Goals;
+using CatalogStore.BackendAPI.Repository.Invoices;
+using CatalogStore.BackendAPI.Repository.Reports;
+using CatalogStore.BackendAPI.Services.Reports;
+using CatalogStore.BackendAPI.Services.Invoicing;
 using CatalogStore.BackendAPI.Repository.Inventory;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
 using CatalogStore.BackendAPI.Repository.InventoryTransactions;
@@ -23,6 +27,7 @@ using CatalogStore.BackendAPI.Services.InventoryLines;
 using CatalogStore.BackendAPI.Services.InventoryTransactions;
 using CatalogStore.BackendAPI.Services.Orders;
 using CatalogStore.BackendAPI.Services.Product;
+using CatalogStore.BackendAPI.Services.Product.Cabys;
 using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using CatalogStore.BackendAPI.Services.ProductImage;
 using CatalogStore.BackendAPI.Services.Sales;
@@ -113,6 +118,7 @@ builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientServices, ClientServices>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductServices, ProductServices>();
+builder.Services.AddScoped<ICabysServices, CabysServices>();
 builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
 builder.Services.AddScoped<IProductImageServices, ProductImageServices>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
@@ -124,10 +130,19 @@ builder.Services.AddScoped<IInventoryTransactionServices, InventoryTransactionSe
 builder.Services.AddScoped<IStockImportServices, StockImportServices>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderServices, OrderServices>();
+builder.Services.AddScoped<IProformaServices, ProformaServices>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 builder.Services.AddScoped<ISalesServices, SalesServices>();
+// Facturación electrónica: sin reintentos automáticos a propósito (el proveedor no tiene idempotencia).
+builder.Services.Configure<InvoicingOptions>(builder.Configuration.GetSection("Invoicing"));
+builder.Services.AddHttpClient("Invoicing");
+builder.Services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+builder.Services.AddScoped<IInvoiceTransport, HttpInvoiceTransport>();
+builder.Services.AddScoped<IInvoiceServices, InvoiceServices>();
 builder.Services.AddScoped<IGoalRepository, GoalRepository>();
 builder.Services.AddScoped<IGoalServices, GoalServices>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
+builder.Services.AddScoped<IReportServices, ReportServices>();
 
 // Correo: se encola en EmailOutbox_TB y EmailOutboxWorker lo envía en segundo plano (ver EmailOptions).
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));

@@ -16,6 +16,10 @@ namespace CatalogStore.BackendAPI.Repository.Product
         // Soporte para la importación por lotes: las entidades se devuelven con seguimiento y se guardan juntas.
         Task<Dictionary<int, Models.Product.Product>> GetByExternalIdsAsync(IEnumerable<int> externalIds);
         Task AddRangeAsync(IEnumerable<Models.Product.Product> products);
+        // Con seguimiento: para cambiar solo el CABYS sin reescribir el resto del producto.
+        Task<Models.Product.Product?> GetTrackedAsync(int id);
+        // Con seguimiento: productos de una categoría (todos, o solo los que no tienen CABYS).
+        Task<List<Models.Product.Product>> GetTrackedByCategoryAsync(Models.Product.categoryType category, bool onlyWithoutCabys);
         Task<int> SaveChangesAsync();
     }
 }

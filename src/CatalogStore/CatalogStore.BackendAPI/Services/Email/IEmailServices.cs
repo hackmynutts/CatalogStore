@@ -17,6 +17,8 @@ namespace CatalogStore.BackendAPI.Services.Email
         public const string Invitation = "Invitation";
         public const string PasswordReset = "PasswordReset";
         public const string PasswordChanged = "PasswordChanged";
+        public const string Invoice = "Invoice";
+        public const string Proforma = "Proforma";
     }
 
     // Encola correos. El envío real lo hace EmailOutboxWorker en segundo plano, con reintentos.

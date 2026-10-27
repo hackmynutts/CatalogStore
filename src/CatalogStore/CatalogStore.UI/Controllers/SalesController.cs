@@ -1,4 +1,5 @@
 using CatalogStore.UI.Handlers;
+using CatalogStore.UI.Models.Invoicing;
 using CatalogStore.UI.Models.Sales;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,7 +52,31 @@ namespace CatalogStore.UI.Controllers
             if (sale is null)
                 return NotFound();
 
+            // Comprobantes electrónicos de la venta. Si la API de facturación falla la venta se muestra igual, sin esa tarjeta.
+            var invoices = new List<InvoiceViewModel>();
+            var invoiceResponse = await client.GetAsync($"api/Invoice/sale/{id}");
+            if (invoiceResponse.IsSuccessStatusCode)
+                invoices = await invoiceResponse.Content.ReadFromJsonAsync<List<InvoiceViewModel>>() ?? new();
+            ViewData["Invoices"] = invoices;
+
             ViewData["JustCreated"] = created;
+            return View(sale);
+        }
+
+        // GET: Sales/Receipt/5 — tiquete de caja (impresión NO fiscal) de una venta sin IVA.
+        // Las ventas con IVA llevan factura electrónica y las anuladas no se imprimen: ambas vuelven al detalle.
+        public async Task<IActionResult> Receipt(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Sale/{id}");
+            if (!response.IsSuccessStatusCode)
+                return NotFound();
+
+            var sale = await response.Content.ReadFromJsonAsync<SaleViewModel>();
+            if (sale is null)
+                return NotFound();
+            if (sale.ApplyIva || sale.IsVoided)
+                return RedirectToAction(nameof(Details), new { id });
             return View(sale);
         }
 

@@ -46,6 +46,10 @@ namespace CatalogStore.BackendAPI.Repository.Product
                 .ToDictionaryAsync(p => p.ExternalProductID!.Value);
         }
         public async Task AddRangeAsync(IEnumerable<Models.Product.Product> products) => await _dbContext.Products.AddRangeAsync(products);
+        public Task<Models.Product.Product?> GetTrackedAsync(int id) =>
+            _dbContext.Products.FirstOrDefaultAsync(p => p.ProductID == id);
+        public Task<List<Models.Product.Product>> GetTrackedByCategoryAsync(Models.Product.categoryType category, bool onlyWithoutCabys) =>
+            _dbContext.Products.Where(p => p.categoria == category && (!onlyWithoutCabys || p.CabysCode == null)).ToListAsync();
         public async Task<int> SaveChangesAsync() => await _dbContext.SaveChangesAsync();
     }
 }

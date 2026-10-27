@@ -1,0 +1,21 @@
+@model (string From, string To)
+@* Rango de fechas con atajos (los maneja reports.js). Los id llevan un número porque la página repite este bloque. *@
+@{
+    var id = Guid.NewGuid().ToString("N")[..6];
+}
+<div class="row g-2 mb-2">
+    <div class="col-6">
+        <label class="form-label" for="from-@id">Desde</label>
+        <input type="date" class="form-control" id="from-@id" name="from" value="@Model.From" required />
+    </div>
+    <div class="col-6">
+        <label class="form-label" for="to-@id">Hasta</label>
+        <input type="date" class="form-control" id="to-@id" name="to" value="@Model.To" required />
+    </div>
+</div>
+<div class="report-chips" role="group" aria-label="Atajos de fechas">
+    <button type="button" class="report-chip" data-range="month">Este mes</button>
+    <button type="button" class="report-chip" data-range="prev-month">Mes anterior</button>
+    <button type="button" class="report-chip" data-range="30">Últimos 30 días</button>
+    <button type="button" class="report-chip" data-range="year">Este año</button>
+</div>

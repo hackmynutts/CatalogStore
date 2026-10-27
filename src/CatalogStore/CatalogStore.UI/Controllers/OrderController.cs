@@ -74,6 +74,39 @@ namespace CatalogStore.UI.Controllers
             return View(order);
         }
 
+        // GET: Order/Proforma/5 — la cotización imprimible (no fiscal). Solo órdenes abiertas.
+        public async Task<IActionResult> Proforma(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Order/{id}");
+            if (!response.IsSuccessStatusCode)
+                return NotFound();
+
+            var order = await response.Content.ReadFromJsonAsync<OrderViewModel>();
+            if (order is null)
+                return NotFound();
+            if (order.OrderStatus is not (OrderStatus.InProcess or OrderStatus.Pending) || order.Lines.Count == 0)
+                return RedirectToAction(nameof(Details), new { id });
+
+            // Datos de contacto del cliente: la orden solo guarda nombre e identificación.
+            var clientResponse = await client.GetAsync($"api/Client/{order.ClientID}");
+            if (clientResponse.IsSuccessStatusCode)
+                ViewData["Client"] = await clientResponse.Content.ReadFromJsonAsync<CatalogStore.UI.Models.Client.ClientViewModel>();
+            return View(order);
+        }
+
+        // POST: Order/ProformaEmail/5 — manda la proforma al correo del cliente
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProformaEmail(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsync($"api/Order/{id}/proforma/email", null);
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo enviar la proforma.") });
+        }
+
         // ───────── Acciones del detalle ─────────
 
         // POST: Order/Activate — "Agregar productos": deja la orden como activa y manda al catálogo.

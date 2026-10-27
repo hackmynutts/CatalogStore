@@ -1,0 +1,108 @@
+@using CatalogStore.UI.Models.User
+@{
+    ViewData["Title"] = "Reportes";
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    var sellers = ViewData["Sellers"] as List<UserViewModel> ?? new();
+    var error = TempData["ReportError"] as string;
+    var today = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "America/Costa_Rica").Date;
+    var monthStart = new DateTime(today.Year, today.Month, 1);
+    string D(DateTime d) => d.ToString("yyyy-MM-dd");
+}
+
+<div class="mb-3">
+    <h1 class="mb-0">Reportes</h1>
+    <div class="goal-phase-text">Se descargan como libros de Excel (.xlsx) con filtros, totales y varias hojas.@(isAdmin ? "" : " Ves solo tus propias ventas.")</div>
+</div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="auth-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> @error</div>
+}
+
+@* Una tarjeta por reporte; cada una es un formulario GET que descarga el archivo. *@
+<div class="report-grid">
+
+    <section class="report-card">
+        <h2 class="report-title"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Ventas</h2>
+        <p class="report-desc">Cada venta con cliente, montos sin IVA, IVA, total, cobrado, saldo, estado y comprobante. Incluye resumen por vendedor y por estado.</p>
+        <form method="get" asp-action="Download" class="report-form" data-report>
+            <input type="hidden" name="key" value="sales" />
+            <partial name="_ReportDates" model="@((D(monthStart), D(today)))" />
+            @if (isAdmin)
+            {
+                <partial name="_ReportSeller" model="sellers" />
+            }
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="includeVoided" value="true" id="sales-voided" />
+                <label class="form-check-label" for="sales-voided">Agregar una hoja con las anuladas</label>
+            </div>
+            <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+        </form>
+    </section>
+
+    <section class="report-card">
+        <h2 class="report-title"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> Cuentas por cobrar</h2>
+        <p class="report-desc">Ventas con saldo pendiente al día de hoy: días vencida, antigüedad (al día, 1 a 30, 31 a 60, 61 a 90 y más de 90) y saldo por cliente.</p>
+        <form method="get" asp-action="Download" class="report-form" data-report>
+            <input type="hidden" name="key" value="receivables" />
+            @if (isAdmin)
+            {
+                <partial name="_ReportSeller" model="sellers" />
+            }
+            <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+        </form>
+    </section>
+
+    <section class="report-card">
+        <h2 class="report-title"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Cobros</h2>
+        <p class="report-desc">Abonos recibidos en el período, por fecha de pago, con método, referencia y quién lo registró. Resumen por método de pago.</p>
+        <form method="get" asp-action="Download" class="report-form" data-report>
+            <input type="hidden" name="key" value="payments" />
+            <partial name="_ReportDates" model="@((D(monthStart), D(today)))" />
+            @if (isAdmin)
+            {
+                <partial name="_ReportSeller" model="sellers" />
+            }
+            <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+        </form>
+    </section>
+
+    @if (isAdmin)
+    {
+        <section class="report-card">
+            <h2 class="report-title"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Ventas por producto</h2>
+            <p class="report-desc">Cantidad, vendido sin IVA, descuentos, costo, utilidad y margen por producto, y resumen por categoría. El costo es el de cada orden al completarse.</p>
+            <form method="get" asp-action="Download" class="report-form" data-report>
+                <input type="hidden" name="key" value="products" />
+                <partial name="_ReportDates" model="@((D(monthStart), D(today)))" />
+                <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+            </form>
+        </section>
+
+        <section class="report-card">
+            <h2 class="report-title"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Metas y desempeño</h2>
+            <p class="report-desc">Por vendedor en un mes: vendido, cobrado y cantidad de ventas contra su meta, con el porcentaje cumplido.</p>
+            <form method="get" asp-action="Download" class="report-form" data-report>
+                <input type="hidden" name="key" value="goals" />
+                <div class="mb-3">
+                    <label class="form-label" for="goals-period">Mes</label>
+                    <input type="month" class="form-control" id="goals-period" name="period" value="@today.ToString("yyyy-MM")" required />
+                </div>
+                <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+            </form>
+        </section>
+
+        <section class="report-card">
+            <h2 class="report-title"><i class="fa-solid fa-warehouse" aria-hidden="true"></i> Inventario valorizado</h2>
+            <p class="report-desc">Existencias, reservado y disponible por producto, con su valor al costo y a precio de venta.</p>
+            <form method="get" asp-action="Download" class="report-form" data-report>
+                <input type="hidden" name="key" value="stock" />
+                <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+            </form>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/reports.js" asp-append-version="true"></script>
+}

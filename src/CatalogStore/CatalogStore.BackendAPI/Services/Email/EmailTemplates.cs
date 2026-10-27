@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using System.Net;
 
 namespace CatalogStore.BackendAPI.Services.Email
@@ -11,6 +12,9 @@ namespace CatalogStore.BackendAPI.Services.Email
         private const string Muted = "#6b7280";
 
         private static string E(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
+
+        // ₡18,000.00 siempre, igual que las pantallas, sin depender de la cultura con la que corra el servidor.
+        private static string Money(decimal value) => value.ToString("N2", CultureInfo.InvariantCulture);
 
         // Marco común: encabezado con la marca, contenido y pie.
         public static string Layout(string title, string contentHtml, string? footerNote = null) => $"""
@@ -68,6 +72,59 @@ namespace CatalogStore.BackendAPI.Services.Email
             Button("Crear nueva contraseña", link) +
             P($"""<span style="font-size:13px;color:{Muted};">El enlace vence en {validMinutes} minutos y se puede usar una sola vez.</span>"""),
             "Si no pediste este cambio, ignorá este correo: tu contraseña actual sigue funcionando.");
+
+        public record ProformaLine(string? Code, string Name, int Quantity, decimal UnitPrice, decimal DiscountPercent, decimal LineSubtotal);
+
+        // Proforma (cotización, no fiscal): la tabla va en el cuerpo del correo porque la cola no admite adjuntos.
+        public static string Proforma(string clientName, string number, DateTime issued, int validDays, IReadOnlyList<ProformaLine> lines,
+            decimal subtotal, decimal discount, decimal iva, decimal total, bool applyIva, string? notes)
+        {
+            var rows = string.Concat(lines.Select(l => $"""
+                <tr>
+                  <td style="padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:13px;">{E(l.Name)}{(string.IsNullOrWhiteSpace(l.Code) ? "" : $"""<br><span style="color:{Muted};font-size:11px;">{E(l.Code)}</span>""")}</td>
+                  <td style="padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;">{l.Quantity}</td>
+                  <td style="padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;white-space:nowrap;">₡{Money(l.UnitPrice)}{(l.DiscountPercent > 0 ? $"""<br><span style="color:{Muted};font-size:11px;">- {l.DiscountPercent.ToString("0.##", CultureInfo.InvariantCulture)} %</span>""" : "")}</td>
+                  <td style="padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;white-space:nowrap;">₡{Money(l.LineSubtotal)}</td>
+                </tr>
+                """));
+            string Total(string label, decimal value, bool bold = false) =>
+                $"""<tr><td style="padding:3px 6px;text-align:right;font-size:13px;{(bold ? "font-weight:700;font-size:15px;" : "")}">{label}</td><td style="padding:3px 6px;text-align:right;font-size:13px;white-space:nowrap;{(bold ? "font-weight:700;font-size:15px;" : "")}">₡{Money(value)}</td></tr>""";
+
+            return Layout(
+                $"Proforma {number}",
+                P($"Hola {E(clientName)},") +
+                P($"Esta es tu proforma del {issued:dd/MM/yyyy}. Los precios son válidos por <strong>{validDays} días</strong>.") +
+                $"""
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;border-collapse:collapse;">
+                  <tr style="background:#f9fafb;">
+                    <th align="left" style="padding:8px 6px;font-size:11px;color:{Muted};text-transform:uppercase;">Producto</th>
+                    <th align="right" style="padding:8px 6px;font-size:11px;color:{Muted};text-transform:uppercase;">Cant.</th>
+                    <th align="right" style="padding:8px 6px;font-size:11px;color:{Muted};text-transform:uppercase;">Precio</th>
+                    <th align="right" style="padding:8px 6px;font-size:11px;color:{Muted};text-transform:uppercase;">Subtotal</th>
+                  </tr>
+                  {rows}
+                </table>
+                <table role="presentation" align="right" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+                  {Total("Subtotal", subtotal + discount)}
+                  {(discount > 0 ? Total("Descuento", -discount) : "")}
+                  {Total(applyIva ? "IVA" : "IVA (no aplica)", iva)}
+                  {Total("Total", total, bold: true)}
+                </table>
+                <div style="clear:both;"></div>
+                """ +
+                (string.IsNullOrWhiteSpace(notes) ? "" : P($"""<span style="font-size:13px;color:{Muted};">Notas: {E(notes)}</span>""")) +
+                P($"""<span style="font-size:12px;color:{Muted};">Documento informativo: no es un comprobante fiscal ni una factura.</span>"""),
+                "Para aceptar esta proforma, respondé a tu vendedor.");
+        }
+
+        // Comprobante electrónico aceptado: el enlace lleva al PDF (el XML lo conserva el emisor).
+        public static string InvoiceIssued(string clientName, string documentLabel, string saleNumber, decimal total, string pdfUrl, string clave) => Layout(
+            documentLabel,
+            P($"Hola {E(clientName)},") +
+            P($"Te enviamos tu <strong>{E(documentLabel.ToLowerInvariant())}</strong> de la venta <strong>{E(saleNumber)}</strong> por un total de <strong>₡{Money(total)}</strong>.") +
+            Button("Ver comprobante (PDF)", pdfUrl) +
+            P($"""<span style="font-size:12px;color:{Muted};word-break:break-all;">Clave: {E(clave)}</span>"""),
+            "Este comprobante fue emitido electrónicamente y aceptado por el Ministerio de Hacienda.");
 
         // Aviso de seguridad después de cualquier cambio de contraseña.
         public static string PasswordChanged(string fullName, DateTime localWhen) => Layout(

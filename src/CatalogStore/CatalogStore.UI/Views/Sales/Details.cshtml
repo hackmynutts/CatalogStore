@@ -1,6 +1,13 @@
 @model CatalogStore.UI.Models.Sales.SaleViewModel
 @using CatalogStore.UI.Models.Sales
+@using CatalogStore.UI.Models.Invoicing
 @{
+    // Facturación electrónica: el comprobante vigente (factura o tiquete) y su nota de crédito, si la hay.
+    var invoices = ViewData["Invoices"] as List<InvoiceViewModel> ?? new();
+    var mainInvoice = invoices.FirstOrDefault(i => !i.IsCreditNote && InvoiceUi.IsActive(i.Status));
+    var creditNote = invoices.FirstOrDefault(i => i.IsCreditNote && InvoiceUi.IsActive(i.Status));
+    // Para el botón "Anular venta": sin comprobante, o con la nota de crédito aceptada, se puede anular.
+    string voidInvoiceState = mainInvoice is null || creditNote?.Status == InvoiceUi.Accepted ? "ok" : creditNote is null ? "needs-credit-note" : "credit-pending";
     ViewData["Title"] = $"Venta {Model.SaleNumber}";
     bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
     bool justCreated = ViewData["JustCreated"] as bool? == true;
@@ -58,7 +65,8 @@
         @if (canVoidSale)
         {
             <button type="button" class="btn btn-sm btn-outline-danger" style="width:auto;" data-action="void-sale"
-                    data-active-payments="@vigentes" data-total="@SalesUi.Money(Model.TotalAmount)" data-order-number="@Model.OrderNumber">
+                    data-active-payments="@vigentes" data-total="@SalesUi.Money(Model.TotalAmount)" data-order-number="@Model.OrderNumber"
+                    data-invoice-state="@voidInvoiceState">
                 <i class="fa-solid fa-ban" aria-hidden="true"></i> Anular venta
             </button>
         }
@@ -196,6 +204,118 @@
                 </ul>
             }
         </div>
+
+        @* Las ventas sin IVA no van a Hacienda: llevan un tiquete de caja (impresión no fiscal). *@
+        @if (!Model.ApplyIva && !Model.IsVoided)
+        {
+            <div class="info-card">
+                <h2 class="info-card-title"><i class="fa-solid fa-receipt"></i> Tiquete de caja</h2>
+                <div class="invoice-start">
+                    <a asp-action="Receipt" asp-route-id="@Model.SalesHeaderID" class="btn btn-sm btn-brand btn-brand-auto" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir tiquete
+                    </a>
+                    <span class="invoice-hint">Esta venta es sin IVA: no se factura electrónicamente. El tiquete es un comprobante simple, <strong>no fiscal</strong>.</span>
+                </div>
+            </div>
+        }
+
+        @* Facturación electrónica. Emitir es un acto fiscal real (Hacienda): solo administradores y siempre con confirmación. *@
+        @if (Model.ApplyIva && (!Model.IsVoided || invoices.Any()))
+        {
+            <div class="info-card" id="invoiceCard" data-sale-id="@Model.SalesHeaderID">
+                <h2 class="info-card-title">
+                    <i class="fa-solid fa-file-invoice"></i> Facturación electrónica
+                    <span class="order-card-count">@invoices.Count</span>
+                </h2>
+
+                @if (!invoices.Any())
+                {
+                    <div class="app-table-empty">
+                        <i class="fa-solid fa-file-circle-question"></i>
+                        <span>Esta venta todavía no tiene @(Model.ApplyIva ? "factura" : "tiquete") electrónico.</span>
+                    </div>
+                }
+                else
+                {
+                    <ul class="invoice-list">
+                        @foreach (var inv in invoices)
+                        {
+                            <li class="invoice-item">
+                                <div class="invoice-head">
+                                    <span class="invoice-title">@inv.DocumentTypeName @(inv.Number == "—" ? "" : "· " + inv.Number)</span>
+                                    <span class="@InvoiceUi.StatusClass(inv.Status)">@(InvoiceUi.IsStuck(inv) ? "Trabada" : inv.StatusName)</span>
+                                </div>
+                                <div class="invoice-meta">
+                                    Creada el @inv.CreatedOn.ToString("dd/MM/yyyy HH:mm") por @inv.CreatedBy
+                                    @if (!string.IsNullOrEmpty(inv.HaciendaStatus))
+                                    {
+                                        <span> · Hacienda: <strong>@inv.HaciendaStatus</strong></span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(inv.Clave))
+                                {
+                                    <div class="invoice-clave" title="Clave de 50 dígitos">@inv.Clave</div>
+                                }
+                                @if (inv.IsCreditNote && !string.IsNullOrEmpty(inv.Reason))
+                                {
+                                    <div class="invoice-meta">Motivo: @inv.Reason</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(inv.HaciendaMessage))
+                                {
+                                    <div class="invoice-note @(inv.Status is InvoiceUi.Uncertain or InvoiceUi.Failed or InvoiceUi.Rejected ? "is-warn" : "")">@inv.HaciendaMessage</div>
+                                }
+                                @if (inv.Status == InvoiceUi.Uncertain || InvoiceUi.IsStuck(inv))
+                                {
+                                    <div class="invoice-note is-warn">
+                                        No se sabe si Hacienda recibió este comprobante. <strong>No lo vuelvas a emitir:</strong> verificalo con el proveedor
+                                        @(string.IsNullOrEmpty(inv.Clave) ? "" : "(con la clave de arriba)") y, si confirmás que NO se emitió, descartá el intento.
+                                    </div>
+                                }
+                                <div class="invoice-actions">
+                                    @if (!string.IsNullOrEmpty(inv.PdfUrl))
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" href="@inv.PdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF</a>
+                                    }
+                                    @if (isAdmin)
+                                    {
+                                        @if (inv.HasXml)
+                                        {
+                                            <a class="btn btn-sm btn-outline-secondary" asp-controller="Invoices" asp-action="Xml" asp-route-id="@inv.Id"><i class="fa-solid fa-file-code" aria-hidden="true"></i> XML</a>
+                                        }
+                                        @if (!string.IsNullOrEmpty(inv.Clave) && inv.Status is InvoiceUi.Sent or InvoiceUi.Uncertain or InvoiceUi.Accepted)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="invoice-refresh" data-id="@inv.Id"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Actualizar estado</button>
+                                        }
+                                        @if (inv.Status == InvoiceUi.Accepted && !string.IsNullOrEmpty(inv.PdfUrl))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="invoice-email" data-id="@inv.Id" data-email="@Model.ClientEmail"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Enviar al cliente</button>
+                                        }
+                                        @if (inv.Status == InvoiceUi.Uncertain || InvoiceUi.IsStuck(inv))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-action="invoice-discard" data-id="@inv.Id"><i class="fa-solid fa-trash-can" aria-hidden="true"></i> Descartar intento</button>
+                                        }
+                                        @if (inv.Status == InvoiceUi.Accepted && !inv.IsCreditNote && creditNote is null && !Model.IsVoided)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-action="invoice-credit-note" data-label="@inv.DocumentTypeName.ToLowerInvariant()"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Nota de crédito</button>
+                                        }
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (isAdmin && mainInvoice is null && !Model.IsVoided)
+                {
+                    <div class="invoice-start">
+                        <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="invoice-start" data-doc="@(Model.ApplyIva ? "factura" : "tiquete")">
+                            <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i> Revisar y @(Model.ApplyIva ? "facturar" : "emitir tiquete")
+                        </button>
+                        <span class="invoice-hint">@(Model.ApplyIva ? "La venta lleva IVA: se emite una factura electrónica." : "La venta es sin IVA: se emite un tiquete electrónico.") Antes de enviar se revisa todo y se pide confirmación.</span>
+                    </div>
+                }
+            </div>
+        }
     </div>
 
     <div class="col-lg-4">
@@ -325,4 +445,5 @@
 
 @section Scripts {
     <script src="~/js/sales-details.js" asp-append-version="true"></script>
+    <script src="~/js/sales-invoice.js" asp-append-version="true"></script>
 }

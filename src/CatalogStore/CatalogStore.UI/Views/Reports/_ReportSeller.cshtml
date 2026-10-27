@@ -1,0 +1,14 @@
+@model List<CatalogStore.UI.Models.User.UserViewModel>
+@{
+    var id = Guid.NewGuid().ToString("N")[..6];
+}
+<div class="mb-3">
+    <label class="form-label" for="seller-@id">Vendedor</label>
+    <select class="form-select" id="seller-@id" name="seller">
+        <option value="">Todos los vendedores</option>
+        @foreach (var u in Model)
+        {
+            <option value="@u.Email">@(string.IsNullOrWhiteSpace(u.FullName) ? u.Email : $"{u.FullName.Trim()} ({u.Email})")</option>
+        }
+    </select>
+</div>

@@ -26,6 +26,17 @@ namespace CatalogStore.BackendAPI.Controllers
         private string CurrentUser => User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
         private bool IsAdmin => User.IsInRole("Admin") || User.IsInRole("AdminIT");
 
+        // POST api/Order/5/proforma/email — manda la proforma al correo del cliente (orden abierta; el vendedor, solo la suya)
+        [HttpPost("{id:int}/proforma/email")]
+        public async Task<IActionResult> EmailProforma(int id, [FromServices] CatalogStore.BackendAPI.Services.Orders.IProformaServices proformaServices)
+        {
+            var result = await proformaServices.SendByEmailAsync(id, CurrentUser, IsAdmin);
+            if (result.Success) return Ok(new { id = result.Id });
+            return result.Error == OrderServices.NotFoundMessage
+                ? NotFound(new { message = result.Error })
+                : BadRequest(new { message = result.Error });
+        }
+
         // ───────── Lectura ─────────
 
         // GET api/Order?status=1&clientId=5 — el vendedor recibe solo sus órdenes

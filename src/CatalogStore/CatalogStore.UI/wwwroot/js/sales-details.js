@@ -132,6 +132,25 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = e.target.closest('[data-action="void-sale"]');
         if (!btn) return;
 
+        // Una venta con factura o tiquete electrónico no se anula sin su nota de crédito aceptada por Hacienda.
+        const invoiceState = btn.dataset.invoiceState;
+        if (invoiceState === 'needs-credit-note' || invoiceState === 'credit-pending') {
+            const card = document.getElementById('invoiceCard');
+            const r = await Swal.fire({
+                icon: 'info',
+                title: invoiceState === 'needs-credit-note' ? 'Primero la nota de crédito' : 'La nota de crédito está pendiente',
+                text: invoiceState === 'needs-credit-note'
+                    ? 'Esta venta tiene un comprobante electrónico vigente. Emití la nota de crédito, esperá a que Hacienda la acepte y después anulá la venta.'
+                    : 'La nota de crédito todavía no está aceptada por Hacienda. Actualizá su estado en "Facturación electrónica" y volvé a intentar.',
+                showCancelButton: !!card,
+                confirmButtonText: card ? 'Ir a Facturación' : 'Entendido',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: brandColor
+            });
+            if (r.isConfirmed && card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
         const activePayments = Number(btn.dataset.activePayments || 0);
         if (activePayments > 0) {
             Swal.fire({

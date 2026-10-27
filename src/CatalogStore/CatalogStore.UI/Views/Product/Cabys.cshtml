@@ -1,0 +1,148 @@
+@model List<CatalogStore.UI.Models.Product.ProductViewModel>
+@{
+    ViewData["Title"] = "CABYS de productos";
+    var categories = new (int Id, string Label)[]
+    {
+        (0, "Genérica"), (1, "Repuestos de moto"), (2, "Accesorios de moto"), (3, "Capas de moto"), (4, "Tapas plásticas de moto")
+    };
+    string Label(int c) => categories.FirstOrDefault(x => x.Id == c).Label ?? "—";
+    int total = Model.Count;
+    int withCabys = Model.Count(p => !string.IsNullOrEmpty(p.CabysCode));
+    int missing = total - withCabys;
+    int pct = total == 0 ? 0 : (int)Math.Floor(withCabys * 100.0 / total);
+    bool onlyMissing = ViewData["OnlyMissing"] as bool? == true;
+    var rows = onlyMissing ? Model.Where(p => string.IsNullOrEmpty(p.CabysCode)).ToList() : Model;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0">CABYS de productos</h1>
+        <div class="goal-phase-text">La factura electrónica exige el código CABYS de cada producto. Se busca en el catálogo oficial de Hacienda.</div>
+    </div>
+    <a asp-action="IndexAdmin" class="btn btn-outline-brand btn-sm" style="width:auto;"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Productos</a>
+</div>
+
+<form id="cabysTokenForm" style="display:none">@Html.AntiForgeryToken()</form>
+
+<section class="kpi-grid cabys-kpis mb-4" aria-label="Avance del CABYS">
+    <div class="kpi-tile">
+        <span class="kpi-label">Con CABYS</span>
+        <span class="kpi-value kpi-value-ok" id="cabysWithCount">@withCabys</span>
+        <span class="kpi-meta">de @total productos · @pct %</span>
+    </div>
+    <div class="kpi-tile @(missing > 0 ? "kpi-tile-alert" : "")">
+        <span class="kpi-label">Sin CABYS</span>
+        <span class="kpi-value @(missing > 0 ? "kpi-value-danger" : "")">@missing</span>
+        <span class="kpi-meta">@(missing > 0 ? "No se pueden facturar" : "Todo listo")</span>
+    </div>
+</section>
+
+<h2 class="goal-h2">Asignar por categoría</h2>
+<p class="goal-help" style="margin-bottom:12px;">Si todos los productos de una categoría llevan el mismo CABYS, asignalo de una vez. Después ajustás los que sean distintos uno por uno.</p>
+<div class="table-responsive mb-4">
+    <table class="table app-table cabys-categories">
+        <thead>
+            <tr>
+                <th class="sorter-false filter-false">Categoría</th>
+                <th class="sorter-false filter-false">Productos</th>
+                <th class="sorter-false filter-false">Sin CABYS</th>
+                <th class="sorter-false filter-false">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in categories)
+            {
+                var inCat = Model.Where(p => p.categoria == c.Id).ToList();
+                if (inCat.Count == 0) { continue; }
+                var miss = inCat.Count(p => string.IsNullOrEmpty(p.CabysCode));
+                <tr>
+                    <td>@c.Label</td>
+                    <td>@inCat.Count</td>
+                    <td>@(miss == 0 ? "—" : miss.ToString())</td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary cabys-bulk-btn" data-category="@c.Id" data-label="@c.Label" data-total="@inCat.Count" data-missing="@miss">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Asignar a la categoría
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<h2 class="goal-h2">Productos</h2>
+<div class="d-flex align-items-center gap-3 flex-wrap mb-2">
+    <div class="app-table-search-wrap mb-0" style="flex:1; min-width:220px;">
+        <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
+        <input type="text" class="app-table-search" data-table-search="cabysTable" data-column="all" placeholder="Buscar productos..." />
+    </div>
+    <div class="form-check mb-0">
+        <input class="form-check-input" type="checkbox" id="onlyMissing" @(onlyMissing ? "checked" : "") />
+        <label class="form-check-label" for="onlyMissing">Solo los que no tienen CABYS (@missing)</label>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table id="cabysTable" class="table app-table">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>CABYS</th>
+                <th class="sorter-false filter-false">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in rows)
+            {
+                bool has = !string.IsNullOrEmpty(p.CabysCode);
+                <tr data-id="@p.ProductID" data-has="@(has ? "1" : "0")">
+                    <td>@(string.IsNullOrEmpty(p.ProductCode) ? "—" : p.ProductCode)</td>
+                    <td>@p.ProductName</td>
+                    <td>@Label(p.categoria)</td>
+                    <td class="cabys-cell">
+                        @if (has)
+                        {
+                            <span class="cabys-code">@p.CabysCode</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-pay badge-pay-pending">Falta</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-sm btn-outline-primary cabys-set-btn" data-id="@p.ProductID" data-name="@p.ProductName" title="@(has ? "Cambiar CABYS" : "Asignar CABYS")">
+                                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> @(has ? "Cambiar" : "Asignar")
+                            </button>
+                            @if (has)
+                            {
+                                <span class="action-sep">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger cabys-clear-btn" data-id="@p.ProductID" data-name="@p.ProductName" title="Quitar CABYS"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div id="cabysTable-pager" class="app-table-pager">
+    <button type="button" class="btn btn-sm btn-outline-secondary first" title="Primera página"><i class="fa-solid fa-angles-left"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary prev" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>
+    <span class="pagedisplay"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary next" title="Siguiente"><i class="fa-solid fa-angle-right"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary last" title="Última página"><i class="fa-solid fa-angles-right"></i></button>
+    <select class="pagesize">
+        <option value="10">10 / página</option>
+        <option value="25" selected>25 / página</option>
+        <option value="50">50 / página</option>
+        <option value="100">100 / página</option>
+    </select>
+</div>
+
+@section Scripts {
+    <script src="~/js/product-cabys.js" asp-append-version="true"></script>
+}

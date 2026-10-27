@@ -1,3 +1,4 @@
+using CatalogStore.UI.Handlers;
 using CatalogStore.UI.Models.Product;
 using CatalogStore.UI.Models.Status;
 using Microsoft.AspNetCore.Authorization;
@@ -220,6 +221,59 @@ namespace CatalogStore.UI.Controllers
 
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();
             return Json(new { success = true, result });
+        }
+
+        // ───────── CABYS (factura electrónica) ─────────
+
+        // GET: Product/Cabys — todos los productos con su CABYS, para completar los que faltan
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> Cabys(bool onlyMissing = false)
+        {
+            ViewData["OnlyMissing"] = onlyMissing;
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync("api/Product");
+            var productos = response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<List<ProductViewModel>>() ?? new()
+                : new List<ProductViewModel>();
+            return View(productos.OrderBy(p => p.ProductName).ToList());
+        }
+
+        // GET: Product/CabysSearch?q=casco — busca en el catálogo oficial; el JSON de la API se reenvía tal cual
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> CabysSearch(string? q)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Product/cabys/search?q={Uri.EscapeDataString(q ?? string.Empty)}");
+            if (!response.IsSuccessStatusCode)
+                return Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo buscar en el catálogo CABYS.") });
+            return Json(new { success = true, items = await response.Content.ReadFromJsonAsync<JsonElement>() });
+        }
+
+        // POST: Product/SetCabys — asigna o quita (vacío) el CABYS de un producto
+        [HttpPost]
+        [Authorize(Roles = "Admin,AdminIT")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetCabys(int id, string? cabysCode)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PutAsJsonAsync($"api/Product/{id}/cabys", new { cabysCode = string.IsNullOrWhiteSpace(cabysCode) ? null : cabysCode.Trim() });
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo guardar el CABYS.") });
+        }
+
+        // POST: Product/SetCabysBulk — el mismo CABYS para una categoría; responde cuántos productos cambió
+        [HttpPost]
+        [Authorize(Roles = "Admin,AdminIT")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetCabysBulk(int category, string? cabysCode, bool onlyEmpty = true)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PutAsJsonAsync("api/Product/cabys/bulk", new { category, cabysCode, onlyEmpty });
+            if (!response.IsSuccessStatusCode)
+                return Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo asignar el CABYS.") });
+            var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return Json(new { success = true, count = result.GetProperty("id").GetInt32() });
         }
 
         [HttpPost]

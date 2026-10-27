@@ -34,6 +34,10 @@
         </div>
     </div>
     <div class="detail-actions">
+        @if ((inProcess || pending) && Model.Lines.Count > 0)
+        {
+            <a asp-action="Proforma" asp-route-id="@Model.OrderID" class="btn btn-sm btn-outline-secondary" style="width:auto;" title="Cotización para el cliente (no fiscal)"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> Proforma</a>
+        }
         @if (inProcess)
         {
             <button type="button" class="btn btn-sm btn-outline-brand" data-action="activate"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar productos</button>

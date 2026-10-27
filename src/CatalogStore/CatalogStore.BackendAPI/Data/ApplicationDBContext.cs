@@ -15,6 +15,7 @@ using CatalogStore.BackendAPI.Models.SalesLine;
 using CatalogStore.BackendAPI.Models.SalesPayment;
 using CatalogStore.BackendAPI.Models.EmailOutbox;
 using CatalogStore.BackendAPI.Models.Goal;
+using CatalogStore.BackendAPI.Models.Invoice;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -23,6 +24,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Eventlog> Eventlogs { get; set; }
         public DbSet<EmailOutbox> EmailOutbox { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
@@ -481,6 +483,49 @@ namespace CatalogStore.BackendAPI.Data
                     t.HasCheckConstraint("CK_SalesPayment_Void_Consistent",
                                         "([IsVoided] = 0 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) " +
                                         "OR ([IsVoided] = 1 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
+                });
+            });
+            builder.Entity<Invoice>(entity =>
+            {
+                entity.Property(e => e.Clave).HasMaxLength(50);
+                entity.Property(e => e.Consecutive).HasMaxLength(20);
+                entity.Property(e => e.SecurityCode).HasMaxLength(8).IsRequired();
+                entity.Property(e => e.HaciendaStatus).HasMaxLength(100);
+                entity.Property(e => e.HaciendaMessage).HasMaxLength(1000);
+                entity.Property(e => e.PdfUrl).HasMaxLength(500);
+                entity.Property(e => e.PdfUrlTicket).HasMaxLength(500);
+                entity.Property(e => e.Reason).HasMaxLength(250);
+                entity.Property(e => e.CreatedBy).HasMaxLength(140).IsRequired();
+                entity.Property(e => e.ModifiedBy).HasMaxLength(140);
+                entity.HasOne(e => e.SalesHeader)
+                    .WithMany()
+                    .HasForeignKey(e => e.SalesHeaderID)
+                    .HasConstraintName("FK_Invoice_SalesHeader_SalesHeaderID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.ReferenceInvoice)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReferenceInvoiceID)
+                    .HasConstraintName("FK_Invoice_Invoice_ReferenceInvoiceID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                // Último seguro contra la doble emisión: una venta no puede tener dos comprobantes vigentes del mismo tipo.
+                // Vigente = Enviando(0), Enviada(1), Aceptada(2) o Por conciliar(4). Rechazada(3) y No emitida(5) liberan la venta.
+                entity.HasIndex(e => new { e.SalesHeaderID, e.DocumentType })
+                    .IsUnique()
+                    .HasFilter("[Status] IN (0,1,2,4)")
+                    .HasDatabaseName("UX_Invoice_Sale_DocType_Active");
+                entity.HasIndex(e => e.Clave)
+                    .IsUnique()
+                    .HasFilter("[Clave] IS NOT NULL")
+                    .HasDatabaseName("UX_Invoice_Clave");
+                entity.HasIndex(e => e.SalesHeaderID)
+                    .HasDatabaseName("IX_Invoice_SalesHeaderID");
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_Invoice_Status_Valid", "[Status] IN (0,1,2,3,4,5)");
+                    t.HasCheckConstraint("CK_Invoice_DocType_Valid", "[DocumentType] IN (1,3,4)");
+                    t.HasCheckConstraint("CK_Invoice_Clave_Format", "[Clave] IS NULL OR (LEN([Clave]) = 50 AND [Clave] NOT LIKE '%[^0-9]%')");
+                    t.HasCheckConstraint("CK_Invoice_Reference_Consistent",
+                                        "([DocumentType] = 3 AND [ReferenceInvoiceID] IS NOT NULL) OR ([DocumentType] <> 3 AND [ReferenceInvoiceID] IS NULL)");
                 });
             });
             builder.Entity<Goal>(entity =>

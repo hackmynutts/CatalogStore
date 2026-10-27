@@ -1,6 +1,7 @@
 ﻿using CatalogStore.BackendAPI.DTO.Product;
 using CatalogStore.BackendAPI.Models.Product;
 using CatalogStore.BackendAPI.Services.Product;
+using CatalogStore.BackendAPI.Services.Product.Cabys;
 using CatalogStore.BackendAPI.Services.Product.CatalogExternal;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +19,12 @@ namespace CatalogStore.BackendAPI.Controllers
     {
         private readonly IProductServices _productServices;
         private readonly IProductImportServices _importServices;
-        public ProductController(IProductServices productServices, IProductImportServices importServices)
+        private readonly ICabysServices _cabysServices;
+        public ProductController(IProductServices productServices, IProductImportServices importServices, ICabysServices cabysServices)
         {
             _productServices = productServices;
             _importServices = importServices;
+            _cabysServices = cabysServices;
         }
         // GET: api/<ProductController>
         [HttpGet]
@@ -131,6 +134,45 @@ namespace CatalogStore.BackendAPI.Controllers
             bool updated = await _productServices.InactivateAsync(id, edit);
             if (!updated) return NotFound();
             return Ok(edit);
+        }
+
+        // GET api/Product/cabys/search?q=casco — busca en el catálogo oficial CABYS de Hacienda
+        [HttpGet("cabys/search")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> SearchCabys([FromQuery] string? q, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var items = await _cabysServices.SearchAsync(q ?? string.Empty, cancellationToken);
+                return Ok(items.Select(i => new CabysItemDTO { Code = i.Code, Description = i.Description, TaxRate = i.TaxRate, Category = i.Category }));
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, new { message = "No se pudo consultar el catálogo CABYS de Hacienda. Intentá de nuevo en unos minutos." });
+            }
+        }
+
+        // PUT api/Product/5/cabys — asignar o quitar (null) el CABYS de un producto
+        [HttpPut("{id:int}/cabys")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> PutCabys(int id, [FromBody] SetCabysDTO dto) =>
+            ToResponse(await _productServices.SetCabysAsync(id, dto.CabysCode, CurrentUser));
+
+        // PUT api/Product/cabys/bulk — el mismo CABYS para una categoría; responde { id } con cuántos se actualizaron
+        [HttpPut("cabys/bulk")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> PutCabysBulk([FromBody] BulkCabysDTO dto) =>
+            ToResponse(await _productServices.SetCabysByCategoryAsync(dto, CurrentUser));
+
+        private string CurrentUser => User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
+
+        private IActionResult ToResponse(CatalogStore.BackendAPI.DTO.Common.OperationResult result)
+        {
+            if (result.Success)
+                return Ok(new { id = result.Id });
+            return result.Error == ProductServices.NotFoundMessage
+                ? NotFound(new { message = result.Error })
+                : BadRequest(new { message = result.Error });
         }
 
         // DELETE api/<ProductController>/5

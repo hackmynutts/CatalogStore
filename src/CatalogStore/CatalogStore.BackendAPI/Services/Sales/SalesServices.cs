@@ -3,6 +3,8 @@ using CatalogStore.BackendAPI.DTO.Sales;
 using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.EventLogs;
 using CatalogStore.BackendAPI.Models.InventoryTransaction;
+using CatalogStore.BackendAPI.Models.Invoice;
+using CatalogStore.BackendAPI.Repository.Invoices;
 using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
 using CatalogStore.BackendAPI.Models.SalesHeader;
@@ -32,9 +34,12 @@ namespace CatalogStore.BackendAPI.Services.Sales
         private readonly IOrderRepository _orderRepository;
         private readonly IInventoryLineRepository _inventoryLineRepository;
         private readonly IInventoryTransactionServices _inventoryTransactionServices;
-        public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, IEventlogServices eventlogServices, TimeProvider time, 
-                            IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices)
+        private readonly IInvoiceRepository _invoiceRepository;
+        public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, IEventlogServices eventlogServices, TimeProvider time,
+                            IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices,
+                            IInvoiceRepository invoiceRepository)
         {
+            _invoiceRepository = invoiceRepository;
             _salesRepository = salesRepository;
             _clientServices= clientServices;
             _eventlogServices = eventlogServices;
@@ -298,6 +303,9 @@ namespace CatalogStore.BackendAPI.Services.Sales
                 var paid = PaidAmount(sale);
                 if (paid > 0)
                     return OperationResult.Fail($"La venta {sale.SaleNumber} tiene ₡{paid:N2} en abonos vigentes. Anúlelos primero.");
+                var invoiceBlock = await InvoiceBlockAsync(sale);
+                if (invoiceBlock is not null)
+                    return OperationResult.Fail(invoiceBlock);
 
                 var order = await _orderRepository.GetForUpdateAsync(sale.OrderID)
                     ?? throw new InvalidOperationException($"La venta {sale.SaleNumber} apunta a la orden {sale.OrderID}, que no existe.");
@@ -377,6 +385,23 @@ namespace CatalogStore.BackendAPI.Services.Sales
         private DateOnly TodayLocal() => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
 
         private static decimal PaidAmount(SalesHeader sale) => sale.Payments.Where(p => !p.IsVoided).Sum(p => p.Amount);
+
+        // Una venta con factura o tiquete electrónico vigente no se puede anular hasta que su nota de crédito esté
+        // aceptada por Hacienda: si no, el stock volvería y la orden se retornaría con un comprobante fiscal todavía válido.
+        private async Task<string?> InvoiceBlockAsync(SalesHeader sale)
+        {
+            var invoices = await _invoiceRepository.GetBySaleAsync(sale.SalesHeaderID);
+            var main = invoices.FirstOrDefault(i => i.DocumentType != InvoiceDocType.NotaCredito && InvoiceStates.Active.Contains(i.Status));
+            if (main is null) return null;
+
+            var note = invoices.FirstOrDefault(i => i.DocumentType == InvoiceDocType.NotaCredito && InvoiceStates.Active.Contains(i.Status));
+            if (note?.Status == InvoiceStatus.Accepted) return null;
+
+            var label = main.DocumentType == InvoiceDocType.Tiquete ? "tiquete" : "factura";
+            return note is null
+                ? $"La venta {sale.SaleNumber} tiene un {label} electrónico vigente. Emití primero la nota de crédito (Facturación) y esperá a que Hacienda la acepte."
+                : $"La nota de crédito de la venta {sale.SaleNumber} todavía no está aceptada por Hacienda. Actualizá su estado y volvé a intentar.";
+        }
 
         // Lo pagado y el estado salen siempre de la lista de abonos vigentes.
         private static void RecalculatePayments(SalesHeader sale, string user, DateTime now)

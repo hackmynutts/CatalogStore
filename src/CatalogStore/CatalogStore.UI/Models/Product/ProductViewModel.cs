@@ -16,6 +16,8 @@ namespace CatalogStore.UI.Models.Product
         // Nunca es null: los productos sin precio tienen Price = null y PriceCalcIVA = 0.
         public decimal PriceCalcIVA { get; set; }
         public int UnidadMedida { get; set; }
+        // CABYS de 13 dígitos para la factura electrónica; null mientras no se asigne.
+        public string? CabysCode { get; set; }
         public int StatusID { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
