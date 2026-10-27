@@ -21,6 +21,7 @@ namespace CatalogStore.UI.Models.Order
             OrderStatus.Pending => "badge-order badge-order-pending",
             OrderStatus.Completed => "badge-order badge-order-completed",
             OrderStatus.Cancelled or OrderStatus.Rejected => "badge-order badge-order-cancelled",
+            OrderStatus.Returned => "badge-order badge-order-returned",
             _ => "badge-order"
         };
     }

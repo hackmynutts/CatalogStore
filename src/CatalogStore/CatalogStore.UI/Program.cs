@@ -1,6 +1,8 @@
+using CatalogStore.UI.Controllers;
 using CatalogStore.UI.Filters;
 using CatalogStore.UI.Handlers;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Threading.RateLimiting;
 
 
 
@@ -28,6 +30,15 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
         options.SlidingExpiration = true;
     });
+// "Olvidé mi contraseña" es público: como mucho 5 envíos cada 15 minutos por IP. El límite va aquí y no en la API
+// porque la API ve siempre la IP de la UI, no la del usuario. La API además limita a un correo por usuario cada 5 min.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(AccountController.PasswordFormsPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(15), QueueLimit = 0 }));
+});
 
 var app = builder.Build();
 
@@ -41,6 +52,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}");
 app.UseRouting();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -90,5 +90,17 @@ namespace CatalogStore.UI.Controllers
                 ? Json(new { success = true })
                 : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo anular el abono.") });
         }
+
+        // POST: Sales/VoidSale — anular la venta completa. Solo admin y sin abonos vigentes (lo valida la API).
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VoidSale(int salesHeaderId, string? reason)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsJsonAsync($"api/Sale/{salesHeaderId}/void", new { reason = reason ?? string.Empty });
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo anular la venta.") });
+        }
     }
 }

@@ -22,7 +22,8 @@
         (PaymentStatus.Pending, false, "Pendientes"),
         (PaymentStatus.PartiallyPaid, false, "Parciales"),
         (PaymentStatus.Paid, false, "Pagadas"),
-        (null, true, "Vencidas")
+        (null, true, "Vencidas"),
+        (PaymentStatus.Voided, false, "Anuladas")
     };
 }
 
@@ -106,7 +107,8 @@
         @foreach (var s in Model)
         {
             var pct = SalesUi.PaidPercent(s.AmountPaid, s.TotalAmount);
-            <tr class="@(s.IsOverdue ? "sales-row-overdue" : "")">
+            var voided = s.PaymentStatus == PaymentStatus.Voided;
+            <tr class="@(s.IsOverdue ? "sales-row-overdue" : "") @(voided ? "sales-row-voided" : "")">
                 <td><a asp-action="Details" asp-route-id="@s.SalesHeaderID" class="order-number-link">@s.SaleNumber</a></td>
                 <td>
                     @s.ClientName
@@ -129,7 +131,8 @@
                     </div>
                     <span class="pay-progress-text">@SalesUi.Money(s.AmountPaid)</span>
                 </td>
-                <td class="text-end order-amount @(s.Balance > 0 ? "fw-bold" : "text-muted")">@SalesUi.Money(s.Balance)</td>
+                @* Una anulada no se cobra: su saldo no es deuda *@
+                <td class="text-end order-amount @(!voided && s.Balance > 0 ? "fw-bold" : "text-muted")">@(voided ? "—" : SalesUi.Money(s.Balance))</td>
                 <td>
                     <span class="badge @SalesUi.StatusBadge(s.PaymentStatus)">@s.PaymentStatusName</span>
                     @if (s.IsOverdue)
@@ -172,6 +175,6 @@
 {
     <div class="app-table-empty">
         <i class="fa-solid fa-receipt"></i>
-        <span>@(overdue ? "No hay ventas vencidas." : "No hay ventas para mostrar con este filtro.") Las ventas se crean al completar una orden.</span>
+        <span>@(overdue ? "No hay ventas vencidas." : status == PaymentStatus.Voided ? "No hay ventas anuladas." : "No hay ventas para mostrar con este filtro.") Las ventas se crean al completar una orden.</span>
     </div>
 }

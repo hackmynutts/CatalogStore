@@ -38,13 +38,24 @@
                     {
                         <span class="badge badge-role me-1">@role</span>
                     }
+                    @if (!u.HasPassword)
+                    {
+                        <span class="badge badge-invite-pending" title="Todavía no creó su contraseña">Invitación pendiente</span>
+                    }
                 </td>
                 <td>@(u.SendNotifications ? "Sí" : "No")</td>
                 <td class="text-end">
                     <div class="action-buttons">
                         <button type="button" class="btn btn-sm btn-outline-primary btn-edit-user" title="Editar" data-id="@u.Id"><i class="fa-solid fa-pen-to-square"></i></button>
                         <span class="action-sep">|</span>
-                        <button type="button" class="btn btn-sm btn-outline-warning btn-reset-password" title="Restablecer contraseña" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-rotate"></i></button>
+                        @if (u.HasPassword)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-warning btn-reset-password" title="Restablecer contraseña" data-id="@u.Id" data-username="@u.UserName" data-email="@u.Email"><i class="fa-solid fa-rotate"></i></button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-warning btn-resend-invitation" title="Reenviar invitación" data-id="@u.Id" data-username="@u.UserName" data-email="@u.Email"><i class="fa-solid fa-envelope"></i></button>
+                        }
                         <span class="action-sep">|</span>
                         <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user" title="Eliminar" data-id="@u.Id" data-username="@u.UserName"><i class="fa-solid fa-trash"></i></button>
                     </div>

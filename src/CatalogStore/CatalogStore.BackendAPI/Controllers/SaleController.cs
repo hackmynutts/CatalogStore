@@ -55,6 +55,11 @@ namespace CatalogStore.BackendAPI.Controllers
         public async Task<IActionResult> VoidPayment(int id, int paymentId, [FromBody] VoidSalePaymentDTO dto) =>
             ToResponse(await _salesServices.VoidPaymentAsync(id, paymentId, dto, CurrentUser, IsAdmin));
 
+        // POST api/Sale/5/void — anular la venta (solo admin, sin abonos vigentes; devuelve el stock y retorna la orden)
+        [HttpPost("{id:int}/void")]
+        public async Task<IActionResult> VoidSale(int id, [FromBody] VoidSaleDTO dto) =>
+            ToResponse(await _salesServices.VoidSaleAsync(id, dto, CurrentUser, IsAdmin));
+
         private IActionResult ToResponse(OperationResult result)
         {
             if (result.Success)

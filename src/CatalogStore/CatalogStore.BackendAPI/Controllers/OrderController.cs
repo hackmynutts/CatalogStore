@@ -89,6 +89,11 @@ namespace CatalogStore.BackendAPI.Controllers
         public async Task<IActionResult> SetApplyIva(int id, [FromBody] SetApplyIvaDTO dto) =>
             ToResponse(await _orderServices.SetApplyIvaAsync(id, dto.ApplyIva, CurrentUser, IsAdmin));
 
+        // PUT api/Order/12/discount — { "discount": 5 } el mismo % en todas las líneas (0 = quitar descuentos)
+        [HttpPut("{id:int}/discount")]
+        public async Task<IActionResult> SetDiscount(int id, [FromBody] SetOrderDiscountDTO dto) =>
+            ToResponse(await _orderServices.SetDiscountAsync(id, dto, CurrentUser, IsAdmin));
+
         // ───────── Cambios de estado ─────────
 
         // POST api/Order/12/submit — en proceso → pendiente

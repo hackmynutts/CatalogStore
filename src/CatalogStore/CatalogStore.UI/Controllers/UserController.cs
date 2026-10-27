@@ -1,4 +1,5 @@
-﻿using CatalogStore.UI.Models.User;
+﻿using CatalogStore.UI.Handlers;
+using CatalogStore.UI.Models.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -71,15 +72,7 @@ namespace CatalogStore.UI.Controllers
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.PostAsJsonAsync("api/User/register", model);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = "No se pudo crear el usuario.", details = errorBody });
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<RegisterResponseDTO>();
-            return Json(new { success = true, temporaryPassword = result?.TemporaryPassword });
+            return await LinkResultAsync(response, "No se pudo crear el usuario.");
         }
 
         [HttpPost]
@@ -88,12 +81,33 @@ namespace CatalogStore.UI.Controllers
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.PostAsync($"api/User/{id}/reset-password", null);
+            return await LinkResultAsync(response, "No se pudo restablecer la contraseña.");
+        }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendInvitation(Guid id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsync($"api/User/{id}/resend-invitation", null);
+            return await LinkResultAsync(response, "No se pudo reenviar la invitación.");
+        }
+
+        // Crear, restablecer y reenviar responden igual: a qué correo salió el enlace o, con el correo
+        // deshabilitado, el enlace para compartirlo a mano.
+        private async Task<IActionResult> LinkResultAsync(HttpResponseMessage response, string fallback)
+        {
             if (!response.IsSuccessStatusCode)
-                return Json(new { success = false, message = "No se pudo restablecer la contraseña." });
+                return Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, fallback) });
 
             var result = await response.Content.ReadFromJsonAsync<RegisterResponseDTO>();
-            return Json(new { success = true, temporaryPassword = result?.TemporaryPassword });
+            return Json(new
+            {
+                success = true,
+                emailSentTo = result?.EmailSentTo,
+                manualLink = result?.ManualLink,
+                deliveryFailed = result?.DeliveryFailed ?? false
+            });
         }
 
         [HttpPost]

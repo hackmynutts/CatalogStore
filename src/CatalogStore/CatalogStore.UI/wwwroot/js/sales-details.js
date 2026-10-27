@@ -1,4 +1,4 @@
-// Detalle de una venta (Views/Sales/Details.cshtml): registrar un pago y anular abonos.
+// Detalle de una venta (Views/Sales/Details.cshtml): registrar un pago, anular abonos y anular la venta.
 // Cada acción llama a SalesController (UI) y, si sale bien, recarga: la vista ya viene armada desde el servidor.
 document.addEventListener('DOMContentLoaded', function () {
     const root = document.getElementById('saleDetails');
@@ -122,6 +122,53 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         await Swal.fire({ icon: 'success', title: 'Abono anulado', timer: 1500, showConfirmButton: false, confirmButtonColor: brandColor });
+        location.href = location.pathname;
+    });
+
+    // ───────── Anular venta (solo admin; el botón solo existe para admins) ─────────
+    // Con abonos vigentes la API la rechaza: se avisa antes para no pedir un motivo que no va a servir.
+
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('[data-action="void-sale"]');
+        if (!btn) return;
+
+        const activePayments = Number(btn.dataset.activePayments || 0);
+        if (activePayments > 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Primero anulá los abonos',
+                text: activePayments === 1
+                    ? 'La venta tiene 1 abono vigente. Anulalo (con su motivo) y después anulá la venta.'
+                    : `La venta tiene ${activePayments} abonos vigentes. Anulalos (cada uno con su motivo) y después anulá la venta.`,
+                confirmButtonColor: brandColor
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: `¿Anular la venta ${saleNumber}?`,
+            html: `Total <strong>${btn.dataset.total}</strong>. Los productos vuelven al inventario y la orden <strong>${btn.dataset.orderNumber}</strong> queda retornada. <strong>No se puede deshacer.</strong>`,
+            input: 'textarea',
+            inputLabel: 'Motivo de la anulación',
+            inputPlaceholder: 'Ej. el cliente devolvió la mercadería, venta duplicada',
+            inputAttributes: { maxlength: '250' },
+            inputValidator: value => !value || !value.trim() ? 'Escribí el motivo.' : undefined,
+            showCancelButton: true,
+            confirmButtonText: 'Anular venta',
+            cancelButtonText: 'Volver',
+            confirmButtonColor: '#dc3545'
+        });
+        if (!result.isConfirmed) return;
+
+        btn.disabled = true;
+        const response = await post('/Sales/VoidSale', { reason: result.value.trim() });
+        if (!response.success) {
+            btn.disabled = false;
+            Swal.fire({ icon: 'error', title: 'No se pudo anular la venta', text: response.message || 'Intentá de nuevo.' });
+            return;
+        }
+        await Swal.fire({ icon: 'success', title: `${saleNumber} anulada`, text: 'El stock volvió al inventario.', timer: 1800, showConfirmButton: false });
         location.href = location.pathname;
     });
 });

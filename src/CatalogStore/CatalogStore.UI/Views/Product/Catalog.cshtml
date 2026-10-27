@@ -26,7 +26,8 @@
     <form id="orderTokenForm" hidden>@Html.AntiForgeryToken()</form>
 
     @* Barra de la orden activa: la llena order-catalog.js. Sticky para que siga visible al recorrer el catálogo. *@
-    <section class="order-bar" id="orderBar" aria-live="polite" aria-label="Orden activa">
+    <section class="order-bar" id="orderBar" aria-live="polite" aria-label="Orden activa"
+             data-max-discount="@((User.IsInRole("Admin") || User.IsInRole("AdminIT")) ? "99.99" : "5")">
         <div class="order-bar-loading">
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
             <span>Cargando orden activa…</span>
@@ -175,6 +176,7 @@ else
     <script src="~/js/product-catalog.js" asp-append-version="true"></script>
     @if (canOrder)
     {
+        <script src="~/js/order-discount.js" asp-append-version="true"></script>
         <script src="~/js/order-catalog.js" asp-append-version="true"></script>
     }
 }

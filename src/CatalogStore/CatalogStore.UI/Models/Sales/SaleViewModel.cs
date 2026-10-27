@@ -82,8 +82,12 @@ namespace CatalogStore.UI.Models.Sales
         public bool IsOverdue { get; set; }
         public int DaysOverdue { get; set; }
         public string? Notes { get; set; }
+        public string? VoidedBy { get; set; }
+        public DateTime? VoidedOn { get; set; }
+        public string? VoidedReason { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
+        public bool IsVoided => PaymentStatus == PaymentStatus.Voided;
         public List<SaleLineViewModel> Lines { get; set; } = new();
         public List<SalePaymentViewModel> Payments { get; set; } = new();
     }

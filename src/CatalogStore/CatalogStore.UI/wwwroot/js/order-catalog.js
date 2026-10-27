@@ -138,6 +138,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <input class="form-check-input" type="checkbox" role="switch" id="orderApplyIva" ${order.applyIva ? 'checked' : ''}>
                 <label class="form-check-label" for="orderApplyIva">Aplicar IVA</label>
             </div>
+            ${order.lines.length === 0 ? '' : `
+            <button type="button" class="btn btn-sm btn-outline-brand order-panel-discount" data-action="order-discount">
+                <i class="fa-solid fa-percent" aria-hidden="true"></i> Descuento a toda la orden
+            </button>`}
             <dl class="order-totals">
                 <div><dt>Subtotal</dt><dd>${fmt(order.subtotal)}</dd></div>
                 <div><dt>IVA</dt><dd>${fmt(order.ivaTotal)}</dd></div>
@@ -315,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await fn();
             if (!result.success) showError('No se pudo actualizar la orden', result.message);
             await loadOrder();
+            return result;
         } finally {
             setBusy(false);
         }
@@ -352,6 +357,17 @@ document.addEventListener('DOMContentLoaded', function () {
             runLineAction(() => post('/Order/RemoveLine', { orderId: order.orderID, lineId: line.orderLineID }));
         }
         else if (action === 'release') release();
+        else if (action === 'order-discount') {
+            if (busy) return;
+            const discount = await OrderDiscount.ask({
+                lines: order.lines.map(l => ({ name: l.productName, discount: l.discount })),
+                maxDiscount: Number(bar.dataset.maxDiscount),
+                confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim() || undefined
+            });
+            if (discount === null) return;
+            const result = await runLineAction(() => post('/Order/SetDiscount', { orderId: order.orderID, discount: String(discount) }));
+            if (result?.success) toast.fire({ icon: 'success', title: discount === 0 ? 'Descuentos quitados' : `Descuento de ${discount} % aplicado` });
+        }
         else if (action === 'submit') {
             const confirm = await Swal.fire({
                 icon: 'question',

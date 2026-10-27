@@ -24,6 +24,8 @@ namespace CatalogStore.BackendAPI.Services.Orders
         Task<OperationResult> RemoveLineAsync(int orderId, int lineId, string user, bool isAdmin);
         Task<OperationResult> UpdateHeaderAsync(int orderId, UpdateOrderDTO dto, string user, bool isAdmin);
         Task<OperationResult> SetApplyIvaAsync(int orderId, bool applyIva, string user, bool isAdmin);
+        // Mismo % en todas las líneas (pisa los individuales; las líneas que se agreguen después no lo heredan).
+        Task<OperationResult> SetDiscountAsync(int orderId, SetOrderDiscountDTO dto, string user, bool isAdmin);
 
         // Cambios de estado
         Task<OperationResult> SubmitAsync(int orderId, string user, bool isAdmin);

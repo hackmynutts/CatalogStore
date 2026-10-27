@@ -215,6 +215,90 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.ToTable("Client_TB", "dbo");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.EmailOutbox.EmailOutbox", b =>
+                {
+                    b.Property<int>("EmailOutboxID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EmailOutboxID"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HtmlBody")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsSensitive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("NextAttemptOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RelatedID")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RelatedTable")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("SentOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ToAddress")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ToName")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.HasKey("EmailOutboxID");
+
+                    b.HasIndex("RelatedTable", "RelatedID")
+                        .HasDatabaseName("IX_EmailOutbox_RelatedTable_RelatedID");
+
+                    b.HasIndex("Status", "NextAttemptOn")
+                        .HasDatabaseName("IX_EmailOutbox_Status_NextAttemptOn");
+
+                    b.ToTable("EmailOutbox_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_EmailOutbox_Attempts_NonNegative", "[Attempts] >= 0");
+
+                            t.HasCheckConstraint("CK_EmailOutbox_SentOn_Consistent", "([Status] = 1 AND [SentOn] IS NOT NULL) OR ([Status] <> 1 AND [SentOn] IS NULL)");
+
+                            t.HasCheckConstraint("CK_EmailOutbox_Status_Valid", "[Status] IN (0,1,2)");
+                        });
+                });
+
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.EventLogs.Eventlog", b =>
                 {
                     b.Property<int>("EventlogId")

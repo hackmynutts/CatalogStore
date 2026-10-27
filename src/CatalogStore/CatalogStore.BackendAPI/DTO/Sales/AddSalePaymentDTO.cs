@@ -34,4 +34,13 @@ namespace CatalogStore.BackendAPI.DTO.Sales
         [StringLength(250, ErrorMessage = "El motivo no puede exceder los 250 caracteres.")]
         public string Reason { get; set; } = string.Empty;
     }
+
+    // Anular una venta completa (solo admin). 250 = largo de SalesHeader.VoidedReason.
+    public class VoidSaleDTO
+    {
+        [Display(Name = "Motivo")]
+        [Required(ErrorMessage = "Indique el motivo de la anulación.")]
+        [StringLength(250, ErrorMessage = "El motivo no puede exceder los 250 caracteres.")]
+        public string Reason { get; set; } = string.Empty;
+    }
 }

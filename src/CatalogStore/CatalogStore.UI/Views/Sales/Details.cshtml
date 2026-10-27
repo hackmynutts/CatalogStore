@@ -4,7 +4,8 @@
     ViewData["Title"] = $"Venta {Model.SaleNumber}";
     bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
     bool justCreated = ViewData["JustCreated"] as bool? == true;
-    bool canPay = Model.Balance > 0 && Model.PaymentStatus != PaymentStatus.Voided;
+    bool canPay = Model.Balance > 0 && !Model.IsVoided;
+    bool canVoidSale = isAdmin && !Model.IsVoided;
     var pct = SalesUi.PaidPercent(Model.AmountPaid, Model.TotalAmount);
     var vigentes = Model.Payments.Count(p => !p.IsVoided);
     // Hoy en Costa Rica (el servidor puede estar en otra zona): límite del selector de fecha de pago.
@@ -18,6 +19,17 @@
     <div class="order-state-note order-state-note-done" role="status">
         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
         <span>La orden <strong>@Model.OrderNumber</strong> se completó y generó esta venta. Registrá el pago cuando el cliente pague.</span>
+    </div>
+}
+
+@if (Model.IsVoided)
+{
+    <div class="order-state-note order-state-note-voided" role="status">
+        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        <span>
+            <strong>Venta anulada</strong> por @Model.VoidedBy el @Model.VoidedOn?.ToString("dd/MM/yyyy HH:mm"). Motivo: @Model.VoidedReason
+            <span class="d-block">Los productos volvieron al inventario y la orden <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderID">@Model.OrderNumber</a> quedó retornada.</span>
+        </span>
     </div>
 }
 
@@ -43,6 +55,13 @@
                 <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Registrar pago
             </button>
         }
+        @if (canVoidSale)
+        {
+            <button type="button" class="btn btn-sm btn-outline-danger" style="width:auto;" data-action="void-sale"
+                    data-active-payments="@vigentes" data-total="@SalesUi.Money(Model.TotalAmount)" data-order-number="@Model.OrderNumber">
+                <i class="fa-solid fa-ban" aria-hidden="true"></i> Anular venta
+            </button>
+        }
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver</a>
     </div>
 </div>
@@ -64,8 +83,16 @@
     </div>
     <div class="kpi-tile">
         <span class="kpi-label">Saldo</span>
-        <span class="kpi-value @(Model.Balance > 0 ? (Model.IsOverdue ? "kpi-value-danger" : "kpi-value-warn") : "kpi-value-ok")">@SalesUi.Money(Model.Balance)</span>
-        <span class="kpi-meta">@(Model.Balance > 0 ? "Pendiente de cobro" : "Sin saldo pendiente")</span>
+        @if (Model.IsVoided)
+        {
+            <span class="kpi-value kpi-value-muted">Anulada</span>
+            <span class="kpi-meta">No se cobra</span>
+        }
+        else
+        {
+            <span class="kpi-value @(Model.Balance > 0 ? (Model.IsOverdue ? "kpi-value-danger" : "kpi-value-warn") : "kpi-value-ok")">@SalesUi.Money(Model.Balance)</span>
+            <span class="kpi-meta">@(Model.Balance > 0 ? "Pendiente de cobro" : "Sin saldo pendiente")</span>
+        }
     </div>
     <div class="kpi-tile @(Model.IsOverdue ? "kpi-tile-alert" : "")">
         <span class="kpi-label">Vence</span>
@@ -183,7 +210,7 @@
                 <div><dt>IVA</dt><dd>@SalesUi.Money(Model.IvaTotal)</dd></div>
                 <div class="order-totals-total"><dt>Total</dt><dd>@SalesUi.Money(Model.TotalAmount)</dd></div>
                 <div><dt>Cobrado</dt><dd>− @SalesUi.Money(Model.AmountPaid)</dd></div>
-                <div class="order-totals-total"><dt>Saldo</dt><dd>@SalesUi.Money(Model.Balance)</dd></div>
+                <div class="order-totals-total"><dt>Saldo</dt><dd>@(Model.IsVoided ? "Anulada" : SalesUi.Money(Model.Balance))</dd></div>
             </dl>
         </div>
 

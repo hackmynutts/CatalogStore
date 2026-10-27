@@ -13,6 +13,7 @@ using CatalogStore.BackendAPI.Models.OrderLine;
 using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
 using CatalogStore.BackendAPI.Models.SalesPayment;
+using CatalogStore.BackendAPI.Models.EmailOutbox;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -31,6 +32,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<SalesHeader> SalesHeaders { get; set; }
         public DbSet<SalesLine> SalesLines { get; set; }
         public DbSet<SalesPayment> SalesPayments { get; set; }
+        public DbSet<EmailOutbox> EmailOutbox { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -443,6 +445,38 @@ namespace CatalogStore.BackendAPI.Data
                     t.HasCheckConstraint("CK_SalesPayment_Void_Consistent",
                                         "([IsVoided] = 0 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) " +
                                         "OR ([IsVoided] = 1 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
+                });
+            });
+            builder.Entity<EmailOutbox>(entity =>
+            {
+                entity.Property(e => e.ToAddress)
+                    .HasMaxLength(256).IsRequired();
+                entity.Property(e => e.ToName)
+                    .HasMaxLength(140);
+                entity.Property(e => e.Subject)
+                    .HasMaxLength(200).IsRequired();
+                entity.Property(e => e.HtmlBody)
+                    .IsRequired();
+                entity.Property(e => e.Kind)
+                    .HasMaxLength(50).IsRequired();
+                entity.Property(e => e.RelatedTable)
+                    .HasMaxLength(50);
+                entity.Property(e => e.RelatedID)
+                    .HasMaxLength(50);
+                entity.Property(e => e.LastError)
+                    .HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                // El worker busca los pendientes cuyo próximo intento ya llegó.
+                entity.HasIndex(e => new { e.Status, e.NextAttemptOn })
+                    .HasDatabaseName("IX_EmailOutbox_Status_NextAttemptOn");
+                entity.HasIndex(e => new { e.RelatedTable, e.RelatedID })
+                    .HasDatabaseName("IX_EmailOutbox_RelatedTable_RelatedID");
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_EmailOutbox_Status_Valid", "[Status] IN (0,1,2)");
+                    t.HasCheckConstraint("CK_EmailOutbox_Attempts_NonNegative", "[Attempts] >= 0");
+                    t.HasCheckConstraint("CK_EmailOutbox_SentOn_Consistent", "([Status] = 1 AND [SentOn] IS NOT NULL) OR ([Status] <> 1 AND [SentOn] IS NULL)");
                 });
             });
         }

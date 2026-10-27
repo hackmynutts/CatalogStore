@@ -16,13 +16,24 @@ namespace CatalogStore.BackendAPI.Controllers
             _userServices = userServices;
         }
 
+        private string CurrentUser => User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
+
+        // Respuesta común de los enlaces de contraseña. DeliveryFailed: la acción se hizo pero el enlace no salió.
+        private static object LinkResponse(string message, AuthModels.LinkDelivery? delivery) => new
+        {
+            Message = message,
+            delivery?.EmailSentTo,
+            delivery?.ManualLink,
+            DeliveryFailed = delivery is null
+        };
+
         [HttpPost("register")]
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> Register([FromBody] AuthModels.RegisterRequest request)
         {
-            var result = await _userServices.RegisterAsync(request);
-            return result.Succeeded ? Ok(new { Message = "Usuario registrado exitosamente.", TemporaryPassword = result.TemporaryPassword })
-                                    : BadRequest(result.Errors);
+            var result = await _userServices.RegisterAsync(request, CurrentUser);
+            return result.Succeeded ? Ok(LinkResponse("Usuario registrado exitosamente.", result.Delivery))
+                                    : BadRequest(new { Message = string.Join(" ", result.Errors) });
         }
 
         [HttpPost("login")]
@@ -63,17 +74,53 @@ namespace CatalogStore.BackendAPI.Controllers
                 return Unauthorized();
 
             var result = await _userServices.ChangePasswordAsync(userId, request);
-            return result.Succeeded ? Ok() : BadRequest(result.Errors);
+            return result.Succeeded ? Ok() : BadRequest(new { Message = string.Join(" ", result.Errors) });
         }
 
         [HttpPost("{id}/reset-password")]
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> ResetPassword(Guid id)
         {
-            var result = await _userServices.ResetPasswordAsync(id);
+            var result = await _userServices.ResetPasswordAsync(id, CurrentUser);
             return result.Succeeded
-                ? Ok(new { TemporaryPassword = result.TemporaryPassword })
-                : BadRequest(result.Errors);
+                ? Ok(LinkResponse("Enlace para restablecer la contraseña generado.", result.Delivery))
+                : BadRequest(new { Message = string.Join(" ", result.Errors) });
+        }
+
+        [HttpPost("{id}/resend-invitation")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> ResendInvitation(Guid id)
+        {
+            var result = await _userServices.ResendInvitationAsync(id, CurrentUser);
+            return result.Succeeded
+                ? Ok(LinkResponse("Invitación reenviada.", result.Delivery))
+                : BadRequest(new { Message = string.Join(" ", result.Errors) });
+        }
+
+        // Público. Misma respuesta exista o no el correo: no sirve para averiguar quién tiene cuenta.
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] AuthModels.ForgotPasswordRequest request)
+        {
+            await _userServices.ForgotPasswordAsync(request.Email);
+            return Ok(new { Message = "Si el correo está registrado, te enviamos un enlace para restablecer la contraseña." });
+        }
+
+        // Público. La UI lo llama antes de mostrar el formulario del enlace.
+        [HttpPost("password-link/check")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CheckPasswordLink([FromBody] AuthModels.PasswordLinkRequest request)
+        {
+            return Ok(await _userServices.CheckPasswordLinkAsync(request));
+        }
+
+        // Público. Crea la contraseña con el enlace de la invitación o del reset.
+        [HttpPost("password-link")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SetPasswordFromLink([FromBody] AuthModels.SetPasswordRequest request)
+        {
+            var result = await _userServices.SetPasswordFromLinkAsync(request);
+            return result.Succeeded ? Ok() : BadRequest(new { Message = string.Join(" ", result.Errors) });
         }
 
         [HttpGet("me")]

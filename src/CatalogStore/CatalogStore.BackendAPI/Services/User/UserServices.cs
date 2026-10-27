@@ -2,10 +2,12 @@ using CatalogStore.BackendAPI.DTO.User;
 using CatalogStore.BackendAPI.Models.Auth;
 using CatalogStore.BackendAPI.Models.EventLogs;
 using CatalogStore.BackendAPI.Services.Auth;
+using CatalogStore.BackendAPI.Services.Email;
 using CatalogStore.BackendAPI.Services.EventLogs;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
+using System.Text;
 using static CatalogStore.BackendAPI.Models.Auth.AuthModels;
 
 namespace CatalogStore.BackendAPI.Services.User
@@ -15,33 +17,45 @@ namespace CatalogStore.BackendAPI.Services.User
         private const string UsersTable = "AspNetUsers";
         private const string UserRolesTable = "AspNetUserRoles";
 
+        // "Olvidé mi contraseña": como máximo un correo por usuario en esta ventana (evita llenarle el buzón).
+        private static readonly TimeSpan ForgotPasswordThrottle = TimeSpan.FromMinutes(5);
+        private const string InvalidInviteMessage = "La invitación no es válida, ya se usó o venció. Pedile a un administrador que te la reenvíe.";
+        private const string InvalidResetMessage = "El enlace no es válido, ya se usó o venció. Pedí uno nuevo.";
+
         private readonly UserManager<Data.ApplicationUser> _userManager;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IEventlogServices _eventlogServices;
+        private readonly IEmailServices _emailServices;
+        private readonly TimeProvider _time;
+        private readonly ILogger<UserServices> _logger;
 
-        public UserServices(UserManager<Data.ApplicationUser> userManager, IJwtTokenService jwtTokenService, IEventlogServices eventlogServices)
+        public UserServices(UserManager<Data.ApplicationUser> userManager, IJwtTokenService jwtTokenService, IEventlogServices eventlogServices,
+            IEmailServices emailServices, TimeProvider time, ILogger<UserServices> logger)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;
             _eventlogServices = eventlogServices;
+            _emailServices = emailServices;
+            _time = time;
+            _logger = logger;
         }
 
-        public async Task<AuthModels.RegisterResult> RegisterAsync(AuthModels.RegisterRequest request)
+        public async Task<AuthModels.RegisterResult> RegisterAsync(AuthModels.RegisterRequest request, string actor)
         {
             Data.ApplicationUser? user = null;
             try
             {
-                string temporaryPassword = GenerateTemporaryPassword();
                 user = new Data.ApplicationUser
                 {
-                    FullName = request.FullName,
-                    Email = request.Email,
-                    UserName = request.UserName,
+                    FullName = request.FullName?.Trim() ?? string.Empty,
+                    Email = request.Email?.Trim(),
+                    UserName = request.UserName?.Trim(),
                     SendNotifications = request.SendNotifications,
-                    MustChangePassword = true
+                    MustChangePassword = false
                 };
 
-                IdentityResult result = await _userManager.CreateAsync(user, temporaryPassword);
+                // Sin contraseña: no puede iniciar sesión hasta crearla con el enlace de la invitación.
+                IdentityResult result = await _userManager.CreateAsync(user);
                 if (!result.Succeeded)
                 {
                     await _eventlogServices.LogAsync(
@@ -82,8 +96,6 @@ namespace CatalogStore.BackendAPI.Services.User
                         SendNotifications = user.SendNotifications,
                         Roles = new List<string> { request.Role }
                     });
-
-                return new RegisterResult(true, Enumerable.Empty<string>(), temporaryPassword);
             }
             catch (Exception ex)
             {
@@ -95,6 +107,24 @@ namespace CatalogStore.BackendAPI.Services.User
                     "Excepción no controlada al registrar usuario.",
                     stackTrace: ex.ToString());
                 return new RegisterResult(false, new[] { ex.Message });
+            }
+
+            // El usuario ya existe: si la invitación falla no se deshace, se reenvía desde la lista de usuarios.
+            try
+            {
+                var delivery = await DeliverLinkAsync(user, PasswordLinks.ModeInvite, actor, requestedByAdmin: true);
+                return new RegisterResult(true, Enumerable.Empty<string>(), delivery);
+            }
+            catch (Exception ex)
+            {
+                await _eventlogServices.LogAsync(
+                    typeEvent.Error,
+                    "Administration/Users",
+                    UsersTable,
+                    user.Id.ToString(),
+                    "Usuario creado, pero no se pudo enviar la invitación.",
+                    stackTrace: ex.ToString());
+                return new RegisterResult(true, Enumerable.Empty<string>());
             }
         }
 
@@ -127,6 +157,7 @@ namespace CatalogStore.BackendAPI.Services.User
                 userId.ToString(),
                 "Cambio de contraseña exitoso.");
 
+            await QueuePasswordChangedNoticeAsync(usuario);
             return new ChangePasswordResult(true, Enumerable.Empty<string>());
         }
 
@@ -195,15 +226,138 @@ namespace CatalogStore.BackendAPI.Services.User
                 "Cierre de sesión.");
         }
 
-        public async Task<AuthModels.ResetPasswordResult> ResetPasswordAsync(Guid id)
+        // La contraseña actual sigue sirviendo hasta que el usuario use el enlace.
+        public async Task<AuthModels.ResetPasswordResult> ResetPasswordAsync(Guid id, string actor)
         {
             var usuario = await _userManager.FindByIdAsync(id.ToString());
             if (usuario == null)
                 return new ResetPasswordResult(false, new[] { "Usuario no encontrado." });
+            if (string.IsNullOrWhiteSpace(usuario.Email))
+                return new ResetPasswordResult(false, new[] { "El usuario no tiene correo registrado." });
 
-            string temporaryPassword = GenerateTemporaryPassword();
-            var token = await _userManager.GeneratePasswordResetTokenAsync(usuario);
-            var result = await _userManager.ResetPasswordAsync(usuario, token, temporaryPassword);
+            var delivery = await DeliverLinkAsync(usuario, PasswordLinks.ModeReset, actor, requestedByAdmin: true);
+
+            await _eventlogServices.LogAsync(
+                typeEvent.Edit,
+                "Administration/Users",
+                UsersTable,
+                id.ToString(),
+                delivery.EmailSentTo is null
+                    ? "Restablecimiento de contraseña por un administrador: enlace entregado al administrador (correo deshabilitado)."
+                    : "Restablecimiento de contraseña por un administrador: enlace enviado por correo.");
+
+            return new ResetPasswordResult(true, Enumerable.Empty<string>(), delivery);
+        }
+
+        public async Task<AuthModels.ResetPasswordResult> ResendInvitationAsync(Guid id, string actor)
+        {
+            var usuario = await _userManager.FindByIdAsync(id.ToString());
+            if (usuario == null)
+                return new ResetPasswordResult(false, new[] { "Usuario no encontrado." });
+            if (usuario.PasswordHash != null)
+                return new ResetPasswordResult(false, new[] { "Este usuario ya creó su contraseña. Usá \"Restablecer contraseña\"." });
+            if (string.IsNullOrWhiteSpace(usuario.Email))
+                return new ResetPasswordResult(false, new[] { "El usuario no tiene correo registrado." });
+
+            // Nuevo SecurityStamp: las invitaciones anteriores dejan de servir y solo vale la que se envía ahora.
+            await _userManager.UpdateSecurityStampAsync(usuario);
+            var delivery = await DeliverLinkAsync(usuario, PasswordLinks.ModeInvite, actor, requestedByAdmin: true);
+
+            await _eventlogServices.LogAsync(
+                typeEvent.Edit,
+                "Administration/Users",
+                UsersTable,
+                id.ToString(),
+                "Invitación reenviada.");
+
+            return new ResetPasswordResult(true, Enumerable.Empty<string>(), delivery);
+        }
+
+        public async Task ForgotPasswordAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return;
+            email = email.Trim();
+
+            // Nunca lanza ni cambia la respuesta: el controller contesta lo mismo exista o no el correo.
+            try
+            {
+                var usuario = await _userManager.FindByEmailAsync(email);
+                if (usuario == null)
+                {
+                    await _eventlogServices.LogAsync(
+                        typeEvent.EditFail,
+                        "Administration/Users",
+                        UsersTable,
+                        email,
+                        "Solicitud de restablecimiento de contraseña para un correo no registrado.",
+                        actorOverride: email);
+                    return;
+                }
+
+                if (!_emailServices.Enabled)
+                {
+                    _logger.LogWarning("Olvidé mi contraseña de {UserId}: el correo está deshabilitado (Email:Enabled=false), no se envió nada.", usuario.Id);
+                    return;
+                }
+
+                if (await _emailServices.WasQueuedRecentlyAsync(EmailKinds.PasswordReset, UsersTable, usuario.Id.ToString(), ForgotPasswordThrottle))
+                    return;
+
+                await DeliverLinkAsync(usuario, PasswordLinks.ModeReset, usuario.UserName ?? email, requestedByAdmin: false);
+
+                await _eventlogServices.LogAsync(
+                    typeEvent.Edit,
+                    "Administration/Users",
+                    UsersTable,
+                    usuario.Id.ToString(),
+                    "Se envió un enlace para restablecer la contraseña (olvidé mi contraseña).",
+                    actorOverride: email);
+            }
+            catch (Exception ex)
+            {
+                await _eventlogServices.LogAsync(
+                    typeEvent.Error,
+                    "Administration/Users",
+                    UsersTable,
+                    email,
+                    "Excepción no controlada en olvidé mi contraseña.",
+                    stackTrace: ex.ToString(),
+                    actorOverride: email);
+            }
+        }
+
+        public async Task<AuthModels.PasswordLinkCheckResult> CheckPasswordLinkAsync(AuthModels.PasswordLinkRequest request)
+        {
+            var (usuario, token) = await ResolveLinkAsync(request.UserId, request.Token, request.Mode);
+            bool valid = usuario != null && token != null && await IsLinkTokenValidAsync(usuario, request.Mode, token);
+            if (!valid)
+                return new PasswordLinkCheckResult(false, Message: InvalidLinkMessage(request.Mode));
+
+            return new PasswordLinkCheckResult(true, usuario!.FullName, usuario.UserName);
+        }
+
+        public async Task<AuthModels.ChangePasswordResult> SetPasswordFromLinkAsync(AuthModels.SetPasswordRequest request)
+        {
+            var (usuario, token) = await ResolveLinkAsync(request.UserId, request.Token, request.Mode);
+            if (usuario == null || token == null)
+                return new ChangePasswordResult(false, new[] { InvalidLinkMessage(request.Mode) });
+
+            IdentityResult result;
+            if (request.Mode == PasswordLinks.ModeInvite)
+            {
+                if (!await IsLinkTokenValidAsync(usuario, request.Mode, token))
+                    return new ChangePasswordResult(false, new[] { InvalidInviteMessage });
+                // Cambia el SecurityStamp: la invitación queda usada.
+                result = await _userManager.AddPasswordAsync(usuario, request.NewPassword);
+            }
+            else
+            {
+                // ResetPasswordAsync valida el token y cambia el SecurityStamp: el enlace queda usado.
+                result = await _userManager.ResetPasswordAsync(usuario, token, request.NewPassword);
+                if (!result.Succeeded && result.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.InvalidToken)))
+                    return new ChangePasswordResult(false, new[] { InvalidResetMessage });
+            }
 
             if (!result.Succeeded)
             {
@@ -211,23 +365,133 @@ namespace CatalogStore.BackendAPI.Services.User
                     typeEvent.EditFail,
                     "Administration/Users",
                     UsersTable,
-                    id.ToString(),
-                    "No se pudo restablecer la contraseña.",
-                    postData: result.Errors.Select(e => e.Description));
-                return new ResetPasswordResult(false, result.Errors.Select(e => e.Description));
+                    usuario.Id.ToString(),
+                    "No se pudo crear la contraseña con el enlace.",
+                    postData: result.Errors.Select(e => e.Description),
+                    actorOverride: usuario.Email);
+                return new ChangePasswordResult(false, result.Errors.Select(e => e.Description));
             }
 
-            usuario.MustChangePassword = true;
+            // Usar el enlace prueba que el correo es suyo.
+            usuario.MustChangePassword = false;
+            usuario.EmailConfirmed = true;
             await _userManager.UpdateAsync(usuario);
 
             await _eventlogServices.LogAsync(
                 typeEvent.Edit,
                 "Administration/Users",
                 UsersTable,
-                id.ToString(),
-                "Restablecimiento de contraseña por un administrador.");
+                usuario.Id.ToString(),
+                request.Mode == PasswordLinks.ModeInvite
+                    ? "El usuario creó su contraseña con la invitación."
+                    : "El usuario restableció su contraseña con el enlace del correo.",
+                actorOverride: usuario.Email);
 
-            return new ResetPasswordResult(true, Enumerable.Empty<string>(), temporaryPassword);
+            await QueuePasswordChangedNoticeAsync(usuario);
+            return new ChangePasswordResult(true, Enumerable.Empty<string>());
+        }
+
+        // ───────── Enlaces de contraseña ─────────
+
+        // Nombre para los correos; Trim por usuarios guardados con espacios de más.
+        private static string DisplayName(Data.ApplicationUser usuario) =>
+            (string.IsNullOrWhiteSpace(usuario.FullName) ? usuario.UserName ?? string.Empty : usuario.FullName).Trim();
+
+        private static string InvalidLinkMessage(string? mode) =>
+            mode == PasswordLinks.ModeInvite ? InvalidInviteMessage : InvalidResetMessage;
+
+        // Usuario y token decodificado del enlace; (null, null) si algo no cuadra. No dice cuál parte falló.
+        private async Task<(Data.ApplicationUser? User, string? Token)> ResolveLinkAsync(Guid userId, string? encodedToken, string? mode)
+        {
+            if (mode != PasswordLinks.ModeInvite && mode != PasswordLinks.ModeReset)
+                return (null, null);
+            if (userId == Guid.Empty || string.IsNullOrWhiteSpace(encodedToken))
+                return (null, null);
+
+            string token;
+            try
+            {
+                token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(encodedToken));
+            }
+            catch (FormatException)
+            {
+                return (null, null);
+            }
+
+            var usuario = await _userManager.FindByIdAsync(userId.ToString());
+            return usuario == null ? (null, null) : (usuario, token);
+        }
+
+        private async Task<bool> IsLinkTokenValidAsync(Data.ApplicationUser usuario, string mode, string token)
+        {
+            if (mode == PasswordLinks.ModeInvite)
+            {
+                // Una invitación solo sirve mientras el usuario no tenga contraseña.
+                return usuario.PasswordHash == null
+                    && await _userManager.VerifyUserTokenAsync(usuario, PasswordLinks.InvitationProvider, PasswordLinks.InvitationPurpose, token);
+            }
+
+            return await _userManager.VerifyUserTokenAsync(usuario, _userManager.Options.Tokens.PasswordResetTokenProvider,
+                UserManager<Data.ApplicationUser>.ResetPasswordTokenPurpose, token);
+        }
+
+        // Genera el token, arma el enlace a la UI y lo encola por correo. Con Email:Enabled=false no encola nada y
+        // devuelve el enlace para que el administrador lo comparta a mano. El token va en Base64Url: el de Identity
+        // trae '+', '/' y '=' que se rompen en una URL.
+        private async Task<LinkDelivery> DeliverLinkAsync(Data.ApplicationUser usuario, string mode, string actor, bool requestedByAdmin)
+        {
+            string token = mode == PasswordLinks.ModeInvite
+                ? await _userManager.GenerateUserTokenAsync(usuario, PasswordLinks.InvitationProvider, PasswordLinks.InvitationPurpose)
+                : await _userManager.GeneratePasswordResetTokenAsync(usuario);
+
+            string link = _emailServices.UiLink(PasswordLinks.UiPath, new Dictionary<string, string>
+            {
+                ["uid"] = usuario.Id.ToString(),
+                ["token"] = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token)),
+                ["mode"] = mode
+            });
+
+            if (!_emailServices.Enabled)
+                return new LinkDelivery(null, link);
+
+            string name = DisplayName(usuario);
+            var message = mode == PasswordLinks.ModeInvite
+                ? new EmailMessage(usuario.Email!, name, "Bienvenido al sistema de SAM DESIGN",
+                    EmailTemplates.Invitation(name, usuario.UserName ?? string.Empty, link, PasswordLinks.InvitationHours),
+                    EmailKinds.Invitation, UsersTable, usuario.Id.ToString(), IsSensitive: true)
+                : new EmailMessage(usuario.Email!, name, "Restablecer contraseña",
+                    EmailTemplates.PasswordReset(name, link, PasswordLinks.ResetMinutes, requestedByAdmin),
+                    EmailKinds.PasswordReset, UsersTable, usuario.Id.ToString(), IsSensitive: true);
+
+            await _emailServices.QueueAndSaveAsync(message, actor);
+            return new LinkDelivery(usuario.Email, null);
+        }
+
+        // Aviso de seguridad. Se envía siempre (no depende de SendNotifications). Si falla, la contraseña ya cambió:
+        // se registra el error y no se le devuelve al usuario.
+        private async Task QueuePasswordChangedNoticeAsync(Data.ApplicationUser usuario)
+        {
+            if (!_emailServices.Enabled || string.IsNullOrWhiteSpace(usuario.Email))
+                return;
+            try
+            {
+                string name = DisplayName(usuario);
+                var localNow = TimeZoneInfo.ConvertTime(_time.GetUtcNow(), _time.LocalTimeZone).DateTime;
+                await _emailServices.QueueAndSaveAsync(
+                    new EmailMessage(usuario.Email, name, "Tu contraseña cambió", EmailTemplates.PasswordChanged(name, localNow),
+                        EmailKinds.PasswordChanged, UsersTable, usuario.Id.ToString()),
+                    usuario.UserName ?? "Sistema");
+            }
+            catch (Exception ex)
+            {
+                await _eventlogServices.LogAsync(
+                    typeEvent.Error,
+                    "Administration/Users",
+                    UsersTable,
+                    usuario.Id.ToString(),
+                    "No se pudo encolar el aviso de cambio de contraseña.",
+                    stackTrace: ex.ToString());
+            }
         }
 
         //get
@@ -246,6 +510,7 @@ namespace CatalogStore.BackendAPI.Services.User
                 Email = user.Email ?? string.Empty,
                 FullName = user.FullName ?? string.Empty,
                 SendNotifications = user.SendNotifications,
+                HasPassword = user.PasswordHash != null,
                 Roles = roles
             };
         }
@@ -266,6 +531,7 @@ namespace CatalogStore.BackendAPI.Services.User
                     Email = user.Email ?? string.Empty,
                     FullName = user.FullName ?? string.Empty,
                     SendNotifications = user.SendNotifications,
+                    HasPassword = user.PasswordHash != null,
                     Roles = roles
                 });
             }
@@ -291,8 +557,8 @@ namespace CatalogStore.BackendAPI.Services.User
                 Roles = roles
             };
 
-            usuario.FullName = request.FullName;
-            usuario.Email = request.Email;
+            usuario.FullName = request.FullName?.Trim() ?? string.Empty;
+            usuario.Email = request.Email?.Trim();
             usuario.SendNotifications = request.SendNotifications;
 
             var result = await _userManager.UpdateAsync(usuario);
@@ -423,36 +689,5 @@ namespace CatalogStore.BackendAPI.Services.User
             return true;
         }
 
-        private static string GenerateTemporaryPassword()
-        {
-            const string uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-            const string lowercase = "abcdefghijkmnpqrstuvwxyz";
-            const string digits = "23456789";
-            const string symbols = "!@#$%?";
-            string all = uppercase + lowercase + digits + symbols;
-
-            var chars = new char[12];
-            chars[0] = PickRandomChar(uppercase);
-            chars[1] = PickRandomChar(lowercase);
-            chars[2] = PickRandomChar(digits);
-            chars[3] = PickRandomChar(symbols);
-
-            for (int i = 4; i < chars.Length; i++)
-                chars[i] = PickRandomChar(all);
-
-            for (int i = chars.Length - 1; i > 0; i--)
-            {
-                int j = RandomNumberGenerator.GetInt32(i + 1);
-                (chars[i], chars[j]) = (chars[j], chars[i]);
-            }
-
-            return new string(chars);
-        }
-
-        private static char PickRandomChar(string pool)
-        {
-            int index = RandomNumberGenerator.GetInt32(pool.Length);
-            return pool[index];
-        }
     }
 }

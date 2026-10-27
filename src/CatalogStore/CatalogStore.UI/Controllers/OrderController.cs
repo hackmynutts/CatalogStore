@@ -65,7 +65,7 @@ namespace CatalogStore.UI.Controllers
             ViewData["IsActiveOrder"] = ReadActiveOrderId() == order.OrderID;
 
             // Una orden completada tiene su venta: se enlaza desde la cabecera.
-            if (order.OrderStatus == OrderStatus.Completed)
+            if (order.OrderStatus is OrderStatus.Completed or OrderStatus.Returned)
             {
                 var saleResponse = await client.GetAsync($"api/Sale/by-order/{order.OrderID}");
                 if (saleResponse.StatusCode == System.Net.HttpStatusCode.OK)
@@ -269,6 +269,19 @@ namespace CatalogStore.UI.Controllers
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.PutAsJsonAsync($"api/Order/{orderId}/iva", new { applyIva });
             return await ToJsonAsync(response, "No se pudo cambiar el IVA.");
+        }
+
+        // POST: Order/SetDiscount — el mismo % en todas las líneas (texto invariante: "5.5"). 0 = quitar descuentos.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetDiscount(int orderId, string? discount)
+        {
+            if (!decimal.TryParse(discount ?? "0", NumberStyles.Number, CultureInfo.InvariantCulture, out var discountValue))
+                return Json(new { success = false, message = "El descuento no es válido." });
+
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PutAsJsonAsync($"api/Order/{orderId}/discount", new { discount = discountValue });
+            return await ToJsonAsync(response, "No se pudo aplicar el descuento.");
         }
 
         // POST: Order/Submit — en proceso → pendiente. La orden deja de estar activa: ya no se le agregan productos.

@@ -1,5 +1,7 @@
 using CatalogStore.BackendAPI.Data;
 using CatalogStore.BackendAPI.Repository.Client;
+using CatalogStore.BackendAPI.Repository.Email;
+using CatalogStore.BackendAPI.Services.Email;
 using CatalogStore.BackendAPI.Repository.EventLogs;
 using CatalogStore.BackendAPI.Repository.Inventory;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
@@ -61,9 +63,20 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.User.RequireUniqueEmail = true;
+    options.Password.RequiredLength = 8;
 })
     .AddEntityFrameworkStores<ApplicationDBContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddTokenProvider<InvitationTokenProvider<ApplicationUser>>(PasswordLinks.InvitationProvider)
+    .AddErrorDescriber<SpanishIdentityErrorDescriber>();
+// Duración de los enlaces de contraseña: el reset usa el provider por defecto, la invitación el suyo (ver PasswordLinks).
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromMinutes(PasswordLinks.ResetMinutes));
+builder.Services.Configure<InvitationTokenProviderOptions>(options =>
+{
+    options.Name = "InvitationDataProtectorTokenProvider";
+    options.TokenLifespan = TimeSpan.FromHours(PasswordLinks.InvitationHours);
+});
 
 builder.Services.AddHttpClient("HaciendaApi", client =>
 {
@@ -111,6 +124,14 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderServices, OrderServices>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 builder.Services.AddScoped<ISalesServices, SalesServices>();
+
+// Correo: se encola en EmailOutbox_TB y EmailOutboxWorker lo envía en segundo plano (ver EmailOptions).
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<IEmailOutboxRepository, EmailOutboxRepository>();
+builder.Services.AddScoped<IEmailServices, EmailServices>();
+builder.Services.AddScoped<EmailOutboxProcessor>();
+builder.Services.AddSingleton<IEmailTransport, SmtpEmailTransport>();
+builder.Services.AddHostedService<EmailOutboxWorker>();
 
 //JWT Services
 builder.Services.AddAuthentication(options =>

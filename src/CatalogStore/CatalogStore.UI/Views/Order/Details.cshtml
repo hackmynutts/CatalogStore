@@ -7,12 +7,18 @@
     bool pending = Model.OrderStatus == OrderStatus.Pending;
     bool canCancel = inProcess || pending;
     bool isActiveOrder = ViewData["IsActiveOrder"] as bool? == true;
+    // Tope del diálogo "Descuento a toda la orden" (el backend lo valida igual).
+    var maxDiscount = isAdmin ? 99.99m : 5m;
+    // Descuento en colones: precio sin descuento menos el subtotal que calculó el backend.
+    var discountAmount = Model.Lines.Sum(l => l.UnitPrice * l.Quantity) - Model.Subtotal;
+    var lineDiscounts = Model.Lines.Select(l => l.Discount).Distinct().ToList();
 }
 
 <form id="orderDetailsTokenForm" hidden>@Html.AntiForgeryToken()</form>
 
 <div class="detail-header" id="orderDetails" data-order-id="@Model.OrderID" data-order-number="@Model.OrderNumber"
-     data-client-id="@Model.ClientID" data-total="₡@Model.OrderTotalAmount.ToString("N2")">
+     data-client-id="@Model.ClientID" data-total="₡@Model.OrderTotalAmount.ToString("N2")"
+     data-max-discount="@maxDiscount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
     <div class="detail-header-left">
         <div class="detail-avatar"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></div>
         <div>
@@ -52,7 +58,17 @@
     </div>
 </div>
 
-@if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel completedSale)
+@if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel voidedSale && voidedSale.IsVoided)
+{
+    <div class="order-state-note order-state-note-voided">
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        <span>
+            Orden retornada: su venta <a asp-controller="Sales" asp-action="Details" asp-route-id="@voidedSale.SalesHeaderID">@voidedSale.SaleNumber</a>
+            se anuló el @voidedSale.VoidedOn?.ToString("dd/MM/yyyy") por @voidedSale.VoidedBy. Motivo: @voidedSale.VoidedReason
+        </span>
+    </div>
+}
+else if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel completedSale)
 {
     <div class="order-state-note order-state-note-done">
         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
@@ -107,7 +123,7 @@
                             @foreach (var l in Model.Lines)
                             {
                                 <tr data-line-id="@l.OrderLineID" data-quantity="@l.Quantity" data-discount="@l.Discount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-                                    <td>
+                                    <td data-line-name="@l.ProductName">
                                         <span class="order-line-name">@l.ProductName</span>
                                         <span class="order-line-meta d-block">@l.ProductCode</span>
                                     </td>
@@ -169,16 +185,34 @@
         <div class="info-card">
             <h2 class="info-card-title"><i class="fa-solid fa-receipt"></i> Resumen</h2>
             <dl class="order-totals">
+                @if (discountAmount > 0)
+                {
+                    <div><dt>Productos</dt><dd>₡@((Model.Subtotal + discountAmount).ToString("N2"))</dd></div>
+                    <div><dt>Descuentos</dt><dd>− ₡@discountAmount.ToString("N2")</dd></div>
+                }
                 <div><dt>Subtotal</dt><dd>₡@Model.Subtotal.ToString("N2")</dd></div>
                 <div><dt>IVA</dt><dd>₡@Model.IvaTotal.ToString("N2")</dd></div>
                 <div class="order-totals-total"><dt>Total</dt><dd>₡@Model.OrderTotalAmount.ToString("N2")</dd></div>
             </dl>
+            @if (discountAmount > 0)
+            {
+                <p class="order-hint mt-2 mb-0">
+                    <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                    @(lineDiscounts.Count == 1 ? $"Todos los productos con {lineDiscounts[0]:0.##} % de descuento." : "Descuentos distintos por producto.")
+                </p>
+            }
             @if (inProcess)
             {
                 <div class="form-check form-switch order-iva-switch mt-3">
                     <input class="form-check-input" type="checkbox" role="switch" id="orderApplyIva" @(Model.ApplyIva ? "checked" : "")>
                     <label class="form-check-label" for="orderApplyIva">Aplicar IVA</label>
                 </div>
+                @if (Model.Lines.Any())
+                {
+                    <button type="button" class="btn btn-sm btn-outline-brand w-100 mt-3" data-action="order-discount">
+                        <i class="fa-solid fa-percent" aria-hidden="true"></i> Descuento a toda la orden
+                    </button>
+                }
             }
             else if (!Model.ApplyIva)
             {
@@ -229,5 +263,6 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/order-discount.js" asp-append-version="true"></script>
     <script src="~/js/order-details.js" asp-append-version="true"></script>
 }

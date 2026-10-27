@@ -27,6 +27,12 @@
                     @ViewData["LoginError"]
                 </div>
             }
+            @if (ViewData["LoginNotice"] != null)
+            {
+                <div class="auth-notice" role="status">
+                    @ViewData["LoginNotice"]
+                </div>
+            }
 
             <form asp-controller="Account" asp-action="Login" method="post" class="auth-form" novalidate>
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
@@ -42,6 +48,7 @@
                     <input asp-for="password" id="password-input" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
                     <button type="button" class="auth-toggle-password" id="toggle-password">Mostrar</button>
                     <span asp-validation-for="password" class="field-validation-error"></span>
+                    <a asp-controller="Account" asp-action="ForgotPassword" class="auth-link-forgot">¿Olvidaste tu contraseña?</a>
                 </div>
 
                 <button type="submit" class="btn-brand">Iniciar sesión</button>

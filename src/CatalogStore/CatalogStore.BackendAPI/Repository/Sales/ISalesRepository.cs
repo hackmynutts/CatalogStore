@@ -13,6 +13,7 @@ namespace CatalogStore.BackendAPI.Repository.Sales
         Task<int> NextSalesNumberAsync();
         // Con seguimiento y con los pagos (vigentes y anulados): para registrar o anular un abono.
         Task<SalesHeader?> GetForUpdateAsync(int salesHeaderId);
+        // Con seguimiento, con líneas y pagos: para anular la venta y devolver el stock.
         Task<SalesHeader?> GetForVoidAsync(int salesHeaderId);
         Task<int> SaveChangesAsync();
         void DiscardChanges();

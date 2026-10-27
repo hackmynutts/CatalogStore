@@ -2,14 +2,18 @@
 using CatalogStore.BackendAPI.DTO.Sales;
 using CatalogStore.BackendAPI.Models.Client;
 using CatalogStore.BackendAPI.Models.EventLogs;
+using CatalogStore.BackendAPI.Models.InventoryTransaction;
 using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
 using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
 using CatalogStore.BackendAPI.Models.SalesPayment;
+using CatalogStore.BackendAPI.Repository.InventoryLines;
+using CatalogStore.BackendAPI.Repository.Orders;
 using CatalogStore.BackendAPI.Repository.Sales;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.EventLogs;
+using CatalogStore.BackendAPI.Services.InventoryTransactions;
 using CatalogStore.BackendAPI.Services.Orders;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
@@ -20,18 +24,24 @@ namespace CatalogStore.BackendAPI.Services.Sales
     {
         private const string ModuleName = "Ventas/Ventas";
         private const string SalesTable = "SalesHeader";
-        // Público: el controller lo usa para responder 404 en vez de 400.
         public const string NotFoundMessage = "Venta no encontrada.";
         private readonly ISalesRepository _salesRepository;
         private readonly IClientServices _clientServices;
         private readonly IEventlogServices _eventlogServices;
         private readonly TimeProvider _time;
-        public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, IEventlogServices eventlogServices, TimeProvider time)
+        private readonly IOrderRepository _orderRepository;
+        private readonly IInventoryLineRepository _inventoryLineRepository;
+        private readonly IInventoryTransactionServices _inventoryTransactionServices;
+        public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, IEventlogServices eventlogServices, TimeProvider time, 
+                            IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices)
         {
             _salesRepository = salesRepository;
             _clientServices= clientServices;
             _eventlogServices = eventlogServices;
             _time = time;
+            _orderRepository = orderRepository;
+            _inventoryLineRepository = inventoryLineRepository;
+            _inventoryTransactionServices = inventoryTransactionServices;
         }
         public async Task<SalesHeader> CreateFromOrderAsync(Order order, string createdBy, DateTime now)
         {
@@ -262,6 +272,103 @@ namespace CatalogStore.BackendAPI.Services.Sales
             }
         }
 
+        // ───────────────────────── Anulación ─────────────────────────
+
+        // Anula la venta completa (solo admin). Exige que no queden abonos vigentes: la plata recibida se anula
+        // abono por abono, cada uno con su motivo. Devuelve al stock lo vendido (movimiento Devolucion con
+        // referencia a la venta), marca la venta Anulada y su orden Retornada, y guarda todo junto.
+        public async Task<OperationResult> VoidSaleAsync(int salesHeaderId, VoidSaleDTO dto, string user, bool isAdmin)
+        {
+            if (!isAdmin)
+                return OperationResult.Fail("Solo un administrador puede anular ventas.");
+            var reason = dto.Reason?.Trim();
+            if (string.IsNullOrEmpty(reason))
+                return OperationResult.Fail("Indique el motivo de la anulación.");
+            if (reason.Length > 250)
+                return OperationResult.Fail("El motivo no puede exceder los 250 caracteres.");
+
+            try
+            {
+                var now = _time.GetUtcNow().UtcDateTime;
+                var sale = await _salesRepository.GetForVoidAsync(salesHeaderId);
+                if (sale is null)
+                    return OperationResult.Fail(NotFoundMessage);
+                if (sale.PaymentStatus == PaymentStatus.Voided)
+                    return OperationResult.Fail($"La venta {sale.SaleNumber} ya está anulada.");
+                var paid = PaidAmount(sale);
+                if (paid > 0)
+                    return OperationResult.Fail($"La venta {sale.SaleNumber} tiene ₡{paid:N2} en abonos vigentes. Anúlelos primero.");
+
+                var order = await _orderRepository.GetForUpdateAsync(sale.OrderID)
+                    ?? throw new InvalidOperationException($"La venta {sale.SaleNumber} apunta a la orden {sale.OrderID}, que no existe.");
+                if (order.OrderStatus != OrderStatus.Completed)
+                    return OperationResult.Fail($"La orden {order.OrderNumber} está {order.OrderStatus.Humanize().ToLower()} y su venta no se puede anular.");
+
+                // Las cantidades salen de la venta: la devolución es el espejo del documento que se anula.
+                var inventoryLines = await _inventoryLineRepository.GetForUpdateByProductsAsync(sale.Lines.Select(l => l.ProductID));
+                foreach (var line in sale.Lines.OrderBy(l => l.SalesLineID))
+                {
+                    string? error = null;
+                    if (!inventoryLines.TryGetValue(line.ProductID, out var inventoryLine))
+                        error = $"{line.ProductCode}: no está en el inventario.";
+                    else
+                    {
+                        var move = _inventoryTransactionServices.ApplyMovement(inventoryLine, TransactionType.Devolucion, line.Quantity,
+                            ReferenceType.Venta, sale.SaleNumber, $"Anulación: {reason}", user, now);
+                        if (!move.Success)
+                            error = $"{line.ProductCode}: {move.Error}";
+                    }
+                    if (error is not null)
+                    {
+                        // Las líneas anteriores ya quedaron modificadas en el contexto: se descartan antes de responder.
+                        _salesRepository.DiscardChanges();
+                        return OperationResult.Fail(error);
+                    }
+                }
+
+                var previousSale = sale.PaymentStatus;
+                var previousOrder = order.OrderStatus;
+
+                // Los cuatro juntos: el CHECK CK_SalesHeader_Void_Consistent rechaza una anulada incompleta.
+                // No se llama a RecalculatePayments: volvería el estado a Pendiente.
+                sale.PaymentStatus = PaymentStatus.Voided;
+                sale.VoidedBy = user;
+                sale.VoidedOn = now;
+                sale.VoidedReason = reason;
+                sale.ModifiedBy = user;
+                sale.ModifiedOn = now;
+
+                order.OrderStatus = OrderStatus.Returned;
+                order.ModifiedBy = user;
+                order.ModifiedOn = now;
+
+                // Mismo contexto: venta, orden, inventario y transacciones en un solo guardado.
+                await _salesRepository.SaveChangesAsync();
+
+                await _eventlogServices.LogAsync(typeEvent.Cancel, ModuleName, SalesTable, sale.SalesHeaderID.ToString(),
+                    $"Venta {sale.SaleNumber} anulada (orden {order.OrderNumber} retornada). Motivo: {reason}",
+                    preData: new { PaymentStatus = previousSale, OrderStatus = previousOrder },
+                    postData: new
+                    {
+                        sale.SalesHeaderID, sale.SaleNumber, order.OrderNumber, sale.PaymentStatus, order.OrderStatus, sale.VoidedReason,
+                        Lines = sale.Lines.Select(l => new { l.ProductID, l.ProductCode, l.Quantity })
+                    });
+                return OperationResult.Ok(sale.SalesHeaderID);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _salesRepository.DiscardChanges();
+                return OperationResult.Fail("La venta o su orden cambió mientras se procesaba. Revisá el detalle e intentá de nuevo.");
+            }
+            catch (Exception ex)
+            {
+                _salesRepository.DiscardChanges();
+                await _eventlogServices.LogAsync(typeEvent.CancelFail, ModuleName, SalesTable, salesHeaderId.ToString(),
+                    "Excepción no controlada al anular una venta.", stackTrace: ex.ToString());
+                throw;
+            }
+        }
+
         // ───────────────────────── Helpers ─────────────────────────
 
         // Admin ve y cobra cualquier venta; el vendedor solo las suyas.
@@ -341,6 +448,9 @@ namespace CatalogStore.BackendAPI.Services.Sales
                 IsOverdue = isOverdue,
                 DaysOverdue = daysOverdue,
                 Notes = sale.Notes,
+                VoidedBy = sale.VoidedBy,
+                VoidedOn = sale.VoidedOn,
+                VoidedReason = sale.VoidedReason,
                 CreatedBy = sale.CreatedBy,
                 CreatedOn = sale.CreatedOn,
                 Lines = sale.Lines.OrderBy(l => l.SalesLineID).Select(l => new SaleLineDTO

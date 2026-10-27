@@ -153,6 +153,9 @@ namespace CatalogStore.BackendAPI.Services.Orders
         // La línea de inventario vuelve con seguimiento porque ApplyMovement le cambia el reservado.
         private async Task<(string? Error, Models.Product.Product? Product, InventoryLine? InventoryLine)> ValidateItemAsync(AddOrderLineDTO dto, bool isAdmin)
         {
+            var discountError = DiscountFormatError(dto.Discount);
+            if (discountError is not null)
+                return (discountError, null, null);
             var maxDiscount = _ordersOptions.Value.MaxSellerDiscountPercent;
             if (!isAdmin && dto.Discount > maxDiscount)
                 return ($"El descuento máximo permitido para vendedores es {maxDiscount} %.", null, null);
@@ -232,6 +235,10 @@ namespace CatalogStore.BackendAPI.Services.Orders
             var line = order.OrderLines.FirstOrDefault(l => l.OrderLineID == lineId);
             if (line is null)
                 return OperationResult.Fail("La línea no pertenece a esta orden.");
+
+            var discountError = DiscountFormatError(dto.Discount);
+            if (discountError is not null)
+                return OperationResult.Fail(discountError);
 
             // El tope solo se aplica si el vendedor CAMBIA el descuento: así puede editar la cantidad de una línea
             // a la que un administrador le dio más del 5 %.
@@ -362,6 +369,57 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 $"Orden {order.OrderNumber}: {(applyIva ? "se aplica IVA" : "sin IVA")}.",
                 preData: new { ApplyIva = !applyIva, OrderTotalAmount = totalBefore },
                 postData: new { order.ApplyIva, order.OrderTotalAmount });
+            return OperationResult.Ok(order.OrderID);
+        }
+
+        // Descuento a toda la orden: el mismo % en cada línea, pisando los descuentos individuales (el de la orden
+        // manda). No se guarda en la orden: las líneas que se agreguen después entran sin descuento. 0 = quitar todos.
+        public Task<OperationResult> SetDiscountAsync(int orderId, SetOrderDiscountDTO dto, string user, bool isAdmin) =>
+            WithRetryAsync(() => SetDiscountCoreAsync(orderId, dto, user, isAdmin), orderId.ToString(), "aplicar un descuento a la orden");
+
+        private async Task<OperationResult> SetDiscountCoreAsync(int orderId, SetOrderDiscountDTO dto, string user, bool isAdmin)
+        {
+            var now = _time.GetUtcNow().UtcDateTime;
+            var discountError = DiscountFormatError(dto.Discount);
+            if (discountError is not null)
+                return OperationResult.Fail(discountError);
+            var maxDiscount = _ordersOptions.Value.MaxSellerDiscountPercent;
+            if (!isAdmin && dto.Discount > maxDiscount)
+                return OperationResult.Fail($"El descuento máximo permitido para vendedores es {maxDiscount} %.");
+
+            var (order, loadError) = await LoadForEditAsync(orderId, user, isAdmin);
+            if (order is null)
+                return OperationResult.Fail(loadError!);
+            if (order.OrderLines.Count == 0)
+                return OperationResult.Fail("La orden no tiene productos.");
+            if (order.OrderLines.All(l => l.Discount == dto.Discount))
+                return OperationResult.Ok(order.OrderID);
+
+            var before = new
+            {
+                order.OrderTotalAmount,
+                Lines = order.OrderLines.Select(l => new { l.OrderLineID, l.ProductCode, l.Discount }).ToList()
+            };
+
+            var rate = IvaRate(order);
+            foreach (var line in order.OrderLines)
+            {
+                line.Discount = dto.Discount;
+                line.ModifiedBy = user;
+                line.ModifiedOn = now;
+                RecalculateLine(line, rate);
+            }
+            RecalculateTotal(order);
+            Touch(order, user, now);
+            await _orderRepository.SaveChangesAsync();
+
+            var count = order.OrderLines.Count;
+            await _eventlogServices.LogAsync(typeEvent.Edit, ModuleName, OrdersTable, order.OrderID.ToString(),
+                dto.Discount == 0
+                    ? $"Orden {order.OrderNumber}: descuentos quitados de {(count == 1 ? "1 producto" : $"{count} productos")}."
+                    : $"Orden {order.OrderNumber}: descuento de {dto.Discount:0.##} % aplicado a {(count == 1 ? "1 producto" : $"{count} productos")}.",
+                preData: before,
+                postData: new { dto.Discount, order.OrderTotalAmount });
             return OperationResult.Ok(order.OrderID);
         }
 
@@ -619,13 +677,16 @@ namespace CatalogStore.BackendAPI.Services.Orders
             return (order, null);
         }
 
-        // Las ediciones (líneas, cabecera, IVA, enviar a revisión) solo se permiten en proceso.
+        // Las ediciones (líneas, cabecera, IVA, descuento, enviar a revisión) solo se permiten en proceso.
+        // "Devolvela a edición" solo se sugiere en Pending: es el único estado que puede volver a InProcess.
         private async Task<(Order? Order, string? Error)> LoadForEditAsync(int orderId, string user, bool isAdmin)
         {
-            var (order, error) = await LoadAsync(orderId, user, isAdmin, OrderStatus.InProcess);
-            if (order is null && error != NotFoundMessage)
-                error += " Devolvela a edición para modificarla.";
-            return (order, error);
+            var (order, error) = await LoadAsync(orderId, user, isAdmin, OrderStatus.InProcess, OrderStatus.Pending);
+            if (order is null)
+                return (null, error);
+            if (order.OrderStatus == OrderStatus.Pending)
+                return (null, $"La orden {order.OrderNumber} está pendiente y no permite esta acción. Devolvela a edición para modificarla.");
+            return (order, null);
         }
 
         private async Task<Order> NewOrderAsync(int clientId, string user, DateTime now)
@@ -687,6 +748,18 @@ namespace CatalogStore.BackendAPI.Services.Orders
         {
             order.ModifiedBy = user;
             order.ModifiedOn = now;
+        }
+
+        // Rango y decimales de un descuento (por línea o a toda la orden). Se repite aunque el DTO tenga [Range]:
+        // el servicio no depende del model binding. La columna es decimal(5,2): con más decimales el precio se
+        // calcularía con un % distinto al que queda guardado.
+        private static string? DiscountFormatError(decimal discount)
+        {
+            if (discount < 0 || discount > 99.99m)
+                return "El descuento debe estar entre 0 y 99.99 %.";
+            if (decimal.Round(discount, 2) != discount)
+                return "El descuento admite como máximo dos decimales.";
+            return null;
         }
 
         // 1.13 o 1 según la orden lleve IVA o no (ver OrderPricing.EffectiveIvaRate).

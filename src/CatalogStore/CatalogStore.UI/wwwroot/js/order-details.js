@@ -103,6 +103,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const row = btn.closest('tr');
             run('/Order/RemoveLine', { lineId: row.dataset.lineId }, null, 'No se pudo quitar el producto');
         }
+        else if (action === 'order-discount') {
+            const lines = [...document.querySelectorAll('#orderLinesTable tbody tr[data-line-id]')].map(row => ({
+                name: row.querySelector('[data-line-name]').dataset.lineName,
+                discount: Number(row.dataset.discount)
+            }));
+            const discount = await OrderDiscount.ask({ lines, maxDiscount: Number(root.dataset.maxDiscount), confirmButtonColor: brandColor });
+            if (discount === null) return;
+            run('/Order/SetDiscount', { discount: String(discount) },
+                discount === 0 ? 'Descuentos quitados' : `Descuento de ${discount} % aplicado`, 'No se pudo aplicar el descuento');
+        }
         else if (action === 'save-notes') {
             const notes = document.getElementById('orderNotes').value;
             run('/Order/UpdateNotes', { clientId: root.dataset.clientId, notes }, 'Notas guardadas', 'No se pudieron guardar las notas');
@@ -126,6 +136,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if (Number.isNaN(discount) || discount < 0 || discount > 99.99) {
                 Swal.fire({ icon: 'error', title: 'Descuento inválido', text: 'El descuento debe estar entre 0 y 99.99 %.' });
+                discountInput.value = row.dataset.discount;
+                return;
+            }
+            // Por texto: en JS 5.55 * 100 no da exacto.
+            if (discountInput.value && !/^\d+(\.\d{1,2})?$/.test(discountInput.value.trim())) {
+                Swal.fire({ icon: 'error', title: 'Descuento inválido', text: 'El descuento admite como máximo dos decimales.' });
                 discountInput.value = row.dataset.discount;
                 return;
             }

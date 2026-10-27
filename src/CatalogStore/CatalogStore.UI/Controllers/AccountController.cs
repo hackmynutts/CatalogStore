@@ -1,9 +1,11 @@
-﻿using CatalogStore.UI.Models.User;
+﻿using CatalogStore.UI.Handlers;
+using CatalogStore.UI.Models.User;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -11,6 +13,9 @@ namespace CatalogStore.UI.Controllers
 {
     public class AccountController : Controller
     {
+        // Límite por IP para "olvidé mi contraseña" (ver Program.cs).
+        public const string PasswordFormsPolicy = "password-forms";
+
         private readonly IHttpClientFactory _httpClientFactory;
 
         public AccountController(IHttpClientFactory httpClientFactory)
@@ -18,12 +23,138 @@ namespace CatalogStore.UI.Controllers
             _httpClientFactory = httpClientFactory;
         }
         [HttpGet]
-        public ActionResult Login(bool expired = false)
+        public ActionResult Login(bool expired = false, bool passwordSet = false)
         {
             // Llega con ?expired=true cuando SessionExpiredFilter o session-guard.js detectan que el token ya no sirve.
             if (expired)
                 ViewData["LoginError"] = "Tu sesión expiró. Iniciá sesión de nuevo para continuar.";
+            // Llega con ?passwordSet=true después de crear la contraseña con el enlace del correo.
+            if (passwordSet)
+                ViewData["LoginNotice"] = "Tu contraseña quedó lista. Iniciá sesión con ella.";
             return View();
+        }
+
+        // ───────── Olvidé mi contraseña y enlaces del correo (públicos) ─────────
+        // Usan el cliente BackendApiAuth: no hay sesión, así que no hace falta el JwtDelegatingHandler.
+
+        [HttpGet]
+        public ActionResult ForgotPassword()
+        {
+            return View(new ForgotPasswordViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting(PasswordFormsPolicy)]
+        public async Task<ActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendApiAuth");
+                var response = await client.PostAsJsonAsync("api/User/forgot-password", new { model.Email });
+                if (!response.IsSuccessStatusCode)
+                {
+                    ViewData["FormError"] = "No se pudo procesar la solicitud. Probá de nuevo en unos minutos.";
+                    return View(model);
+                }
+            }
+            catch (HttpRequestException)
+            {
+                ViewData["FormError"] = "No se pudo conectar con el servidor. Probá de nuevo en unos minutos.";
+                return View(model);
+            }
+
+            // Siempre la misma respuesta, exista o no el correo.
+            ViewData["Sent"] = true;
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> SetPassword(Guid uid, string? token, string? mode)
+        {
+            var model = new SetPasswordViewModel
+            {
+                UserId = uid,
+                Token = token ?? string.Empty,
+                Mode = mode == SetPasswordViewModel.ModeInvite ? SetPasswordViewModel.ModeInvite : SetPasswordViewModel.ModeReset
+            };
+
+            var check = await CheckLinkAsync(model);
+            if (check == null || !check.Valid)
+            {
+                ViewData["LinkError"] = check?.Message ?? "No se pudo validar el enlace. Probá de nuevo en unos minutos.";
+                return View(model);
+            }
+
+            model.FullName = check.FullName;
+            model.UserName = check.UserName;
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> SetPassword(SetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                // Volver a llenar el saludo: no viaja en el formulario.
+                var check = await CheckLinkAsync(model);
+                model.FullName = check?.FullName;
+                model.UserName = check?.UserName;
+                return View(model);
+            }
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendApiAuth");
+                var response = await client.PostAsJsonAsync("api/User/password-link", new
+                {
+                    model.UserId,
+                    model.Token,
+                    model.Mode,
+                    model.NewPassword
+                });
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    ViewData["FormError"] = await ApiErrorReader.ReadAsync(response, "No se pudo guardar la contraseña.");
+                    var check = await CheckLinkAsync(model);
+                    if (check == null || !check.Valid)
+                        ViewData["LinkError"] = check?.Message ?? ViewData["FormError"];
+                    model.FullName = check?.FullName;
+                    model.UserName = check?.UserName;
+                    return View(model);
+                }
+            }
+            catch (HttpRequestException)
+            {
+                ViewData["FormError"] = "No se pudo conectar con el servidor. Probá de nuevo en unos minutos.";
+                return View(model);
+            }
+
+            // Si había otra sesión abierta en este navegador, se cierra: la próxima entrada es con la contraseña nueva.
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction(nameof(Login), new { passwordSet = true });
+        }
+
+        // null: el backend no respondió.
+        private async Task<PasswordLinkCheckDTO?> CheckLinkAsync(SetPasswordViewModel model)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("BackendApiAuth");
+                var response = await client.PostAsJsonAsync("api/User/password-link/check", new { model.UserId, model.Token, model.Mode });
+                if (!response.IsSuccessStatusCode)
+                    return null;
+                return await response.Content.ReadFromJsonAsync<PasswordLinkCheckDTO>();
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
         }
 
         [ValidateAntiForgeryToken]
@@ -106,7 +237,8 @@ namespace CatalogStore.UI.Controllers
 
             if (!response.IsSuccessStatusCode)
             {
-                ViewData["ChangePasswordError"] = "No se pudo cambiar la contraseña. Verificá que la actual sea correcta.";
+                ViewData["ChangePasswordError"] = await ApiErrorReader.ReadAsync(response,
+                    "No se pudo cambiar la contraseña. Verificá que la actual sea correcta.");
                 return View(model);
             }
 

@@ -39,6 +39,9 @@ namespace CatalogStore.BackendAPI.DTO.Sales
         public bool IsOverdue { get; set; }
         public int DaysOverdue { get; set; }
         public string? Notes { get; set; }
+        public string? VoidedBy { get; set; }
+        public DateTime? VoidedOn { get; set; }
+        public string? VoidedReason { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
         public List<SaleLineDTO> Lines { get; set; } = new();

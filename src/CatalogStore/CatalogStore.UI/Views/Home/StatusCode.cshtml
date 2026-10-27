@@ -4,12 +4,14 @@
     {
         404 => "Página no encontrada",
         403 => "Acceso denegado",
+        429 => "Demasiados intentos",
         _ => "Ocurrió un error"
     };
     string message = code switch
     {
         404 => "La página que buscás no existe o todavía no está construida.",
         403 => "No tenés permiso para ver esta sección.",
+        429 => "Hiciste varios intentos seguidos. Esperá unos minutos y probá de nuevo.",
         _ => "Algo salió mal. Probá de nuevo en unos minutos."
     };
     ViewData["Title"] = title;
