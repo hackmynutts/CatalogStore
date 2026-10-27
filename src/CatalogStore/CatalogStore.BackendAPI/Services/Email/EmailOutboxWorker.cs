@@ -24,7 +24,6 @@ namespace CatalogStore.BackendAPI.Services.Email
             _time = time;
         }
 
-        // Devuelve cuántos correos procesó (enviados o fallidos).
         public async Task<int> ProcessDueAsync(CancellationToken ct)
         {
             var o = _options.CurrentValue;

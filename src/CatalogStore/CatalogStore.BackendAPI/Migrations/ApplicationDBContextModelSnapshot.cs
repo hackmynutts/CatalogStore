@@ -361,6 +361,73 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.ToTable("Eventlog_TB", "dbo");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.Goal.Goal", b =>
+                {
+                    b.Property<int>("GoalID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GoalID"));
+
+                    b.Property<decimal>("CollectedAmountTarget")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("SalesAmountTarget")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<int>("SalesCountTarget")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Seller")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("GoalID");
+
+                    b.HasIndex("Seller", "Year", "Month")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Goal_Seller_Year_Month_UQ");
+
+                    b.ToTable("Goal_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Goal_Month_Valid", "[Month] BETWEEN 1 AND 12");
+
+                            t.HasCheckConstraint("CK_Goal_Targets_NonNegative", "[SalesAmountTarget] >= 0 AND [CollectedAmountTarget] >= 0 AND [SalesCountTarget] >= 0");
+
+                            t.HasCheckConstraint("CK_Goal_Year_Valid", "[Year] BETWEEN 2024 AND 2200");
+                        });
+                });
+
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.Inventory.Inventory", b =>
                 {
                     b.Property<int>("InventoryID")
@@ -990,6 +1057,9 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     b.HasIndex("PaymentStatus", "DueDate")
                         .HasDatabaseName("IX_SalesHeader_PaymentStatus_DueDate");
+
+                    b.HasIndex("Seller", "SaleDate")
+                        .HasDatabaseName("IX_SalesHeader_Seller_SaleDate");
 
                     b.ToTable("SalesHeader_TB", "dbo", t =>
                         {

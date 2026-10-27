@@ -1,6 +1,8 @@
 @model CatalogStore.UI.Models.User.UserViewModel
 @{
     ViewData["Title"] = "Mis datos";
+    // Las metas las carga AccountController.Details solo para quien las usa (vendedores y administradores).
+    var goals = ViewData["Goals"] as CatalogStore.UI.Models.Goals.MyGoalsViewModel;
 }
 <h1>Mis datos</h1>
 
@@ -27,3 +29,9 @@
 </dl>
 
 <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-secondary">Cambiar contraseña</a>
+
+@if (goals is not null)
+{
+    <hr class="goal-profile-sep" />
+    <partial name="~/Views/Goals/_MyGoalsPanel.cshtml" model="goals" />
+}

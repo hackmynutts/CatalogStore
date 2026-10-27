@@ -1,0 +1,171 @@
+@model CatalogStore.UI.Models.Goals.TeamGoalsViewModel
+@using CatalogStore.UI.Models.Goals
+@{
+    var p = Model.Period;
+    ViewData["Title"] = "Metas del equipo";
+    var (py, pm) = GoalUi.Shift(p.Year, p.Month, -1);
+    var (ny, nm) = GoalUi.Shift(p.Year, p.Month, 1);
+    var monthLabel = GoalUi.MonthName(p.Year, p.Month);
+    var prevLabel = GoalUi.MonthName(py, pm);
+    string phaseText = p.Phase switch
+    {
+        GoalPhase.Current => $"Día {p.DayOfMonth} de {p.DaysInMonth} · " + (p.DaysRemaining == 1 ? "hoy es el último día" : $"quedan {p.DaysRemaining} días contando hoy"),
+        GoalPhase.Past => "Mes cerrado: las metas ya no se pueden cambiar",
+        _ => "Todavía no empieza"
+    };
+
+    // Totales del equipo. El % solo compara lo de quienes tienen meta en esa métrica (si no, el % engaña).
+    (decimal Actual, decimal Target, decimal Pct, int WithGoal) Total(Func<SellerProgress, GoalMetric> pick)
+    {
+        var all = Model.Sellers.Select(pick).ToList();
+        var withGoal = all.Where(x => x.Target > 0).ToList();
+        var target = withGoal.Sum(x => x.Target);
+        var done = withGoal.Sum(x => x.Actual);
+        return (all.Sum(x => x.Actual), target, target > 0 ? Math.Round(done / target * 100m, 1) : 0m, withGoal.Count);
+    }
+    var tSold = Total(x => x.Sold);
+    var tCollected = Total(x => x.Collected);
+    var tCount = Total(x => x.SalesCount);
+    int withAnyGoal = Model.Sellers.Count(x => x.HasGoal);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0">Metas del equipo</h1>
+        <div class="goal-phase-text">@phaseText</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        @if (p.Editable)
+        {
+            <button type="button" class="btn btn-outline-brand btn-sm" style="width:auto;" id="goalCopyBtn"
+                    data-year="@p.Year" data-month="@p.Month" data-month-label="@monthLabel" data-prev-label="@prevLabel">
+                <i class="fa-regular fa-copy" aria-hidden="true"></i> Copiar metas de @prevLabel
+            </button>
+        }
+        <a asp-controller="Account" asp-action="Details" asp-fragment="metas" class="btn btn-outline-brand btn-sm" style="width:auto;"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Mis metas</a>
+    </div>
+</div>
+
+<form id="goalsTokenForm" style="display:none">@Html.AntiForgeryToken()</form>
+
+<nav class="goal-month-nav mb-3" aria-label="Mes">
+    <a asp-action="Team" asp-route-year="@py" asp-route-month="@pm" class="goal-month-btn" title="Mes anterior" aria-label="Mes anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+    <span class="goal-month-label" aria-live="polite">@monthLabel</span>
+    <a asp-action="Team" asp-route-year="@ny" asp-route-month="@nm" class="goal-month-btn" title="Mes siguiente" aria-label="Mes siguiente"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+    @if (p.Phase != GoalPhase.Current)
+    {
+        <a asp-action="Team" class="goal-month-today">Ir al mes actual</a>
+    }
+</nav>
+
+@* Totales del equipo *@
+<section class="kpi-grid goal-kpis mb-4" aria-label="Resumen del equipo">
+    <div class="kpi-tile">
+        <span class="kpi-label">Vendido sin IVA</span>
+        <span class="kpi-value">@GoalUi.Money(tSold.Actual)</span>
+        <span class="kpi-meta">@(tSold.Target > 0 ? $"{tSold.Pct:0.#} % de {GoalUi.Target(tSold.Target, true)}" : "Sin metas")</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Cobrado sin IVA</span>
+        <span class="kpi-value kpi-value-ok">@GoalUi.Money(tCollected.Actual)</span>
+        <span class="kpi-meta">@(tCollected.Target > 0 ? $"{tCollected.Pct:0.#} % de {GoalUi.Target(tCollected.Target, true)}" : "Sin metas")</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Ventas</span>
+        <span class="kpi-value">@tCount.Actual.ToString("N0")</span>
+        <span class="kpi-meta">@(tCount.Target > 0 ? $"{tCount.Pct:0.#} % de {tCount.Target:N0}" : "Sin metas")</span>
+    </div>
+    <div class="kpi-tile">
+        <span class="kpi-label">Vendedores con meta</span>
+        <span class="kpi-value">@withAnyGoal de @Model.Sellers.Count</span>
+        <span class="kpi-meta">@(withAnyGoal < Model.Sellers.Count && p.Editable ? "Falta configurar" : "Al día")</span>
+    </div>
+</section>
+
+@if (!Model.Sellers.Any())
+{
+    <div class="app-table-empty">
+        <i class="fa-solid fa-users"></i>
+        <span>No hay vendedores para mostrar. Creá usuarios con el rol Vendedor en Administración &gt; Usuarios.</span>
+    </div>
+}
+else
+{
+    <div class="goal-legend" aria-hidden="true">
+        <span><i class="goal-legend-bar"></i> Lo que llevan</span>
+        <span><i class="goal-legend-pace"></i> Ritmo esperado a hoy</span>
+    </div>
+
+    <div class="goal-team">
+        @foreach (var s in Model.Sellers)
+        {
+            <article class="goal-seller">
+                <header class="goal-seller-head">
+                    <div>
+                        <h2 class="goal-seller-name">@s.DisplayName</h2>
+                        <div class="goal-seller-email">@s.Seller</div>
+                    </div>
+                    @if (p.Editable)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-primary goal-edit-btn"
+                                data-seller="@s.Seller" data-seller-name="@s.DisplayName"
+                                data-sold="@GoalUi.Input(s.Sold.Target)" data-collected="@GoalUi.Input(s.Collected.Target)" data-count="@GoalUi.Input(s.SalesCount.Target)"
+                                data-rv="@s.RowVersion" data-has-goal="@(s.HasGoal ? "1" : "0")">
+                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> @(s.HasGoal ? "Editar metas" : "Definir metas")
+                        </button>
+                    }
+                </header>
+                <div class="goal-seller-body">
+                    <partial name="_GoalMetric" model="@(new GoalMetricView("Vendido sin IVA", s.Sold, true, p))" />
+                    <partial name="_GoalMetric" model="@(new GoalMetricView("Cobrado sin IVA", s.Collected, true, p))" />
+                    <partial name="_GoalMetric" model="@(new GoalMetricView("Cantidad de ventas", s.SalesCount, false, p))" />
+                </div>
+            </article>
+        }
+    </div>
+}
+
+@* Editar o definir las metas de un vendedor *@
+<div class="modal fade" id="goalModal" tabindex="-1" aria-labelledby="goalModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="goalForm" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="goalModalTitle">Metas de <span id="goalModalSeller"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="goal-modal-month">@monthLabel</p>
+                <input type="hidden" id="goalSeller" />
+                <input type="hidden" id="goalRowVersion" />
+                <input type="hidden" id="goalYear" value="@p.Year" />
+                <input type="hidden" id="goalMonth" value="@p.Month" />
+
+                <div class="mb-3">
+                    <label for="goalSold" class="form-label">Vendido sin IVA (₡)</label>
+                    <input type="number" class="form-control" id="goalSold" min="0" step="0.01" inputmode="decimal" autocomplete="off" />
+                    <div class="invalid-feedback" id="goalSoldError"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="goalCollected" class="form-label">Cobrado sin IVA (₡)</label>
+                    <input type="number" class="form-control" id="goalCollected" min="0" step="0.01" inputmode="decimal" autocomplete="off" />
+                    <div class="invalid-feedback" id="goalCollectedError"></div>
+                </div>
+                <div class="mb-2">
+                    <label for="goalCount" class="form-label">Cantidad de ventas</label>
+                    <input type="number" class="form-control" id="goalCount" min="0" step="1" inputmode="numeric" autocomplete="off" />
+                    <div class="invalid-feedback" id="goalCountError"></div>
+                </div>
+                <p class="goal-modal-help">Dejá una meta en 0 si no querés medir esa métrica.</p>
+                <div class="alert alert-danger py-2 mb-0" id="goalFormError" role="alert" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;" id="goalSubmit">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/goals-team.js" asp-append-version="true"></script>
+}

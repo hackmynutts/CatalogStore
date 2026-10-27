@@ -2211,3 +2211,357 @@ body.order-busy main {
         transition: none;
     }
 }
+
+/* ---------- Metas del vendedor (.goal-*) ---------- */
+
+.goal-phase-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Selector de mes */
+.goal-month-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.goal-month-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--brand-primary);
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.goal-month-btn:hover {
+    background: var(--brand-primary-light);
+    border-color: var(--brand-primary);
+}
+
+.goal-month-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--brand-primary-light);
+    border-color: var(--brand-primary);
+}
+
+.goal-month-btn.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.goal-month-label {
+    min-width: 170px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-color);
+}
+
+.goal-month-today {
+    margin-left: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--brand-primary);
+    text-decoration: none;
+}
+
+.goal-month-today:hover {
+    text-decoration: underline;
+}
+
+.goal-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.goal-note i {
+    margin-top: 3px;
+}
+
+/* Tarjetas de "Mis metas" */
+.goal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.goal-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+}
+
+/* Una métrica: valor, estado, barra y lo que falta */
+.goal-metric-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.goal-metric-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.goal-metric-value {
+    margin: 8px 0 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.goal-metric-value strong {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-right: 4px;
+}
+
+.goal-metric-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.goal-metric-pct {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* Barra: relleno = lo logrado; marca oscura = ritmo esperado a hoy */
+.goal-bar {
+    position: relative;
+    height: 12px;
+    border-radius: 999px;
+    background: #eceff1;
+}
+
+.goal-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #9ca3af;
+    transition: width 0.4s ease;
+}
+
+.goal-bar.goal-s-met .goal-bar-fill { background: #2f8f5b; }
+.goal-bar.goal-s-ok .goal-bar-fill { background: var(--brand-primary); }
+.goal-bar.goal-s-behind .goal-bar-fill { background: #d9a233; }
+.goal-bar.goal-s-miss .goal-bar-fill { background: #d4574a; }
+
+.goal-bar-pace {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: var(--text-color);
+}
+
+/* Estado en texto (el color nunca es lo único que informa) */
+.goal-status {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.goal-status.goal-s-met { background: #dcfce7; color: #166534; }
+.goal-status.goal-s-ok { background: var(--brand-primary-light); color: var(--brand-primary-dark); }
+.goal-status.goal-s-behind { background: #fff4d6; color: #8a5a00; }
+.goal-status.goal-s-miss { background: var(--danger-bg); color: #b42318; }
+.goal-status.goal-s-none { background: #f1f2f4; color: #4b5563; }
+
+.goal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 4px 0 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.goal-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.goal-legend-bar {
+    display: inline-block;
+    width: 22px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--brand-primary);
+}
+
+.goal-legend-pace {
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--text-color);
+}
+
+.goal-help {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    max-width: 760px;
+    margin-bottom: 28px;
+}
+
+.goal-h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 12px;
+}
+
+/* Historial */
+.goal-history td {
+    vertical-align: top;
+}
+
+.goal-history-current td {
+    background: var(--brand-primary-light);
+}
+
+.goal-history-sub {
+    margin-top: 3px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.goal-history-none {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+/* Equipo: una tarjeta por vendedor con sus tres métricas en fila */
+.goal-team {
+    display: grid;
+    gap: 16px;
+}
+
+.goal-seller {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 18px 22px 22px;
+}
+
+.goal-seller-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.goal-seller-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.goal-seller-email {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.goal-seller-body {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+}
+
+.goal-modal-month {
+    font-weight: 700;
+    color: var(--brand-primary-dark);
+    margin-bottom: 14px;
+}
+
+.goal-modal-help {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+@media (max-width: 991.98px) {
+    .goal-grid,
+    .goal-seller-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .goal-seller-body {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .goal-month-label {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .goal-seller {
+        padding: 16px;
+    }
+
+    .goal-seller-head {
+        flex-direction: column;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .goal-bar-fill {
+        transition: none;
+    }
+}
+
+/* Metas dentro del perfil (Account/Details) */
+.goal-profile-sep {
+    margin: 32px 0 24px;
+    border-color: var(--border-color);
+    opacity: 1;
+}
+
+.goal-profile-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.goal-profile {
+    scroll-margin-top: 16px;
+}

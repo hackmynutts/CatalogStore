@@ -14,6 +14,7 @@ using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
 using CatalogStore.BackendAPI.Models.SalesPayment;
 using CatalogStore.BackendAPI.Models.EmailOutbox;
+using CatalogStore.BackendAPI.Models.Goal;
 namespace CatalogStore.BackendAPI.Data
 {
     public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options)
@@ -21,6 +22,7 @@ namespace CatalogStore.BackendAPI.Data
     {
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Eventlog> Eventlogs { get; set; }
+        public DbSet<EmailOutbox> EmailOutbox { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
@@ -32,7 +34,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<SalesHeader> SalesHeaders { get; set; }
         public DbSet<SalesLine> SalesLines { get; set; }
         public DbSet<SalesPayment> SalesPayments { get; set; }
-        public DbSet<EmailOutbox> EmailOutbox { get; set; }
+        public DbSet<Goal> Goals { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -68,6 +70,38 @@ namespace CatalogStore.BackendAPI.Data
                     .HasDatabaseName("IX_Eventlogs_TableName_RecordID");
                 entity.HasIndex(e => e.CreatedOn)
                     .HasDatabaseName("IX_Eventlogs_CreatedOn");
+            });
+            builder.Entity<EmailOutbox>(entity =>
+            {
+                entity.Property(e => e.ToAddress)
+                    .HasMaxLength(256).IsRequired();
+                entity.Property(e => e.ToName)
+                    .HasMaxLength(140);
+                entity.Property(e => e.Subject)
+                    .HasMaxLength(200).IsRequired();
+                entity.Property(e => e.HtmlBody)
+                    .IsRequired();
+                entity.Property(e => e.Kind)
+                    .HasMaxLength(50).IsRequired();
+                entity.Property(e => e.RelatedTable)
+                    .HasMaxLength(50);
+                entity.Property(e => e.RelatedID)
+                    .HasMaxLength(50);
+                entity.Property(e => e.LastError)
+                    .HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                // El worker busca los pendientes cuyo próximo intento ya llegó.
+                entity.HasIndex(e => new { e.Status, e.NextAttemptOn })
+                    .HasDatabaseName("IX_EmailOutbox_Status_NextAttemptOn");
+                entity.HasIndex(e => new { e.RelatedTable, e.RelatedID })
+                    .HasDatabaseName("IX_EmailOutbox_RelatedTable_RelatedID");
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_EmailOutbox_Status_Valid", "[Status] IN (0,1,2)");
+                    t.HasCheckConstraint("CK_EmailOutbox_Attempts_NonNegative", "[Attempts] >= 0");
+                    t.HasCheckConstraint("CK_EmailOutbox_SentOn_Consistent", "([Status] = 1 AND [SentOn] IS NOT NULL) OR ([Status] <> 1 AND [SentOn] IS NULL)");
+                });
             });
             builder.Entity<Client>(entity =>
             {
@@ -375,6 +409,8 @@ namespace CatalogStore.BackendAPI.Data
                                         "([PaymentStatus] != 3 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) " +
                                         "OR ([PaymentStatus] = 3 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
                 });
+                entity.HasIndex(e => new { e.Seller, e.SaleDate})
+                    .HasDatabaseName("IX_SalesHeader_Seller_SaleDate");
             }).HasSequence<int>("SaleNumberSeq").StartsAt(1).IncrementsBy(1);
             builder.Entity<SalesLine>(entity =>
             {
@@ -447,36 +483,27 @@ namespace CatalogStore.BackendAPI.Data
                                         "OR ([IsVoided] = 1 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
                 });
             });
-            builder.Entity<EmailOutbox>(entity =>
+            builder.Entity<Goal>(entity =>
             {
-                entity.Property(e => e.ToAddress)
-                    .HasMaxLength(256).IsRequired();
-                entity.Property(e => e.ToName)
-                    .HasMaxLength(140);
-                entity.Property(e => e.Subject)
-                    .HasMaxLength(200).IsRequired();
-                entity.Property(e => e.HtmlBody)
-                    .IsRequired();
-                entity.Property(e => e.Kind)
-                    .HasMaxLength(50).IsRequired();
-                entity.Property(e => e.RelatedTable)
-                    .HasMaxLength(50);
-                entity.Property(e => e.RelatedID)
-                    .HasMaxLength(50);
-                entity.Property(e => e.LastError)
-                    .HasMaxLength(1000);
+                entity.Property(e => e.Seller)
+                    .HasMaxLength(140).IsRequired();
                 entity.Property(e => e.CreatedBy)
                     .HasMaxLength(140).IsRequired();
-                // El worker busca los pendientes cuyo próximo intento ya llegó.
-                entity.HasIndex(e => new { e.Status, e.NextAttemptOn })
-                    .HasDatabaseName("IX_EmailOutbox_Status_NextAttemptOn");
-                entity.HasIndex(e => new { e.RelatedTable, e.RelatedID })
-                    .HasDatabaseName("IX_EmailOutbox_RelatedTable_RelatedID");
+                entity.Property(e => e.ModifiedBy)
+                    .HasMaxLength(140);
+                entity.Property(e => e.SalesAmountTarget)
+                    .HasPrecision(12, 2);
+                entity.Property(e => e.CollectedAmountTarget)
+                    .HasPrecision(12, 2);
+                entity.HasIndex(e => new { e.Seller, e.Year, e.Month })
+                    .IsUnique()
+                    .HasDatabaseName("IX_Goal_Seller_Year_Month_UQ");
                 entity.ToTable(t =>
                 {
-                    t.HasCheckConstraint("CK_EmailOutbox_Status_Valid", "[Status] IN (0,1,2)");
-                    t.HasCheckConstraint("CK_EmailOutbox_Attempts_NonNegative", "[Attempts] >= 0");
-                    t.HasCheckConstraint("CK_EmailOutbox_SentOn_Consistent", "([Status] = 1 AND [SentOn] IS NOT NULL) OR ([Status] <> 1 AND [SentOn] IS NULL)");
+                    t.HasCheckConstraint("CK_Goal_Month_Valid", "[Month] BETWEEN 1 AND 12");
+                    t.HasCheckConstraint("CK_Goal_Year_Valid", "[Year] BETWEEN 2024 AND 2200");
+                    t.HasCheckConstraint("CK_Goal_Targets_NonNegative", "[SalesAmountTarget] >= 0 AND" +
+                                                " [CollectedAmountTarget] >= 0 AND [SalesCountTarget] >= 0");
                 });
             });
         }

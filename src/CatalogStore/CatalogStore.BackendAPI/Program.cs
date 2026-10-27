@@ -3,6 +3,7 @@ using CatalogStore.BackendAPI.Repository.Client;
 using CatalogStore.BackendAPI.Repository.Email;
 using CatalogStore.BackendAPI.Services.Email;
 using CatalogStore.BackendAPI.Repository.EventLogs;
+using CatalogStore.BackendAPI.Repository.Goals;
 using CatalogStore.BackendAPI.Repository.Inventory;
 using CatalogStore.BackendAPI.Repository.InventoryLines;
 using CatalogStore.BackendAPI.Repository.InventoryTransactions;
@@ -16,6 +17,7 @@ using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.DateManagement;
 using CatalogStore.BackendAPI.Services.EventLogs;
+using CatalogStore.BackendAPI.Services.Goals;
 using CatalogStore.BackendAPI.Services.Inventory;
 using CatalogStore.BackendAPI.Services.InventoryLines;
 using CatalogStore.BackendAPI.Services.InventoryTransactions;
@@ -124,6 +126,8 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderServices, OrderServices>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 builder.Services.AddScoped<ISalesServices, SalesServices>();
+builder.Services.AddScoped<IGoalRepository, GoalRepository>();
+builder.Services.AddScoped<IGoalServices, GoalServices>();
 
 // Correo: se encola en EmailOutbox_TB y EmailOutboxWorker lo envía en segundo plano (ver EmailOptions).
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));

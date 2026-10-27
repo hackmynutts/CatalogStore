@@ -1,0 +1,126 @@
+@model CatalogStore.UI.Models.Goals.MyGoalsViewModel
+@using CatalogStore.UI.Models.Goals
+@{
+    // Metas del usuario en su perfil (Account/Details). El mes se cambia con ?year=&month= en esa misma página.
+    var p = Model.Period;
+    var s = Model.Progress;
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    var (py, pm) = GoalUi.Shift(p.Year, p.Month, -1);
+    var (ny, nm) = GoalUi.Shift(p.Year, p.Month, 1);
+    bool hasNext = p.Phase != GoalPhase.Future; // se puede ver hasta el mes siguiente
+    var soldView = new GoalMetricView("Vendido sin IVA", s.Sold, true, p);
+    var collectedView = new GoalMetricView("Cobrado sin IVA", s.Collected, true, p);
+    var countView = new GoalMetricView("Cantidad de ventas", s.SalesCount, false, p);
+    string phaseText = p.Phase switch
+    {
+        GoalPhase.Current => $"Día {p.DayOfMonth} de {p.DaysInMonth} · " + (p.DaysRemaining == 1 ? "hoy es el último día" : $"quedan {p.DaysRemaining} días contando hoy"),
+        GoalPhase.Past => "Mes cerrado",
+        _ => "Todavía no empieza"
+    };
+}
+
+<section id="metas" class="goal-profile" aria-labelledby="goalsTitle">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h2 class="goal-profile-title" id="goalsTitle">Mis metas</h2>
+            <div class="goal-phase-text">@phaseText</div>
+        </div>
+        @if (isAdmin)
+        {
+            <a asp-controller="Goals" asp-action="Team" asp-route-year="@p.Year" asp-route-month="@p.Month" class="btn btn-outline-brand btn-sm" style="width:auto;">
+                <i class="fa-solid fa-users" aria-hidden="true"></i> Metas del equipo
+            </a>
+        }
+    </div>
+
+    <nav class="goal-month-nav mb-3" aria-label="Mes">
+        <a asp-controller="Account" asp-action="Details" asp-route-year="@py" asp-route-month="@pm" asp-fragment="metas" class="goal-month-btn" title="Mes anterior" aria-label="Mes anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+        <span class="goal-month-label" aria-live="polite">@GoalUi.MonthName(p.Year, p.Month)</span>
+        @if (hasNext)
+        {
+            <a asp-controller="Account" asp-action="Details" asp-route-year="@ny" asp-route-month="@nm" asp-fragment="metas" class="goal-month-btn" title="Mes siguiente" aria-label="Mes siguiente"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+        }
+        else
+        {
+            <span class="goal-month-btn is-disabled" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+        }
+        @if (p.Phase != GoalPhase.Current)
+        {
+            <a asp-controller="Account" asp-action="Details" asp-fragment="metas" class="goal-month-today">Ir al mes actual</a>
+        }
+    </nav>
+
+    @if (!s.HasGoal)
+    {
+        <div class="goal-note" role="note">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <span>
+                @if (p.Phase == GoalPhase.Past)
+                {
+                    <text>No tenías metas en este mes.</text>
+                }
+                else
+                {
+                    <text>Todavía no tenés metas para este mes. Un administrador las configura; mientras tanto ves lo que llevás.</text>
+                }
+            </span>
+        </div>
+    }
+
+    <div class="goal-grid mb-2" role="group" aria-label="Avance de @GoalUi.MonthName(p.Year, p.Month)">
+        @* Ruta completa: el panel también se usa desde Account/Details, que no busca en Views/Goals. *@
+        <article class="goal-card"><partial name="~/Views/Goals/_GoalMetric.cshtml" model="soldView" /></article>
+        <article class="goal-card"><partial name="~/Views/Goals/_GoalMetric.cshtml" model="collectedView" /></article>
+        <article class="goal-card"><partial name="~/Views/Goals/_GoalMetric.cshtml" model="countView" /></article>
+    </div>
+
+    <div class="goal-legend" aria-hidden="true">
+        <span><i class="goal-legend-bar"></i> Lo que llevás</span>
+        <span><i class="goal-legend-pace"></i> Ritmo esperado a hoy</span>
+    </div>
+    <p class="goal-help">
+        El vendido cuenta por la fecha de la venta y el cobrado por la fecha del abono, ambos sin IVA y sin ventas anuladas.
+        El ritmo esperado reparte la meta en partes iguales entre los días del mes.
+    </p>
+
+    <h3 class="goal-h2">Últimos meses</h3>
+    @if (!Model.History.Any())
+    {
+        <div class="app-table-empty"><i class="fa-solid fa-chart-simple"></i><span>Todavía no hay meses para mostrar.</span></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table app-table goal-history">
+                <thead>
+                    @* Los meses ya vienen en orden cronológico: ordenar por texto los desordenaría. *@
+                    <tr><th class="sorter-false filter-false">Mes</th><th class="sorter-false filter-false">Vendido sin IVA</th><th class="sorter-false filter-false">Cobrado sin IVA</th><th class="sorter-false filter-false">Ventas</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in Model.History)
+                    {
+                        var hp = h.Progress;
+                        <tr class="@(h.Year == p.Year && h.Month == p.Month ? "goal-history-current" : "")">
+                            <td><a asp-controller="Account" asp-action="Details" asp-route-year="@h.Year" asp-route-month="@h.Month" asp-fragment="metas">@GoalUi.MonthName(h.Year, h.Month)</a></td>
+                            @foreach (var (metric, isMoney) in new[] { (hp.Sold, true), (hp.Collected, true), (hp.SalesCount, false) })
+                            {
+                                <td>
+                                    @if (metric.Target > 0)
+                                    {
+                                        <span class="goal-status @GoalUi.StatusClass(metric.Status)">@GoalUi.Percent(metric.Percent)</span>
+                                        <div class="goal-history-sub">@GoalUi.Number(metric.Actual, isMoney) de @GoalUi.Target(metric.Target, isMoney)</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="goal-history-none">Sin meta</span>
+                                        <div class="goal-history-sub">@GoalUi.Number(metric.Actual, isMoney)</div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

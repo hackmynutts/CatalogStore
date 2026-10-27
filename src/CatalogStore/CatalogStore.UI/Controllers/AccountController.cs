@@ -1,4 +1,5 @@
 ﻿using CatalogStore.UI.Handlers;
+using CatalogStore.UI.Models.Goals;
 using CatalogStore.UI.Models.User;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -247,7 +248,7 @@ namespace CatalogStore.UI.Controllers
 
         [HttpGet]
         [Authorize]
-        public async Task<ActionResult> Details()
+        public async Task<ActionResult> Details(int? year, int? month)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.GetAsync("api/User/me");
@@ -258,6 +259,24 @@ namespace CatalogStore.UI.Controllers
             var user = await response.Content.ReadFromJsonAsync<UserViewModel>();
             if (user == null)
                 return RedirectToAction("Index", "Home");
+
+            // Metas del mes (vendedores y administradores). Si la API no responde, el perfil se muestra igual sin ellas.
+            if (user.Roles.Any(r => r is "Vendedor" or "Admin" or "AdminIT"))
+            {
+                try
+                {
+                    var period = year.HasValue && month.HasValue ? $"?year={year.Value}&month={month.Value}" : string.Empty;
+                    var goals = await client.GetAsync("api/Goal/me" + period);
+                    if (goals.IsSuccessStatusCode && await goals.Content.ReadFromJsonAsync<MyGoalsViewModel>() is { } mine)
+                    {
+                        var history = await client.GetAsync("api/Goal/me/history");
+                        if (history.IsSuccessStatusCode)
+                            mine.History = await history.Content.ReadFromJsonAsync<List<GoalHistoryItem>>() ?? new();
+                        ViewData["Goals"] = mine;
+                    }
+                }
+                catch (HttpRequestException) { }
+            }
 
             return View(user);
         }

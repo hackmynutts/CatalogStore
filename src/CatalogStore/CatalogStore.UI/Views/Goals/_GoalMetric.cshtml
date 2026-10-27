@@ -1,0 +1,58 @@
+@model CatalogStore.UI.Models.Goals.GoalMetricView
+@using CatalogStore.UI.Models.Goals
+@{
+    var m = Model.Metric;
+    var p = Model.Period;
+    bool hasGoal = m.Target > 0;
+    bool showPace = hasGoal && p.Phase == GoalPhase.Current && m.Status != GoalStatus.Met;
+    string perDay = m.PerDayNeeded is null ? "" : (Model.IsMoney ? GoalUi.Money(m.PerDayNeeded.Value) : m.PerDayNeeded.Value.ToString("0.#")) + " por día";
+}
+@* Una meta: valor, estado en texto, barra con la marca del ritmo esperado y lo que falta. El color nunca es lo único que informa. *@
+<div class="goal-metric">
+    <div class="goal-metric-head">
+        <span class="goal-metric-label">@Model.Label</span>
+        <span class="goal-status @GoalUi.StatusClass(m.Status)">@GoalUi.StatusText(m.Status)</span>
+    </div>
+    <div class="goal-metric-value">
+        <strong>@GoalUi.Number(m.Actual, Model.IsMoney)</strong>
+        @if (hasGoal)
+        {
+            <span>de @GoalUi.Target(m.Target, Model.IsMoney)</span>
+        }
+    </div>
+    @if (hasGoal)
+    {
+        <div class="goal-bar @GoalUi.StatusClass(m.Status)" role="progressbar" aria-label="@Model.Label"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.Min(m.Percent ?? 0m, 100m).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)"
+             aria-valuetext="@GoalUi.Percent(m.Percent) de la meta">
+            <div class="goal-bar-fill" style="width:@GoalUi.BarWidth(m)"></div>
+            @if (showPace)
+            {
+                <span class="goal-bar-pace" style="left:@GoalUi.PacePosition(p)" title="Ritmo esperado a hoy: @GoalUi.Number(m.ExpectedAtPace, Model.IsMoney)"></span>
+            }
+        </div>
+        <div class="goal-metric-foot">
+            <span class="goal-metric-pct">@GoalUi.Percent(m.Percent)</span>
+            @if (m.Status == GoalStatus.Met)
+            {
+                <span>Meta alcanzada</span>
+            }
+            else if (p.Phase == GoalPhase.Past)
+            {
+                <span>Faltaron @GoalUi.Number(m.Remaining, Model.IsMoney)</span>
+            }
+            else if (p.Phase == GoalPhase.Future)
+            {
+                <span>Meta del mes</span>
+            }
+            else
+            {
+                <span>Faltan @GoalUi.Number(m.Remaining, Model.IsMoney)@(perDay.Length > 0 ? $" · {perDay}" : "")</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="goal-metric-foot"><span>Sin meta este mes</span></div>
+    }
+</div>

@@ -38,9 +38,14 @@
             </div>
         }
     </div>
-    <a asp-controller="Order" asp-action="Index" asp-route-status="1" class="btn btn-outline-brand btn-sm" style="width:auto;">
-        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Órdenes por completar
-    </a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-controller="@(isAdmin ? "Goals" : "Account")" asp-action="@(isAdmin ? "Team" : "Details")" asp-fragment="@(isAdmin ? null : "metas")" class="btn btn-outline-brand btn-sm" style="width:auto;">
+            <i class="fa-solid fa-bullseye" aria-hidden="true"></i> @(isAdmin ? "Metas del equipo" : "Mis metas")
+        </a>
+        <a asp-controller="Order" asp-action="Index" asp-route-status="1" class="btn btn-outline-brand btn-sm" style="width:auto;">
+            <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Órdenes por completar
+        </a>
+    </div>
 </div>
 
 @* Indicadores: cuatro tarjetas del mismo tamaño *@
