@@ -19,6 +19,18 @@ namespace CatalogStore.UI.Controllers
         public IActionResult Mine(int? year, int? month) =>
             RedirectToAction("Details", "Account", new { year, month }, "metas");
 
+        // GET: Goals/MineDetail?year=2026&month=10 — las ventas y abonos que suman en MIS metas de ese mes.
+        public async Task<IActionResult> MineDetail(int? year, int? month)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync("api/Goal/me/detail" + PeriodQuery(year, month));
+            if (!response.IsSuccessStatusCode)
+                return RedirectToAction("Details", "Account", new { year, month }, "metas");
+
+            var model = await response.Content.ReadFromJsonAsync<MyGoalDetailViewModel>();
+            return model is null ? RedirectToAction("Details", "Account", new { year, month }, "metas") : View(model);
+        }
+
         // GET: Goals/Team?year=2026&month=10 — todos los vendedores (solo admin)
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> Team(int? year, int? month)

@@ -20,12 +20,12 @@ namespace CatalogStore.BackendAPI.Controllers
         private bool IsAdmin => User.IsInRole("Admin") || User.IsInRole("AdminIT");
 
         // GET api/Report/sales?from=2026-10-01&to=2026-10-31&seller=correo&includeVoided=true
-        // GET api/Report/goals?year=2026&month=10   ·   receivables, payments, products y stock: ver ReportKeys
+        // GET api/Report/statement?clientId=5[&from=2026-01-01&to=2026-10-31]   ·   GET api/Report/goals?year=2026&month=10   ·   receivables, payments, products y stock: ver ReportKeys
         [HttpGet("{key}")]
         public async Task<IActionResult> Get(string key, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] string? seller,
-            [FromQuery] bool includeVoided = false, [FromQuery] int? year = null, [FromQuery] int? month = null)
+            [FromQuery] bool includeVoided = false, [FromQuery] int? year = null, [FromQuery] int? month = null, [FromQuery] int? clientId = null)
         {
-            var result = await _reportServices.BuildAsync(new ReportRequest(key, from, to, seller, includeVoided, year, month), CurrentUser, IsAdmin);
+            var result = await _reportServices.BuildAsync(new ReportRequest(key, from, to, seller, includeVoided, year, month, clientId), CurrentUser, IsAdmin);
             return result.Ok
                 ? File(result.File!.Bytes, XlsxMime, result.File.FileName)
                 : BadRequest(new { message = result.Error });

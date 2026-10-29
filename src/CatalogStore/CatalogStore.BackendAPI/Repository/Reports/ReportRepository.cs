@@ -23,6 +23,8 @@ namespace CatalogStore.BackendAPI.Repository.Reports
 
     public enum StatusKind { Active = 1, Inactive = 2 }
 
+    public record ClientHeaderRow(int Id, string Name, string Identification, string? Phone, string? Email);
+
     public interface IReportRepository
     {
         // seller null = todos. includeVoided false = sin ventas anuladas.
@@ -32,6 +34,11 @@ namespace CatalogStore.BackendAPI.Repository.Reports
         Task<List<PaymentReportRow>> GetPaymentsAsync(DateTime fromUtc, DateTime toUtc, string? seller);
         Task<List<ProductSaleLine>> GetProductSalesAsync(DateTime fromUtc, DateTime toUtc);
         Task<List<StockReportRow>> GetStockAsync();
+        Task<ClientHeaderRow?> GetClientAsync(int clientId);
+        // Todas las ventas no anuladas del cliente (seller null = de todos los vendedores).
+        Task<List<SaleReportRow>> GetClientSalesAsync(int clientId, string? seller);
+        // Abonos vigentes del cliente en ventas no anuladas.
+        Task<List<PaymentReportRow>> GetClientPaymentsAsync(int clientId, string? seller);
     }
 
     public class ReportRepository : IReportRepository
@@ -88,6 +95,28 @@ namespace CatalogStore.BackendAPI.Repository.Reports
         {
             var query = _context.SalesPayments.AsNoTracking()
                 .Where(p => !p.IsVoided && p.SalesHeader.PaymentStatus != PaymentStatus.Voided && p.PaymentDate >= fromUtc && p.PaymentDate < toUtc);
+            if (seller is not null) query = query.Where(p => p.SalesHeader.Seller == seller);
+            return query.OrderBy(p => p.PaymentDate).ThenBy(p => p.SalesPaymentID)
+                .Select(p => new PaymentReportRow(p.PaymentDate, p.SalesHeader.SaleNumber, p.SalesHeader.ClientName, p.SalesHeader.Seller,
+                    p.PaymentMethod, p.Amount, p.Reference, p.CreatedBy))
+                .ToListAsync();
+        }
+
+        public Task<ClientHeaderRow?> GetClientAsync(int clientId) =>
+            _context.Clients.AsNoTracking().Where(c => c.Id == clientId)
+                .Select(c => new ClientHeaderRow(c.Id, c.ClientName, c.Identification, c.ClientPhone, c.ClientEmail)).FirstOrDefaultAsync();
+
+        public async Task<List<SaleReportRow>> GetClientSalesAsync(int clientId, string? seller)
+        {
+            var query = _context.SalesHeaders.AsNoTracking().Where(s => s.ClientID == clientId && s.PaymentStatus != PaymentStatus.Voided);
+            if (seller is not null) query = query.Where(s => s.Seller == seller);
+            return await Project(query.OrderBy(s => s.SaleDate));
+        }
+
+        public Task<List<PaymentReportRow>> GetClientPaymentsAsync(int clientId, string? seller)
+        {
+            var query = _context.SalesPayments.AsNoTracking()
+                .Where(p => !p.IsVoided && p.SalesHeader.ClientID == clientId && p.SalesHeader.PaymentStatus != PaymentStatus.Voided);
             if (seller is not null) query = query.Where(p => p.SalesHeader.Seller == seller);
             return query.OrderBy(p => p.PaymentDate).ThenBy(p => p.SalesPaymentID)
                 .Select(p => new PaymentReportRow(p.PaymentDate, p.SalesHeader.SaleNumber, p.SalesHeader.ClientName, p.SalesHeader.Seller,

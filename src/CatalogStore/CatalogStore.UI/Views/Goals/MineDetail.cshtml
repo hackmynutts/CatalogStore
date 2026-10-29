@@ -1,0 +1,116 @@
+@model CatalogStore.UI.Models.Goals.MyGoalDetailViewModel
+@using CatalogStore.UI.Models.Goals
+@using CatalogStore.UI.Models.Sales
+@{
+    // Detrás de las tarjetas de "Mis metas": exactamente las ventas y los abonos que suman en ese mes.
+    var p = Model.Period;
+    var monthLabel = GoalUi.MonthName(p.Year, p.Month);
+    ViewData["Title"] = $"Mis ventas de {monthLabel}";
+    var zone = "America/Costa_Rica";
+    DateTime Local(DateTime utc) => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0">Mis ventas de @monthLabel</h1>
+        <div class="goal-phase-text">Lo que está sumando en tus metas de este mes.</div>
+    </div>
+    <a asp-controller="Account" asp-action="Details" asp-route-year="@p.Year" asp-route-month="@p.Month" asp-fragment="metas" class="btn btn-outline-secondary btn-sm" style="width:auto;">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver a mis metas
+    </a>
+</div>
+
+<div class="goal-grid mb-3" role="group" aria-label="Totales de @monthLabel">
+    <article class="goal-card">
+        <div class="goal-metric-label">Vendido sin IVA</div>
+        <div class="goal-metric-value"><strong>@SalesUi.Money(Model.SoldTotal)</strong></div>
+    </article>
+    <article class="goal-card">
+        <div class="goal-metric-label">Cobrado sin IVA</div>
+        <div class="goal-metric-value"><strong>@SalesUi.Money(Model.CollectedTotal)</strong></div>
+    </article>
+    <article class="goal-card">
+        <div class="goal-metric-label">Cantidad de ventas</div>
+        <div class="goal-metric-value"><strong>@Model.Sales.Count</strong></div>
+    </article>
+</div>
+
+<h2 class="goal-h2">Ventas del mes <span class="order-card-count">@Model.Sales.Count</span></h2>
+<p class="goal-help">Cuentan por la fecha de la venta, sin IVA y sin ventas anuladas. Es el "Vendido" y la "Cantidad de ventas" de tus metas.</p>
+@if (!Model.Sales.Any())
+{
+    <div class="app-table-empty"><i class="fa-solid fa-receipt"></i><span>No tenés ventas contadas en este mes.</span></div>
+}
+else
+{
+    <div class="table-responsive mb-4">
+        <table class="table app-table">
+            <thead>
+                <tr>
+                    <th>Venta</th><th>Fecha</th><th>Cliente</th><th>IVA</th>
+                    <th class="text-end">Suma a tu meta (sin IVA)</th><th class="text-end">Total de la venta</th><th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model.Sales)
+                {
+                    <tr>
+                        <td><a asp-controller="Sales" asp-action="Details" asp-route-id="@s.SalesHeaderID">@s.SaleNumber</a></td>
+                        <td>@Local(s.SaleDate).ToString("dd/MM/yyyy")</td>
+                        <td>@s.ClientName</td>
+                        <td>@(s.ApplyIva ? "Con IVA" : "Sin IVA")</td>
+                        <td class="text-end">@SalesUi.Money(s.CountedAmount)</td>
+                        <td class="text-end">@SalesUi.Money(s.Total)</td>
+                        <td><span class="@SalesUi.StatusBadge((PaymentStatus)s.PaymentStatus)">@s.PaymentStatusName</span></td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="4">Total</th>
+                    <th class="text-end">@SalesUi.Money(Model.SoldTotal)</th>
+                    <th colspan="2"></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+<h2 class="goal-h2">Cobros del mes <span class="order-card-count">@Model.Payments.Count</span></h2>
+<p class="goal-help">Cuentan por la fecha del abono, sin IVA. Pueden ser de ventas de meses anteriores. Es el "Cobrado" de tus metas.</p>
+@if (!Model.Payments.Any())
+{
+    <div class="app-table-empty"><i class="fa-solid fa-money-bill-wave"></i><span>No tenés cobros contados en este mes.</span></div>
+}
+else
+{
+    <div class="table-responsive mb-4">
+        <table class="table app-table">
+            <thead>
+                <tr>
+                    <th>Fecha del abono</th><th>Venta</th><th>Cliente</th><th>Método</th>
+                    <th class="text-end">Abono (con IVA)</th><th class="text-end">Suma a tu meta (sin IVA)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var pay in Model.Payments)
+                {
+                    <tr>
+                        <td>@Local(pay.PaymentDate).ToString("dd/MM/yyyy")</td>
+                        <td><a asp-controller="Sales" asp-action="Details" asp-route-id="@pay.SalesHeaderID">@pay.SaleNumber</a></td>
+                        <td>@pay.ClientName</td>
+                        <td>@pay.Method</td>
+                        <td class="text-end">@SalesUi.Money(pay.Amount)</td>
+                        <td class="text-end">@SalesUi.Money(pay.CountedAmount)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="5">Total</th>
+                    <th class="text-end">@SalesUi.Money(Model.CollectedTotal)</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}

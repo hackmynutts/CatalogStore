@@ -1,8 +1,10 @@
+@using CatalogStore.UI.Models.Client
 @using CatalogStore.UI.Models.User
 @{
     ViewData["Title"] = "Reportes";
     bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
     var sellers = ViewData["Sellers"] as List<UserViewModel> ?? new();
+    var clients = ViewData["Clients"] as List<ClientViewModel> ?? new();
     var error = TempData["ReportError"] as string;
     var today = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "America/Costa_Rica").Date;
     var monthStart = new DateTime(today.Year, today.Month, 1);
@@ -63,6 +65,41 @@
             {
                 <partial name="_ReportSeller" model="sellers" />
             }
+            <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
+        </form>
+    </section>
+
+    <section class="report-card">
+        <h2 class="report-title"><i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i> Estado de cuenta del cliente</h2>
+        <p class="report-desc">Ventas y abonos de un cliente con saldo corrido, más las ventas que todavía debe. Sin fechas trae todo el historial; con fechas arranca con el saldo inicial.@(isAdmin ? "" : " Solo con tus ventas.")</p>
+        <form method="get" asp-action="Download" class="report-form" data-report>
+            <input type="hidden" name="key" value="statement" />
+            <div class="mb-3">
+                <label class="form-label" for="statement-client">Cliente</label>
+                <select class="form-select" id="statement-client" name="clientId" required>
+                    <option value="">Elegí un cliente…</option>
+                    @foreach (var c in clients)
+                    {
+                        <option value="@c.Id">@c.ClientName@(string.IsNullOrWhiteSpace(c.Identification) ? "" : $" ({c.Identification})")</option>
+                    }
+                </select>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label" for="statement-from">Desde (opcional)</label>
+                    <input type="date" class="form-control" id="statement-from" name="from" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label" for="statement-to">Hasta (opcional)</label>
+                    <input type="date" class="form-control" id="statement-to" name="to" />
+                </div>
+            </div>
+            <div class="report-chips mb-3" role="group" aria-label="Atajos de fechas">
+                <button type="button" class="report-chip" data-range="month">Este mes</button>
+                <button type="button" class="report-chip" data-range="prev-month">Mes anterior</button>
+                <button type="button" class="report-chip" data-range="year">Este año</button>
+                <button type="button" class="report-chip" data-range="all">Todo el historial</button>
+            </div>
             <button type="submit" class="btn btn-brand report-btn"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Descargar Excel</button>
         </form>
     </section>

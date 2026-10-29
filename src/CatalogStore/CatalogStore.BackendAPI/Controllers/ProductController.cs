@@ -136,6 +136,11 @@ namespace CatalogStore.BackendAPI.Controllers
             return Ok(edit);
         }
 
+        // GET api/Product/availability — { productId: unidades disponibles } para las tarjetas del catálogo
+        [HttpGet("availability")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        public async Task<IActionResult> GetAvailability() => Ok(await _productServices.GetAvailabilityAsync());
+
         // GET api/Product/cabys/search?q=casco — busca en el catálogo oficial CABYS de Hacienda
         [HttpGet("cabys/search")]
         [Authorize(Roles = "Admin,AdminIT")]

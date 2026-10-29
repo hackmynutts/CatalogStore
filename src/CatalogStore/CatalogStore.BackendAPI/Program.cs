@@ -46,11 +46,22 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-// Configurar la cadena de conexión para SQL Server
+// Configurar la cadena de conexión para SQL Server.
+// EnableRetryOnFailure reintenta los errores transitorios (ej. 40613 mientras Azure SQL serverless despierta de la pausa).
+// Ojo: con esta estrategia, una transacción explícita (BeginTransaction) tiene que ir dentro de Database.CreateExecutionStrategy().
 builder.Services.AddDbContext<ApplicationDBContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(maxRetryCount: 6, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null)));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
+// El catálogo público no pide sesión: tope global (no por IP, porque quien llama es siempre la UI) de 120 peticiones por minuto.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(CatalogStore.BackendAPI.Controllers.PublicCatalogController.PublicCatalogPolicy, _ => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+        "all", _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -228,6 +239,7 @@ app.UseRequestLocalization(new RequestLocalizationOptions()
     .AddSupportedUICultures(culture));
 
 app.UseStaticFiles(); // Habilitar el uso de archivos estáticos como imagenes
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

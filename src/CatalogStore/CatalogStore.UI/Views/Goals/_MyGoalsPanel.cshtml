@@ -25,12 +25,17 @@
             <h2 class="goal-profile-title" id="goalsTitle">Mis metas</h2>
             <div class="goal-phase-text">@phaseText</div>
         </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-controller="Goals" asp-action="MineDetail" asp-route-year="@p.Year" asp-route-month="@p.Month" class="btn btn-outline-brand btn-sm" style="width:auto;">
+                <i class="fa-solid fa-list-check" aria-hidden="true"></i> Ver mis ventas de @GoalUi.MonthName(p.Year, p.Month)
+            </a>
         @if (isAdmin)
         {
             <a asp-controller="Goals" asp-action="Team" asp-route-year="@p.Year" asp-route-month="@p.Month" class="btn btn-outline-brand btn-sm" style="width:auto;">
                 <i class="fa-solid fa-users" aria-hidden="true"></i> Metas del equipo
             </a>
         }
+        </div>
     </div>
 
     <nav class="goal-month-nav mb-3" aria-label="Mes">
@@ -101,7 +106,7 @@
                     {
                         var hp = h.Progress;
                         <tr class="@(h.Year == p.Year && h.Month == p.Month ? "goal-history-current" : "")">
-                            <td><a asp-controller="Account" asp-action="Details" asp-route-year="@h.Year" asp-route-month="@h.Month" asp-fragment="metas">@GoalUi.MonthName(h.Year, h.Month)</a></td>
+                            <td><a asp-controller="Goals" asp-action="MineDetail" asp-route-year="@h.Year" asp-route-month="@h.Month" title="Ver las ventas que cuentan en este mes">@GoalUi.MonthName(h.Year, h.Month)</a></td>
                             @foreach (var (metric, isMoney) in new[] { (hp.Sold, true), (hp.Collected, true), (hp.SalesCount, false) })
                             {
                                 <td>

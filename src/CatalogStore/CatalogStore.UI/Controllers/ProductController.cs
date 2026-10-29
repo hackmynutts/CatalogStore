@@ -1,4 +1,4 @@
-using CatalogStore.UI.Handlers;
+﻿using CatalogStore.UI.Handlers;
 using CatalogStore.UI.Models.Product;
 using CatalogStore.UI.Models.Status;
 using Microsoft.AspNetCore.Authorization;
@@ -51,7 +51,22 @@ namespace CatalogStore.UI.Controllers
 
             var productos = await response.Content.ReadFromJsonAsync<List<ProductViewModel>>() ?? new List<ProductViewModel>();
             ResolveImageUrls(productos);
+            // Unidades disponibles por producto. Si falla (o el rol no tiene permiso) las tarjetas simplemente no muestran stock.
+            ViewData["Availability"] = await LoadAvailabilityAsync(client);
             return View(productos);
+        }
+
+        // GET: Product/Availability — { productId: disponibles }; el catálogo lo refresca después de agregar a la orden
+        public async Task<IActionResult> Availability()
+        {
+            var availability = await LoadAvailabilityAsync(_httpClientFactory.CreateClient("BackendApi"));
+            return availability is null ? StatusCode(502) : Json(availability);
+        }
+
+        private static async Task<Dictionary<int, int>?> LoadAvailabilityAsync(HttpClient client)
+        {
+            var response = await client.GetAsync("api/Product/availability");
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<Dictionary<int, int>>() : null;
         }
 
         // GET: ProductController/Details/5

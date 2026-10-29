@@ -1,4 +1,4 @@
-@model CatalogStore.UI.Models.Order.OrderViewModel
+﻿@model CatalogStore.UI.Models.Order.OrderViewModel
 @using CatalogStore.UI.Models.Order
 @using CatalogStore.UI.Models.Client
 @inject IConfiguration Configuration
@@ -31,13 +31,14 @@
 
     <div class="print-toolbar">
         <a asp-action="Details" asp-route-id="@Model.OrderID" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver a la orden</a>
-        <button type="button" class="btn btn-brand btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir / guardar PDF</button>
+        <a asp-action="ProformaPdf" asp-route-id="@Model.OrderID" class="btn btn-brand btn-sm" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</button>
         <button type="button" class="btn btn-outline-brand btn-sm" id="proformaEmailBtn" data-id="@Model.OrderID" data-email="@email" @(string.IsNullOrWhiteSpace(email) ? "disabled" : "")>
             <i class="fa-regular fa-envelope" aria-hidden="true"></i> Enviar por correo
         </button>
         <span class="print-toolbar-note">
             @(string.IsNullOrWhiteSpace(email) ? "El cliente no tiene correo registrado." : $"Se envía a {email}.")
-            En el diálogo de impresión elegí "Guardar como PDF" para obtener el archivo.
+
         </span>
     </div>
 

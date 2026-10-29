@@ -31,4 +31,10 @@
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 
+  <!-- Las imágenes de productos se suben en cada ambiente; las de pruebas locales no se publican.
+       wwwroot\images\.keep sí se publica para que exista wwwroot en el servidor (sin esa carpeta WebRootPath queda null). -->
+  <ItemGroup>
+    <Content Update="wwwroot\images\products\**" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>

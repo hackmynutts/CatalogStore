@@ -1,4 +1,4 @@
-using CatalogStore.UI.Controllers;
+﻿using CatalogStore.UI.Controllers;
 using CatalogStore.UI.Filters;
 using CatalogStore.UI.Handlers;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -6,10 +6,15 @@ using System.Threading.RateLimiting;
 
 
 
+// QuestPDF genera los PDF (proforma). Licencia Community: gratis para empresas con menos de 1 millón de USD de ingresos al año;
+// si el cliente supera ese tope necesita una licencia comercial (https://www.questpdf.com/license/).
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 builder.Services.AddControllersWithViews(options => options.Filters.Add<SessionExpiredFilter>());
 builder.Services.AddTransient<JwtDelegatingHandler>();
 builder.Services.AddHttpClient("BackendApi", client =>
@@ -38,6 +43,10 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(AccountController.PasswordFormsPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(15), QueueLimit = 0 }));
+    // La lista de consulta en PDF también es pública y genera un archivo en el servidor: 10 por minuto por IP.
+    options.AddPolicy(HomeController.ConsultationPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
 var app = builder.Build();

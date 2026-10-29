@@ -1,4 +1,5 @@
 using CatalogStore.UI.Handlers;
+using CatalogStore.UI.Models.Client;
 using CatalogStore.UI.Models.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,18 +30,26 @@ namespace CatalogStore.UI.Controllers
                         .Where(u => u.Roles.Contains("Vendedor")).OrderBy(u => string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName).ToList();
             }
             ViewData["Sellers"] = sellers;
+
+            // Para el estado de cuenta: todos los clientes activos, ordenados por nombre.
+            var http = _httpClientFactory.CreateClient("BackendApi");
+            var clientsResponse = await http.GetAsync("api/Client/active");
+            ViewData["Clients"] = clientsResponse.IsSuccessStatusCode
+                ? (await clientsResponse.Content.ReadFromJsonAsync<List<ClientViewModel>>() ?? new()).OrderBy(c => c.ClientName).ToList()
+                : new List<ClientViewModel>();
             return View();
         }
 
-        // GET: Reports/Download?key=sales&from=2026-10-01&to=2026-10-31&seller=correo&includeVoided=true
+        // GET: Reports/Download?key=sales&from=2026-10-01&to=2026-10-31&seller=correo&includeVoided=true   ·   key=statement&clientId=5
         // goals usa period=2026-10 (el selector de mes del navegador).
-        public async Task<IActionResult> Download(string key, string? from, string? to, string? seller, bool includeVoided, string? period)
+        public async Task<IActionResult> Download(string key, string? from, string? to, string? seller, bool includeVoided, string? period, int? clientId)
         {
             var query = new List<string>();
             if (!string.IsNullOrWhiteSpace(from)) query.Add($"from={Uri.EscapeDataString(from)}");
             if (!string.IsNullOrWhiteSpace(to)) query.Add($"to={Uri.EscapeDataString(to)}");
             if (!string.IsNullOrWhiteSpace(seller)) query.Add($"seller={Uri.EscapeDataString(seller)}");
             if (includeVoided) query.Add("includeVoided=true");
+            if (clientId is > 0) query.Add($"clientId={clientId}");
             if (DateTime.TryParseExact(period, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var month))
                 query.Add($"year={month.Year}&month={month.Month}");
 

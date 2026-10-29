@@ -75,6 +75,43 @@ namespace CatalogStore.BackendAPI.DTO.Goals
         public SellerProgressDTO Progress { get; set; } = new();
     }
 
+    // Una venta que cuenta en el "vendido" y en la "cantidad de ventas" del mes. Montos sin IVA salvo Total.
+    public class GoalSaleDTO
+    {
+        public int SalesHeaderID { get; set; }
+        public string SaleNumber { get; set; } = string.Empty;
+        public DateTime SaleDate { get; set; }
+        public string ClientName { get; set; } = string.Empty;
+        public bool ApplyIva { get; set; }
+        // Lo que suma a la meta de vendido (subtotal sin IVA, ya con descuentos).
+        public decimal CountedAmount { get; set; }
+        public decimal Total { get; set; }
+        public int PaymentStatus { get; set; }
+        public string PaymentStatusName { get; set; } = string.Empty;
+    }
+
+    // Un abono que cuenta en el "cobrado" del mes. CountedAmount = la parte sin IVA del abono.
+    public class GoalPaymentDTO
+    {
+        public int SalesHeaderID { get; set; }
+        public string SaleNumber { get; set; } = string.Empty;
+        public DateTime PaymentDate { get; set; }
+        public string ClientName { get; set; } = string.Empty;
+        public string Method { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public decimal CountedAmount { get; set; }
+    }
+
+    // El detalle detrás de las tres tarjetas de un mes: qué ventas y qué abonos suman. Los totales coinciden con Progress.
+    public class MyGoalDetailDTO
+    {
+        public PeriodDTO Period { get; set; } = new();
+        public decimal SoldTotal { get; set; }
+        public decimal CollectedTotal { get; set; }
+        public List<GoalSaleDTO> Sales { get; set; } = new();
+        public List<GoalPaymentDTO> Payments { get; set; } = new();
+    }
+
     public class SetGoalDTO
     {
         [Required(ErrorMessage = "El vendedor es obligatorio.")]

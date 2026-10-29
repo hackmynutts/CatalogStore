@@ -1,4 +1,4 @@
-using CatalogStore.UI.Handlers;
+﻿using CatalogStore.UI.Handlers;
 using CatalogStore.UI.Models.Client;
 using CatalogStore.UI.Models.Order;
 using CatalogStore.UI.Models.Sales;
@@ -77,22 +77,50 @@ namespace CatalogStore.UI.Controllers
         // GET: Order/Proforma/5 — la cotización imprimible (no fiscal). Solo órdenes abiertas.
         public async Task<IActionResult> Proforma(int id)
         {
+            var (order, clientInfo, notFound) = await LoadProformaAsync(id);
+            if (notFound) return NotFound();
+            if (order is null) return RedirectToAction(nameof(Details), new { id });
+            ViewData["Client"] = clientInfo;
+            return View(order);
+        }
+
+        // GET: Order/ProformaPdf/5 — la misma proforma como archivo PDF (Proforma-PRO-0000123.pdf)
+        public async Task<IActionResult> ProformaPdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
+        {
+            var (order, clientInfo, notFound) = await LoadProformaAsync(id);
+            if (notFound) return NotFound();
+            if (order is null) return RedirectToAction(nameof(Details), new { id });
+
+            // Sin logo (o sin carpeta wwwroot) el PDF sale igual, solo con el nombre de la empresa.
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }
+                .Select(x => (x ?? string.Empty).Trim()).Where(x => x.Length > 0));
+            var document = new CatalogStore.UI.Documents.ProformaPdfDocument(order, clientInfo, OrderDocs.LocalNow(), contact,
+                logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null);
+            return File(QuestPDF.Fluent.GenerateExtensions.GeneratePdf(document), "application/pdf", $"Proforma-{OrderDocs.ProformaNumber(order.OrderNumber)}.pdf");
+        }
+
+        // Orden abierta con productos + datos de contacto del cliente. notFound = la orden no existe o no es del vendedor;
+        // order null (sin notFound) = existe pero ya no admite proforma (completada, cancelada o vacía).
+        private async Task<(OrderViewModel? Order, CatalogStore.UI.Models.Client.ClientViewModel? Client, bool NotFound)> LoadProformaAsync(int id)
+        {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.GetAsync($"api/Order/{id}");
             if (!response.IsSuccessStatusCode)
-                return NotFound();
+                return (null, null, true);
 
             var order = await response.Content.ReadFromJsonAsync<OrderViewModel>();
             if (order is null)
-                return NotFound();
+                return (null, null, true);
             if (order.OrderStatus is not (OrderStatus.InProcess or OrderStatus.Pending) || order.Lines.Count == 0)
-                return RedirectToAction(nameof(Details), new { id });
+                return (null, null, false);
 
             // Datos de contacto del cliente: la orden solo guarda nombre e identificación.
             var clientResponse = await client.GetAsync($"api/Client/{order.ClientID}");
-            if (clientResponse.IsSuccessStatusCode)
-                ViewData["Client"] = await clientResponse.Content.ReadFromJsonAsync<CatalogStore.UI.Models.Client.ClientViewModel>();
-            return View(order);
+            var clientInfo = clientResponse.IsSuccessStatusCode
+                ? await clientResponse.Content.ReadFromJsonAsync<CatalogStore.UI.Models.Client.ClientViewModel>()
+                : null;
+            return (order, clientInfo, false);
         }
 
         // POST: Order/ProformaEmail/5 — manda la proforma al correo del cliente

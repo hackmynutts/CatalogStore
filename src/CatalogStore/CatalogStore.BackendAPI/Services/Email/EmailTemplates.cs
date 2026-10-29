@@ -126,6 +126,25 @@ namespace CatalogStore.BackendAPI.Services.Email
             P($"""<span style="font-size:12px;color:{Muted};word-break:break-all;">Clave: {E(clave)}</span>"""),
             "Este comprobante fue emitido electrónicamente y aceptado por el Ministerio de Hacienda.");
 
+        // Al vendedor: un administrador anuló un abono de una venta suya.
+        public static string PaymentVoided(string sellerName, string saleNumber, string clientName, decimal amount, string method, DateTime paidOn,
+            string reason, string voidedBy, decimal balance, string link) => Layout(
+            "Se anuló un abono",
+            P($"Hola {E(sellerName)},") +
+            P($"<strong>{E(voidedBy)}</strong> anuló un abono de la venta <strong>{E(saleNumber)}</strong> ({E(clientName)}):") +
+            $"""
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 14px;font-size:14px;line-height:1.7;">
+              <tr><td style="padding-right:16px;color:{Muted};">Monto</td><td><strong>₡{Money(amount)}</strong></td></tr>
+              <tr><td style="padding-right:16px;color:{Muted};">Método</td><td>{E(method)}</td></tr>
+              <tr><td style="padding-right:16px;color:{Muted};">Fecha del pago</td><td>{paidOn:dd/MM/yyyy}</td></tr>
+              <tr><td style="padding-right:16px;color:{Muted};">Motivo</td><td>{E(reason)}</td></tr>
+              <tr><td style="padding-right:16px;color:{Muted};">Saldo ahora</td><td><strong>₡{Money(balance)}</strong></td></tr>
+            </table>
+            """ +
+            Button("Ver la venta", link) +
+            P($"""<span style="font-size:13px;color:{Muted};">Si el cliente ya había pagado, revisá con el administrador antes de volver a cobrarle.</span>"""),
+            "Recibís este aviso porque sos el vendedor de la venta. Podés apagar las notificaciones desde tu usuario.");
+
         // Aviso de seguridad después de cualquier cambio de contraseña.
         public static string PasswordChanged(string fullName, DateTime localWhen) => Layout(
             "Tu contraseña cambió",

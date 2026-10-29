@@ -4,6 +4,7 @@ using CatalogStore.BackendAPI.Models.EventLogs;
 using CatalogStore.BackendAPI.Models.Goal;
 using CatalogStore.BackendAPI.Repository.Goals;
 using CatalogStore.BackendAPI.Services.EventLogs;
+using Humanizer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,6 +49,33 @@ namespace CatalogStore.BackendAPI.Services.Goals
             var full = (await _userManager.FindByEmailAsync(user))?.FullName?.Trim();
 
             return new MyProgressDTO { Period = period, Progress = BuildSeller(user, full, goal, row, period) };
+        }
+
+        public async Task<MyGoalDetailDTO> GetMyDetailAsync(string user, int? year, int? month)
+        {
+            var (y, m) = Resolve(year, month);
+            var (fromUtc, toUtc) = MonthRange(y, m);
+            var sales = await _goalRepository.GetSalesDetailAsync(fromUtc, toUtc, user);
+            var payments = await _goalRepository.GetPaymentsDetailAsync(fromUtc, toUtc, user);
+
+            return new MyGoalDetailDTO
+            {
+                Period = BuildPeriod(y, m),
+                // Se suma sin redondear y se redondea al final, igual que las tarjetas (Metric): así los totales coinciden.
+                SoldTotal = Money(sales.Sum(s => s.Subtotal)),
+                CollectedTotal = Money(payments.Sum(p => p.CountedAmount)),
+                Sales = sales.Select(s => new GoalSaleDTO
+                {
+                    SalesHeaderID = s.SalesHeaderID, SaleNumber = s.SaleNumber, SaleDate = s.SaleDate, ClientName = s.ClientName,
+                    ApplyIva = s.ApplyIva, CountedAmount = Money(s.Subtotal), Total = s.Total,
+                    PaymentStatus = s.PaymentStatus, PaymentStatusName = ((Models.SalesHeader.PaymentStatus)s.PaymentStatus).Humanize()
+                }).ToList(),
+                Payments = payments.Select(p => new GoalPaymentDTO
+                {
+                    SalesHeaderID = p.SalesHeaderID, SaleNumber = p.SaleNumber, PaymentDate = p.PaymentDate, ClientName = p.ClientName,
+                    Method = ((Models.SalesPayment.PaymentMethod)p.Method).Humanize(), Amount = p.Amount, CountedAmount = Money(p.CountedAmount)
+                }).ToList()
+            };
         }
 
         public async Task<List<GoalHistoryDTO>> GetMyHistoryAsync(string user)

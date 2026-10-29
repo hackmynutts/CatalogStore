@@ -5,6 +5,12 @@ namespace CatalogStore.BackendAPI.Repository.Goals
     // Avance de un vendedor en un rango de fechas. Montos sin IVA y sin redondear (el servicio redondea).
     public record SellerProgressRow(string Seller, decimal SoldAmount, int SalesCount, decimal CollectedAmount);
 
+    // Una venta / un abono que suma en el avance (sin anuladas). Fechas en UTC.
+    public record SaleDetailRow(int SalesHeaderID, string SaleNumber, DateTime SaleDate, string ClientName, bool ApplyIva,
+        decimal Subtotal, decimal Total, int PaymentStatus);
+    public record PaymentDetailRow(int SalesHeaderID, string SaleNumber, DateTime PaymentDate, string ClientName, int Method,
+        decimal Amount, decimal CountedAmount);
+
     // Metas mensuales por vendedor y lo que lleva vendido / cobrado.
     public interface IGoalRepository
     {
@@ -28,5 +34,10 @@ namespace CatalogStore.BackendAPI.Repository.Goals
         // Vendido (Subtotal sin IVA) y cantidad por SaleDate; cobrado sin IVA por PaymentDate. Rango [fromUtc, toUtc).
         // Sin contar ventas anuladas ni abonos anulados. seller null = todos los vendedores con movimiento.
         Task<List<SellerProgressRow>> GetProgressAsync(DateTime fromUtc, DateTime toUtc, string? seller);
+
+        // ── Detalle del avance ──
+        // Las mismas filas que suma GetProgressAsync, una por una. Ventas por SaleDate, abonos por PaymentDate; sin anuladas.
+        Task<List<SaleDetailRow>> GetSalesDetailAsync(DateTime fromUtc, DateTime toUtc, string seller);
+        Task<List<PaymentDetailRow>> GetPaymentsDetailAsync(DateTime fromUtc, DateTime toUtc, string seller);
     }
 }

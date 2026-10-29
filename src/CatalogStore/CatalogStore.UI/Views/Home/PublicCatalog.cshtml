@@ -1,0 +1,131 @@
+@model List<CatalogStore.UI.Models.Home.PublicCatalogItem>
+@using CatalogStore.UI.Models.Home
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Catálogo";
+    ViewData["FullWidth"] = true;
+
+    // WhatsApp de la sección "Landing" de appsettings.json: solo dígitos para el enlace wa.me.
+    var whatsApp = (Configuration["Landing:WhatsApp"] ?? string.Empty).Where(char.IsDigit).Aggregate(string.Empty, (acc, c) => acc + c);
+    bool hasWhatsApp = whatsApp.Length > 0;
+    var catalog = Model;
+}
+
+@section Styles {
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" />
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+}
+
+<div class="lp lp-catalog-page">
+    <!-- Catálogo público: sin precios. El visitante arma una lista, la descarga en PDF o la manda por WhatsApp (landing-catalog.js). -->
+@if (catalog.Count > 0)
+{
+    <section class="lp-section lp-catalog" id="catalogo" data-whatsapp="@(hasWhatsApp ? whatsApp : "")">
+        <div class="lp-wrap">
+            <h1 class="lp-h2">Catálogo</h1>
+            <p class="lp-catalog-intro">Elegí los productos que te interesan y armá tu lista de consulta. Es solo una consulta: un vendedor te confirma disponibilidad y precio.</p>
+
+            <div class="lp-catalog-tools">
+                <label class="visually-hidden" for="lpSearch">Buscar productos</label>
+                <input type="search" id="lpSearch" class="lp-search" placeholder="Buscar por nombre o código" autocomplete="off" />
+                <div class="lp-pills" role="group" aria-label="Categorías">
+                    <button type="button" class="lp-pill is-active" data-category="all">Todas</button>
+                    @foreach (var c in catalog.Select(p => p.Category).Distinct().OrderBy(c => c))
+                    {
+                        <button type="button" class="lp-pill" data-category="@c">@PublicCatalogItem.CategoryLabel(c)</button>
+                    }
+                </div>
+            </div>
+
+            <div class="lp-catalog-grid" id="lpGrid">
+                @foreach (var p in catalog)
+                {
+                    <article class="lp-pcard" data-id="@p.Id" data-name="@p.Name" data-code="@(p.Code ?? "")" data-category="@p.Category">
+                        <div class="lp-pcard-media">
+                            @if (!string.IsNullOrEmpty(p.ImageUrl))
+                            {
+                                <img src="@p.ImageUrl" alt="@p.Name" loading="lazy" />
+                            }
+                            else
+                            {
+                                <img src="~/img/logos/sam_desing-removebg-preview.png" alt="" class="lp-pcard-fallback" loading="lazy" />
+                            }
+                        </div>
+                        <div class="lp-pcard-body">
+                            <span class="lp-pcard-cat">@PublicCatalogItem.CategoryLabel(p.Category)</span>
+                            <h3 class="lp-pcard-title">@p.Name</h3>
+                            @if (!string.IsNullOrEmpty(p.Code))
+                            {
+                                <p class="lp-pcard-code">Código @p.Code</p>
+                            }
+                            <div class="lp-pcard-add">
+                                <button type="button" class="lp-btn lp-btn-primary lp-add" data-toggle aria-pressed="false">Agregar a mi lista</button>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+            <p class="lp-catalog-empty" id="lpEmpty" hidden>No encontramos productos con ese filtro.</p>
+        </div>
+    </section>
+
+    <button type="button" class="lp-list-fab" id="lpListFab" aria-controls="lpList" aria-expanded="false" hidden>
+        <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Mi lista <span class="lp-list-count" id="lpListCount">0</span>
+    </button>
+
+    <dialog class="lp-disclaimer" id="lpDisclaimer" aria-labelledby="lpDisclaimerTitle">
+        <h2 id="lpDisclaimerTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Antes de descargar</h2>
+        <p>Esta lista es <strong>meramente de consulta</strong> y <strong>no garantiza disponibilidad</strong> de los productos. Debés consultarla con un vendedor, que te confirmará disponibilidad y precio.</p>
+        <div class="lp-actions">
+            <button type="button" class="lp-btn lp-btn-primary" id="lpDisclaimerOk"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Entiendo, descargar</button>
+            <button type="button" class="lp-btn lp-btn-ghost" id="lpDisclaimerCancel">Cancelar</button>
+        </div>
+    </dialog>
+
+    <aside class="lp-list" id="lpList" role="dialog" aria-modal="false" aria-labelledby="lpListTitle" hidden>
+        <div class="lp-list-head">
+            <h2 id="lpListTitle">Mi lista de consulta</h2>
+            <button type="button" class="lp-list-close" id="lpListClose" aria-label="Cerrar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <ul class="lp-list-items" id="lpListItems"></ul>
+        <p class="lp-list-empty" id="lpListEmpty">Todavía no elegiste productos.</p>
+        <div class="lp-list-foot">
+            <label for="lpCustomer">Tu nombre (opcional)</label>
+            <input type="text" id="lpCustomer" maxlength="60" autocomplete="name" />
+            <div class="lp-actions">
+                <form method="post" asp-action="ConsultationPdf" asp-controller="Home" id="lpPdfForm">
+                    <input type="hidden" name="items" id="lpPdfItems" />
+                    <input type="hidden" name="customer" id="lpPdfCustomer" />
+                    <button type="submit" class="lp-btn lp-btn-ghost" id="lpPdfBtn"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</button>
+                </form>
+                @if (hasWhatsApp)
+                {
+                    <a href="#" class="lp-btn lp-btn-primary" id="lpWhatsBtn" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar por WhatsApp</a>
+                }
+            </div>
+            <p class="lp-list-hint"><strong>Esta lista es solo de consulta y no garantiza disponibilidad.</strong> Consultala con un vendedor para confirmar disponibilidad y precio.@(hasWhatsApp ? " El botón de WhatsApp abre el chat con tu lista escrita; si preferís mandar el PDF, descargalo y adjuntalo en el chat." : "")</p>
+            <button type="button" class="lp-list-clear" id="lpListClear">Vaciar lista</button>
+        </div>
+    </aside>
+}
+
+    @if (catalog.Count == 0)
+    {
+        <section class="lp-section">
+            <div class="lp-wrap">
+                <h1 class="lp-h2">Catálogo</h1>
+                <p class="lp-catalog-intro">El catálogo no está disponible en este momento. Intentá de nuevo en unos minutos.</p>
+                <a asp-controller="Home" asp-action="Index" class="lp-btn lp-btn-ghost">Volver al inicio</a>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    @if (catalog.Count > 0)
+    {
+        <script src="~/js/landing-catalog.js" asp-append-version="true"></script>
+    }
+}

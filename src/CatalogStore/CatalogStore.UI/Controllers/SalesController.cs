@@ -3,6 +3,7 @@ using CatalogStore.UI.Models.Invoicing;
 using CatalogStore.UI.Models.Sales;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QuestPDF.Fluent;
 using System.Globalization;
 
 namespace CatalogStore.UI.Controllers
@@ -78,6 +79,50 @@ namespace CatalogStore.UI.Controllers
             if (sale.ApplyIva || sale.IsVoided)
                 return RedirectToAction(nameof(Details), new { id });
             return View(sale);
+        }
+
+        // GET: Sales/Invoice/5 — la factura electrónica ACEPTADA de la venta, para imprimirla con el formato de la casa.
+        public async Task<IActionResult> Invoice(int id)
+        {
+            var found = await LoadAcceptedInvoiceAsync(id);
+            if (found is null) return RedirectToAction(nameof(Details), new { id });
+            ViewData["Invoice"] = found.Value.Invoice;
+            return View(found.Value.Sale);
+        }
+
+        // GET: Sales/InvoicePdf/5 — la misma factura como archivo PDF.
+        // Solo la factura: el tiquete de caja (ventas sin IVA) es de impresión y no tiene descarga.
+        public async Task<IActionResult> InvoicePdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
+        {
+            var found = await LoadAcceptedInvoiceAsync(id);
+            if (found is null) return RedirectToAction(nameof(Details), new { id });
+            var (sale, invoice) = found.Value;
+
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var document = new Documents.InvoicePdfDocument(sale, invoice, InvoiceLocalTime(invoice), contact,
+                logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null);
+            return File(document.GeneratePdf(), "application/pdf", $"Factura-{invoice.Number}.pdf");
+        }
+
+        public static DateTime InvoiceLocalTime(InvoiceViewModel invoice) =>
+            TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(invoice.IssuedOn, DateTimeKind.Utc), "America/Costa_Rica");
+
+        // Venta con IVA, no anulada, con una factura aceptada y sin nota de crédito vigente. Cualquier otro caso: null (vuelve al detalle).
+        private async Task<(SaleViewModel Sale, InvoiceViewModel Invoice)?> LoadAcceptedInvoiceAsync(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Sale/{id}");
+            if (!response.IsSuccessStatusCode) return null;
+            var sale = await response.Content.ReadFromJsonAsync<SaleViewModel>();
+            if (sale is null || !sale.ApplyIva || sale.IsVoided) return null;
+
+            var invoiceResponse = await client.GetAsync($"api/Invoice/sale/{id}");
+            if (!invoiceResponse.IsSuccessStatusCode) return null;
+            var invoices = await invoiceResponse.Content.ReadFromJsonAsync<List<InvoiceViewModel>>() ?? new();
+            var invoice = invoices.Where(i => !i.IsCreditNote && i.Status == InvoiceUi.Accepted).OrderByDescending(i => i.Id).FirstOrDefault();
+            if (invoice is null || invoices.Any(i => i.IsCreditNote && i.ReferenceInvoiceID == invoice.Id && InvoiceUi.IsActive(i.Status))) return null;
+            return (sale, invoice);
         }
 
         // POST: Sales/RegisterPayment — el monto llega como texto invariante ("1500.50") para no depender de la cultura.

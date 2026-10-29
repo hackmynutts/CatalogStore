@@ -1,0 +1,118 @@
+@model CatalogStore.UI.Models.Sales.SaleViewModel
+@using CatalogStore.UI.Models.Invoicing
+@inject IConfiguration Configuration
+@{
+    Layout = null;
+    var invoice = (InvoiceViewModel)ViewData["Invoice"]!;
+    var issued = CatalogStore.UI.Controllers.SalesController.InvoiceLocalTime(invoice);
+    string Money(decimal v) => "₡" + v.ToString("N2");
+    var contact = string.Join(" · ", new[] { (Configuration["Landing:WhatsApp"] ?? string.Empty).Trim(), (Configuration["Landing:Email"] ?? string.Empty).Trim() }.Where(x => x.Length > 0));
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Factura @invoice.Number</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/print-docs.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+</head>
+<body class="print-doc-page">
+    <div class="print-toolbar">
+        <a asp-action="Details" asp-route-id="@Model.SalesHeaderID" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver a la venta</a>
+        <a asp-action="InvoicePdf" asp-route-id="@Model.SalesHeaderID" class="btn btn-brand btn-sm" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</button>
+    </div>
+
+    <main class="pf-sheet">
+        <header class="pf-head">
+            <div class="pf-brand">
+                <img src="~/img/logos/logo_pequeño-removebg-preview.png" alt="SAM DESIGN" />
+                <div class="pf-brand-name">SAM DESIGN</div>
+                @if (contact.Length > 0)
+                {
+                    <div class="pf-brand-contact">@contact</div>
+                }
+            </div>
+            <div class="pf-title">
+                <h1>FACTURA ELECTRÓNICA</h1>
+                <div class="pf-number">N.º @invoice.Number</div>
+                <div class="pf-dates">Fecha: @issued.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </header>
+
+        <section class="pf-parties">
+            <div class="pf-box">
+                <h2>Cliente</h2>
+                <strong>@Model.ClientName</strong>@(string.IsNullOrWhiteSpace(Model.ClientCC) ? "" : $" ({Model.ClientCC})")<br />
+                Identificación: @Model.ClientIdentification
+                @if (!string.IsNullOrWhiteSpace(Model.ClientPhone)) { <text><br />Tel. @Model.ClientPhone</text> }
+                @if (!string.IsNullOrWhiteSpace(Model.ClientEmail)) { <text><br />@Model.ClientEmail</text> }
+                @if (!string.IsNullOrWhiteSpace(Model.ClientAddress)) { <text><br />@Model.ClientAddress</text> }
+            </div>
+            <div class="pf-box">
+                <h2>Detalle</h2>
+                Venta: @Model.SaleNumber<br />
+                Vendedor: @Model.Seller<br />
+                Condición: @Model.PaymentTermName<br />
+                Vence: @Model.DueDate.ToString("dd/MM/yyyy")<br />
+                Moneda: colones (₡)
+            </div>
+        </section>
+
+        <table class="pf-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th class="num">Cant.</th>
+                    <th class="num">Precio</th>
+                    <th class="num">Desc.</th>
+                    <th class="num">Subtotal</th>
+                    <th class="num">IVA</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in Model.Lines)
+                {
+                    <tr>
+                        <td>@l.ProductName@if (!string.IsNullOrWhiteSpace(l.ProductCode)) { <span class="pf-code">@l.ProductCode</span> }</td>
+                        <td class="num">@l.Quantity</td>
+                        <td class="num">@Money(l.UnitPrice)</td>
+                        <td class="num">@(l.Discount > 0 ? l.Discount.ToString("0.##") + " %" : "—")</td>
+                        <td class="num">@Money(l.LineSubtotal)</td>
+                        <td class="num">@Money(l.LineIva)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="pf-totals">
+            <div><span>Subtotal</span><span>@Money(Model.Subtotal + Model.DiscountTotal)</span></div>
+            @if (Model.DiscountTotal > 0)
+            {
+                <div><span>Descuento</span><span>− @Money(Model.DiscountTotal)</span></div>
+            }
+            <div><span>IVA</span><span>@Money(Model.IvaTotal)</span></div>
+            <div class="pf-total"><span>Total</span><span>@Money(Model.TotalAmount)</span></div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <div class="pf-notes"><strong>Notas:</strong> @Model.Notes</div>
+        }
+
+        <div class="pf-notes">
+            <strong>Clave:</strong> <span style="word-break:break-all;">@invoice.Clave</span><br />
+            <strong>Consecutivo:</strong> @invoice.Consecutive<br />
+            <strong>Estado en Hacienda:</strong> @(string.IsNullOrWhiteSpace(invoice.HaciendaStatus) ? invoice.StatusName : invoice.HaciendaStatus)
+        </div>
+
+        <div class="pf-legal">
+            Representación impresa de la factura electrónica. El comprobante fiscal es el documento XML firmado y aceptado por el
+            Ministerio de Hacienda, identificado con la clave indicada.
+        </div>
+    </main>
+</body>
+</html>

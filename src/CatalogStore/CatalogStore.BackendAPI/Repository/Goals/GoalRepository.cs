@@ -47,6 +47,24 @@ namespace CatalogStore.BackendAPI.Repository.Goals
 
         // ── Avance ──
 
+        public Task<List<SaleDetailRow>> GetSalesDetailAsync(DateTime fromUtc, DateTime toUtc, string seller) =>
+            _context.SalesHeaders.AsNoTracking()
+                .Where(s => s.PaymentStatus != PaymentStatus.Voided && s.SaleDate >= fromUtc && s.SaleDate < toUtc && s.Seller == seller)
+                .OrderBy(s => s.SaleDate).ThenBy(s => s.SalesHeaderID)
+                .Select(s => new SaleDetailRow(s.SalesHeaderID, s.SaleNumber, s.SaleDate, s.ClientName, s.ApplyIva, s.Subtotal, s.TotalAmount, (int)s.PaymentStatus))
+                .ToListAsync();
+
+        // Misma fórmula del cobrado sin IVA que GetProgressAsync: el abono por la proporción sin IVA de su venta.
+        public Task<List<PaymentDetailRow>> GetPaymentsDetailAsync(DateTime fromUtc, DateTime toUtc, string seller) =>
+            _context.SalesPayments.AsNoTracking()
+                .Where(p => !p.IsVoided && p.PaymentDate >= fromUtc && p.PaymentDate < toUtc
+                         && p.SalesHeader.PaymentStatus != PaymentStatus.Voided && p.SalesHeader.Seller == seller)
+                .OrderBy(p => p.PaymentDate).ThenBy(p => p.SalesPaymentID)
+                .Select(p => new PaymentDetailRow(p.SalesHeaderID, p.SalesHeader.SaleNumber, p.PaymentDate, p.SalesHeader.ClientName, (int)p.PaymentMethod,
+                    p.Amount,
+                    p.SalesHeader.TotalAmount == 0 ? 0m : p.Amount * p.SalesHeader.Subtotal / p.SalesHeader.TotalAmount))
+                .ToListAsync();
+
         public async Task<List<SellerProgressRow>> GetProgressAsync(DateTime fromUtc, DateTime toUtc, string? seller)
         {
             // Una fila por vendedor; SQL Server agrupa y suma (usa IX_SalesHeader_Seller_SaleDate).

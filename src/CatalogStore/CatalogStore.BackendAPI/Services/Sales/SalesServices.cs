@@ -35,11 +35,16 @@ namespace CatalogStore.BackendAPI.Services.Sales
         private readonly IInventoryLineRepository _inventoryLineRepository;
         private readonly IInventoryTransactionServices _inventoryTransactionServices;
         private readonly IInvoiceRepository _invoiceRepository;
+        private readonly Services.Email.IEmailServices _emailServices;
+        private readonly Microsoft.AspNetCore.Identity.UserManager<Data.ApplicationUser> _userManager;
         public SalesServices( ISalesRepository salesRepository, IClientServices clientServices, IEventlogServices eventlogServices, TimeProvider time,
                             IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices,
-                            IInvoiceRepository invoiceRepository)
+                            IInvoiceRepository invoiceRepository, Services.Email.IEmailServices emailServices,
+                            Microsoft.AspNetCore.Identity.UserManager<Data.ApplicationUser> userManager)
         {
             _invoiceRepository = invoiceRepository;
+            _emailServices = emailServices;
+            _userManager = userManager;
             _salesRepository = salesRepository;
             _clientServices= clientServices;
             _eventlogServices = eventlogServices;
@@ -261,6 +266,7 @@ namespace CatalogStore.BackendAPI.Services.Sales
                     $"Abono de ₡{payment.Amount:N2} anulado en {sale.SaleNumber}. Motivo: {reason}",
                     preData: new { IsVoided = false },
                     postData: new { payment.SalesPaymentID, sale.SaleNumber, payment.Amount, payment.VoidedReason, sale.AmountPaid, sale.PaymentStatus });
+                await NotifySellerPaymentVoidedAsync(sale, payment, reason, user);
                 return OperationResult.Ok(sale.SalesHeaderID);
             }
             catch (DbUpdateConcurrencyException)
@@ -274,6 +280,36 @@ namespace CatalogStore.BackendAPI.Services.Sales
                 await _eventlogServices.LogAsync(typeEvent.CancelFail, ModuleName, SalesTable, salesHeaderId.ToString(),
                     "Excepción no controlada al anular un abono.", stackTrace: ex.ToString());
                 throw;
+            }
+        }
+
+        // Avisa por correo al vendedor de la venta que le anularon un abono (cambia su saldo y lo que se le cobra al cliente).
+        // Va DESPUÉS de guardar la anulación y nunca la deshace: si el correo falla, solo queda el rastro en la bitácora.
+        // Se omite si el vendedor es quien anuló, si el correo está deshabilitado o si el vendedor apagó sus notificaciones.
+        private async Task NotifySellerPaymentVoidedAsync(SalesHeader sale, SalesPayment payment, string reason, string voidedBy)
+        {
+            try
+            {
+                if (!_emailServices.Enabled || string.Equals(sale.Seller, voidedBy, StringComparison.OrdinalIgnoreCase)) return;
+                // SalesHeader.Seller es el correo del vendedor (claim unique_name del JWT).
+                var seller = await _userManager.FindByEmailAsync(sale.Seller);
+                if (seller is null || !seller.SendNotifications || string.IsNullOrWhiteSpace(seller.Email)) return;
+
+                var paidOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(payment.PaymentDate, DateTimeKind.Utc), _time.LocalTimeZone).Date;
+                await _emailServices.QueueAndSaveAsync(new Services.Email.EmailMessage(
+                    seller.Email, seller.FullName,
+                    $"Se anuló un abono de la venta {sale.SaleNumber}",
+                    Services.Email.EmailTemplates.PaymentVoided(
+                        string.IsNullOrWhiteSpace(seller.FullName) ? seller.UserName ?? string.Empty : seller.FullName.Trim(),
+                        sale.SaleNumber, sale.ClientName, payment.Amount, payment.PaymentMethod.Humanize(), paidOn, reason, voidedBy,
+                        Math.Max(sale.TotalAmount - sale.AmountPaid, 0m),
+                        _emailServices.UiLink($"Sales/Details/{sale.SalesHeaderID}", new Dictionary<string, string>())),
+                    Services.Email.EmailKinds.PaymentVoided, "SalesHeader", sale.SalesHeaderID.ToString()), voidedBy);
+            }
+            catch (Exception ex)
+            {
+                await _eventlogServices.LogAsync(typeEvent.Error, ModuleName, "SalesPayment", payment.SalesPaymentID.ToString(),
+                    "No se pudo avisar al vendedor de la anulación del abono.", stackTrace: ex.ToString());
             }
         }
 

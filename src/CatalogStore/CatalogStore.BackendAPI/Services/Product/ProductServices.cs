@@ -211,6 +211,9 @@ namespace CatalogStore.BackendAPI.Services.Product
             }
         }
 
+        public Task<Dictionary<int, int>> GetAvailabilityAsync() => _repository.GetAvailabilityAsync();
+        public Task<List<PublicCatalogItemDTO>> GetPublicCatalogAsync() => _repository.GetPublicCatalogAsync();
+
         public async Task<OperationResult> SetCabysAsync(int id, string? cabysCode, string user)
         {
             cabysCode = string.IsNullOrWhiteSpace(cabysCode) ? null : cabysCode.Trim();

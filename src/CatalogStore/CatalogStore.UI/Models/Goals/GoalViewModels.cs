@@ -56,6 +56,40 @@ namespace CatalogStore.UI.Models.Goals
         public SellerProgress Progress { get; set; } = new();
     }
 
+    // Detalle de un mes (api/Goal/me/detail): las ventas y abonos que suman en las tarjetas de metas.
+    public class GoalSaleItem
+    {
+        public int SalesHeaderID { get; set; }
+        public string SaleNumber { get; set; } = string.Empty;
+        public DateTime SaleDate { get; set; }
+        public string ClientName { get; set; } = string.Empty;
+        public bool ApplyIva { get; set; }
+        public decimal CountedAmount { get; set; }
+        public decimal Total { get; set; }
+        public int PaymentStatus { get; set; }
+        public string PaymentStatusName { get; set; } = string.Empty;
+    }
+
+    public class GoalPaymentItem
+    {
+        public int SalesHeaderID { get; set; }
+        public string SaleNumber { get; set; } = string.Empty;
+        public DateTime PaymentDate { get; set; }
+        public string ClientName { get; set; } = string.Empty;
+        public string Method { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public decimal CountedAmount { get; set; }
+    }
+
+    public class MyGoalDetailViewModel
+    {
+        public GoalPeriod Period { get; set; } = new();
+        public decimal SoldTotal { get; set; }
+        public decimal CollectedTotal { get; set; }
+        public List<GoalSaleItem> Sales { get; set; } = new();
+        public List<GoalPaymentItem> Payments { get; set; } = new();
+    }
+
     public class TeamGoalsViewModel
     {
         public GoalPeriod Period { get; set; } = new();

@@ -15,11 +15,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.querySelectorAll('.report-chip').forEach(chip => chip.addEventListener('click', function () {
-        const r = range(chip.dataset.range);
         const form = chip.closest('form');
-        if (!r || !form) return;
-        form.querySelector('[name="from"]').value = iso(r[0]);
-        form.querySelector('[name="to"]').value = iso(r[1]);
+        if (!form) return;
+        // "all" deja las fechas vacías (solo el estado de cuenta las admite opcionales).
+        const r = chip.dataset.range === 'all' ? [null, null] : range(chip.dataset.range);
+        if (!r) return;
+        form.querySelector('[name="from"]').value = r[0] ? iso(r[0]) : '';
+        form.querySelector('[name="to"]').value = r[1] ? iso(r[1]) : '';
         chip.closest('.report-chips').querySelectorAll('.report-chip').forEach(c => c.classList.toggle('is-active', c === chip));
     }));
 

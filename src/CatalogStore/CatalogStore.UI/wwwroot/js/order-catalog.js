@@ -1,4 +1,4 @@
-// Integración del catálogo con las órdenes (Views/Product/Catalog.cshtml).
+﻿// Integración del catálogo con las órdenes (Views/Product/Catalog.cshtml).
 // - Barra de "orden activa" arriba del catálogo y panel lateral (offcanvas) con sus líneas.
 // - Botón "+" en cada tarjeta: agrega 1 unidad a la orden activa; si no hay, pide el cliente y la crea.
 // Todo pasa por OrderController (UI), que llama a la API. Los montos vienen del backend: aquí no se calcula nada.
@@ -65,6 +65,53 @@ document.addEventListener('DOMContentLoaded', function () {
         const response = await fetch('/Order/Active');
         order = response.status === 200 ? await response.json() : null;
         render();
+        refreshAvailability(); // lo reservado por esta orden cambia lo que queda disponible
+    }
+
+    // ───────── disponibilidad en las tarjetas ─────────
+
+    function stockText(n) {
+        return n === 0 ? 'Agotado' : n === 1 ? '1 disponible' : `${n} disponibles`;
+    }
+
+    // Pocas unidades se resalta; el texto siempre dice la cantidad (el color solo refuerza).
+    const LOW_STOCK = 5;
+
+    function applyStock(card, n) {
+        const productId = card.getAttribute('data-product-id');
+        const badge = card.querySelector(`[data-stock-for="${productId}"]`);
+        if (badge) {
+            badge.dataset.stock = n;
+            badge.classList.toggle('is-out', n === 0);
+            badge.classList.toggle('is-low', n > 0 && n <= LOW_STOCK);
+            badge.querySelector('.catalog-card-stock-text').textContent = stockText(n);
+            badge.querySelector('i').className = n === 0 ? 'fa-solid fa-circle-xmark' : 'fa-solid fa-boxes-stacked';
+        }
+        const input = card.querySelector('[data-card-qty]');
+        const row = card.querySelector('.catalog-card-qtyrow');
+        if (input) {
+            input.max = Math.max(n, 1);
+            if (Number(input.value) > n && n > 0) input.value = n;
+            if (row) row.hidden = n === 0;
+        }
+        const add = card.querySelector('.catalog-add-btn[data-product-id]');
+        if (add && !add.classList.contains('is-loading')) {
+            add.disabled = n === 0;
+            add.title = n === 0 ? 'Agotado: no hay unidades disponibles' : 'Agregar a la orden';
+            add.querySelector('i').className = n === 0 ? 'fa-solid fa-box-open' : 'fa-solid fa-plus';
+        }
+    }
+
+    async function refreshAvailability() {
+        try {
+            const response = await fetch('/Product/Availability');
+            if (!response.ok) return;
+            const map = await response.json();
+            document.querySelectorAll('.catalog-card[data-product-id]').forEach(card => {
+                // Sin línea de inventario el producto no aparece en el mapa: no hay unidades.
+                if (card.querySelector('[data-stock-for]')) applyStock(card, map[card.getAttribute('data-product-id')] ?? 0);
+            });
+        } catch { /* sin conexión: queda lo último que se mostró */ }
     }
 
     function render() {
@@ -207,20 +254,27 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.classList.add('is-loading');
         icon.className = 'fa-solid fa-spinner fa-spin';
         try {
-            const data = { productId: btn.dataset.productId, quantity: 1 };
+            const qtyInput = btn.closest('.catalog-card')?.querySelector('[data-card-qty]');
+            const quantity = qtyInput ? Number(qtyInput.value) : 1;
+            const max = qtyInput ? Number(qtyInput.max) : Infinity;
+            if (!Number.isInteger(quantity) || quantity < 1) { showError('Cantidad no válida', 'Escribí un número entero de 1 en adelante.'); return; }
+            if (quantity > max) { showError('No hay tantas unidades', `Solo hay ${max} disponibles de "${btn.dataset.productName}".`); return; }
+            const data = { productId: btn.dataset.productId, quantity };
             if (clientId) data.clientId = clientId;
             const result = await post('/Order/AddItem', data);
 
             if (result.success) {
                 await loadOrder();
                 pulseBar();
-                toast.fire({ icon: 'success', title: `${btn.dataset.productName} agregado a ${order ? order.orderNumber : 'la orden'}` });
+                if (qtyInput) qtyInput.value = 1;
+                toast.fire({ icon: 'success', title: `${quantity > 1 ? quantity + ' × ' : ''}${btn.dataset.productName} agregado a ${order ? order.orderNumber : 'la orden'}` });
             } else if (result.needsClient) {
                 pendingAddBtn = btn;
                 await loadOrder();
                 openClientPicker(result.message);
             } else {
                 showError('No se pudo agregar', result.message);
+                refreshAvailability(); // pudo ser que otra persona se llevara las unidades
             }
         } finally {
             btn.disabled = false;
@@ -229,10 +283,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    document.getElementById('catalogGrid')?.addEventListener('click', function (e) {
+    // Selector de cantidad de la tarjeta: − / + y escribir a mano, siempre entre 1 y lo disponible.
+    function clampCardQty(input) {
+        const max = Number(input.max) || 1;
+        let value = Math.floor(Number(input.value));
+        if (!Number.isFinite(value) || value < 1) value = 1;
+        input.value = Math.min(value, max);
+    }
+
+    const grid = document.getElementById('catalogGrid');
+    grid?.addEventListener('click', function (e) {
+        const step = e.target.closest('[data-qty-step]');
+        if (step) {
+            const input = step.closest('.qty-stepper').querySelector('[data-card-qty]');
+            input.value = (Number(input.value) || 1) + Number(step.dataset.qtyStep);
+            clampCardQty(input);
+            return;
+        }
         const btn = e.target.closest('.catalog-add-btn');
         if (!btn || btn.disabled) return;
         addProduct(btn, null);
+    });
+    grid?.addEventListener('change', e => { if (e.target.matches('[data-card-qty]')) clampCardQty(e.target); });
+    // Enter en la cantidad agrega, igual que el "+".
+    grid?.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || !e.target.matches('[data-card-qty]')) return;
+        e.preventDefault();
+        clampCardQty(e.target);
+        const add = e.target.closest('.catalog-card').querySelector('.catalog-add-btn');
+        if (add && !add.disabled) addProduct(add, null);
     });
 
     // ───────── selector de cliente ─────────

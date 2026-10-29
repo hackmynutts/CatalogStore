@@ -1,4 +1,4 @@
-namespace CatalogStore.BackendAPI.Services.Email
+﻿namespace CatalogStore.BackendAPI.Services.Email
 {
     // Un correo listo para encolar. HtmlBody ya armado (ver EmailTemplates).
     public record EmailMessage(
@@ -19,6 +19,7 @@ namespace CatalogStore.BackendAPI.Services.Email
         public const string PasswordChanged = "PasswordChanged";
         public const string Invoice = "Invoice";
         public const string Proforma = "Proforma";
+        public const string PaymentVoided = "PaymentVoided";
     }
 
     // Encola correos. El envío real lo hace EmailOutboxWorker en segundo plano, con reintentos.

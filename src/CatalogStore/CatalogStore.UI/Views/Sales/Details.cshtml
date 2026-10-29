@@ -272,7 +272,13 @@
                                     </div>
                                 }
                                 <div class="invoice-actions">
-                                    @if (!string.IsNullOrEmpty(inv.PdfUrl))
+                                    @if (inv.Status == InvoiceUi.Accepted && !inv.IsCreditNote && creditNote is null && !Model.IsVoided)
+                                    {
+                                        @* La factura aceptada se imprime y se descarga con el formato de la casa (Sales/Invoice, Sales/InvoicePdf). *@
+                                        <a class="btn btn-sm btn-brand btn-brand-auto" asp-action="Invoice" asp-route-id="@Model.SalesHeaderID" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</a>
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="InvoicePdf" asp-route-id="@Model.SalesHeaderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
+                                    }
+                                    else if (!string.IsNullOrEmpty(inv.PdfUrl))
                                     {
                                         <a class="btn btn-sm btn-outline-secondary" href="@inv.PdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF</a>
                                     }

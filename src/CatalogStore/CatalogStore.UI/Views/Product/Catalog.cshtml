@@ -1,4 +1,4 @@
-@model List<CatalogStore.UI.Models.Product.ProductViewModel>
+﻿@model List<CatalogStore.UI.Models.Product.ProductViewModel>
 @{
     ViewData["Title"] = "Catálogo de productos";
 
@@ -15,6 +15,11 @@
     var categoriasPresentes = Model.Select(p => p.categoria).Distinct().OrderBy(c => c).ToList();
     // Solo los roles que arman órdenes ven el "+" y la barra de orden activa.
     bool canOrder = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor");
+    // Unidades disponibles (existencias menos reservado) por producto; null si no se pudo cargar.
+    var availability = ViewData["Availability"] as Dictionary<int, int>;
+    int? Available(int productId) => availability is null ? null : availability.GetValueOrDefault(productId, 0);
+    // Pocas unidades: se resalta para que el vendedor no prometa de más.
+    const int LowStock = 5;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -103,9 +108,10 @@ else
 
                         @if (p.Price.HasValue)
                         {
-                            <button type="button" class="catalog-add-btn" data-product-id="@p.ProductID" data-product-name="@p.ProductName"
-                                    aria-label="Agregar @p.ProductName a la orden" title="Agregar a la orden">
-                                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            bool soldOut = Available(p.ProductID) == 0;
+                            <button type="button" class="catalog-add-btn" data-product-id="@p.ProductID" data-product-name="@p.ProductName" @(soldOut ? "disabled" : "")
+                                    aria-label="@(soldOut ? $"{p.ProductName} está agotado" : $"Agregar {p.ProductName} a la orden")" title="@(soldOut ? "Agotado: no hay unidades disponibles" : "Agregar a la orden")">
+                                <i class="fa-solid @(soldOut ? "fa-box-open" : "fa-plus")" aria-hidden="true"></i>
                             </button>
                         }
                         else
@@ -120,6 +126,27 @@ else
                     <span class="catalog-card-category">@CategoriaLabel(p.categoria)</span>
                     <h3 class="catalog-card-title">@p.ProductName</h3>
                     <p class="catalog-card-code">@(string.IsNullOrEmpty(p.ProductCode) ? "" : $"Código {p.ProductCode}")</p>
+                    @if (Available(p.ProductID) is int stock)
+                    {
+                        @* El texto siempre dice la cantidad: el color solo refuerza. data-stock-for lo actualiza order-catalog.js. *@
+                        <span class="catalog-card-stock @(stock == 0 ? "is-out" : stock <= LowStock ? "is-low" : "")" data-stock-for="@p.ProductID" data-stock="@stock">
+                            <i class="fa-solid @(stock == 0 ? "fa-circle-xmark" : "fa-boxes-stacked")" aria-hidden="true"></i>
+                            <span class="catalog-card-stock-text">@(stock == 0 ? "Agotado" : stock == 1 ? "1 disponible" : $"{stock} disponibles")</span>
+                        </span>
+                    }
+                    @if (canOrder && p.Price.HasValue)
+                    {
+                        @* Cantidad a agregar con el "+" de la imagen. Tope: lo disponible. Oculta si está agotado. *@
+                        <div class="catalog-card-qtyrow" @(Available(p.ProductID) == 0 ? "hidden" : "")>
+                            <span class="catalog-card-qtylabel" id="qtylabel-@p.ProductID">Cantidad</span>
+                            <div class="qty-stepper qty-stepper-sm" role="group" aria-labelledby="qtylabel-@p.ProductID">
+                                <button type="button" data-qty-step="-1" aria-label="Restar uno a la cantidad de @p.ProductName"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                                <input type="number" min="1" max="@(Available(p.ProductID)?.ToString() ?? "1000000")" step="1" value="1" inputmode="numeric"
+                                       data-card-qty="@p.ProductID" aria-label="Cantidad de @p.ProductName a agregar" />
+                                <button type="button" data-qty-step="1" aria-label="Sumar uno a la cantidad de @p.ProductName"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    }
                     <div class="catalog-card-footer">
                         <span class="catalog-card-price">₡@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</span>
                         <a class="btn btn-sm btn-outline-secondary" asp-controller="Product" asp-action="Details" asp-route-id="@p.ProductID">Ver detalle</a>

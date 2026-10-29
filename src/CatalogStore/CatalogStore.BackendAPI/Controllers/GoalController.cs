@@ -30,6 +30,16 @@ namespace CatalogStore.BackendAPI.Controllers
             return Ok(await _goalServices.GetMyProgressAsync(CurrentUser, year, month));
         }
 
+        // GET api/Goal/me/detail?year=2026&month=10 — las ventas y abonos que suman en mi avance de ese mes
+        [HttpGet("me/detail")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        public async Task<IActionResult> GetMyDetail([FromQuery] int? year, [FromQuery] int? month)
+        {
+            if (GoalServices.PeriodError(year, month) is { } error)
+                return BadRequest(new { message = error });
+            return Ok(await _goalServices.GetMyDetailAsync(CurrentUser, year, month));
+        }
+
         // GET api/Goal/me/history — mis últimos 6 meses
         [HttpGet("me/history")]
         [Authorize(Roles = "Admin,AdminIT,Vendedor")]

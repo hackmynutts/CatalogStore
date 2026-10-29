@@ -16,13 +16,14 @@ namespace CatalogStore.BackendAPI.Services.Reports
         public const string Products = "products";
         public const string Goals = "goals";
         public const string Stock = "stock";
+        public const string Statement = "statement";
 
         // El vendedor solo puede pedir estos y siempre sobre sus propias ventas; el resto trae costos y datos de todos.
-        public static readonly string[] ForSellers = { Sales, Receivables, Payments };
-        public static readonly string[] All = { Sales, Receivables, Payments, Products, Goals, Stock };
+        public static readonly string[] ForSellers = { Sales, Receivables, Payments, Statement };
+        public static readonly string[] All = { Sales, Receivables, Payments, Products, Goals, Stock, Statement };
     }
 
-    public record ReportRequest(string Key, DateOnly? From, DateOnly? To, string? Seller, bool IncludeVoided, int? Year, int? Month);
+    public record ReportRequest(string Key, DateOnly? From, DateOnly? To, string? Seller, bool IncludeVoided, int? Year, int? Month, int? ClientId = null);
     public record ReportFile(string FileName, byte[] Bytes);
     public record ReportResult(ReportFile? File, string? Error)
     {
@@ -64,7 +65,7 @@ namespace CatalogStore.BackendAPI.Services.Reports
             var today = DateOnly.FromDateTime(LocalNow);
             var from = request.From ?? new DateOnly(today.Year, today.Month, 1);
             var to = request.To ?? today;
-            if (key is ReportKeys.Sales or ReportKeys.Payments or ReportKeys.Products)
+            if (key is ReportKeys.Sales or ReportKeys.Payments or ReportKeys.Products || (key == ReportKeys.Statement && request.From is not null && request.To is not null))
             {
                 if (from > to) return ReportResult.Fail("La fecha inicial no puede ser posterior a la final.");
                 if (to.DayNumber - from.DayNumber >= MaxDays) return ReportResult.Fail($"El período no puede pasar de {MaxDays} días.");
@@ -80,6 +81,7 @@ namespace CatalogStore.BackendAPI.Services.Reports
                 case ReportKeys.Receivables: return await ReceivablesAsync(today, seller, $"Al {today:dd/MM/yyyy} · {who} · {generated}", user);
                 case ReportKeys.Payments: return await PaymentsAsync(from, to, seller, $"{period} · {who} · {generated}", user);
                 case ReportKeys.Products: return await ProductsAsync(from, to, $"{period} · {generated}", user);
+                case ReportKeys.Statement: return await StatementAsync(request.ClientId, request.From, request.To, seller, today, generated, user);
                 case ReportKeys.Goals: return await GoalsAsync(request.Year, request.Month, generated, user);
                 default: return await StockAsync(today, $"Al {today:dd/MM/yyyy} · {generated}", user);
             }
@@ -247,6 +249,82 @@ namespace CatalogStore.BackendAPI.Services.Reports
                     .Select(g => new object?[] { g.Key.Humanize(), g.Count(), g.Sum(p => p.Amount) }).ToList()
             };
             return Done($"cobros_{from:yyyyMMdd}_{to:yyyyMMdd}", new[] { detail, byMethod }, user);
+        }
+
+        // ───────── Estado de cuenta del cliente ─────────
+
+        // Libro del cliente: cada venta es un cargo y cada abono vigente un pago, en orden de fecha, con el saldo corrido.
+        // Con período, arranca con una fila de saldo inicial (todo lo anterior a "desde"). El vendedor solo ve lo de sus ventas.
+        private async Task<ReportResult> StatementAsync(int? clientId, DateOnly? from, DateOnly? to, string? seller, DateOnly today, string generated, string user)
+        {
+            if (clientId is null or <= 0) return ReportResult.Fail("Elegí un cliente.");
+            if ((from is null) != (to is null)) return ReportResult.Fail("Poné las dos fechas del período o ninguna.");
+            if (from > to) return ReportResult.Fail("La fecha inicial no puede ser posterior a la final.");
+
+            var client = await _repository.GetClientAsync(clientId.Value);
+            if (client is null) return ReportResult.Fail("El cliente no existe.");
+
+            var sales = await _repository.GetClientSalesAsync(client.Id, seller);
+            var payments = await _repository.GetClientPaymentsAsync(client.Id, seller);
+
+            // Cargo antes que abono dentro del mismo día; así una venta de contado muestra venta y luego pago.
+            var events = sales.Select(s => (Date: Local(s.SaleDate).Date, Order: 0, Type: "Venta", Doc: s.SaleNumber,
+                    Detail: s.ApplyIva ? "Con IVA" : "Sin IVA", Due: (DateOnly?)s.DueDate, Charge: s.Total, Credit: 0m))
+                .Concat(payments.Select(p => (Date: Local(p.PaymentDate).Date, Order: 1, Type: "Abono", Doc: p.SaleNumber,
+                    Detail: string.IsNullOrWhiteSpace(p.Reference) ? p.Method.Humanize() : $"{p.Method.Humanize()} · {p.Reference}",
+                    Due: (DateOnly?)null, Charge: 0m, Credit: p.Amount)))
+                .OrderBy(e => e.Date).ThenBy(e => e.Order).ThenBy(e => e.Doc).ToList();
+
+            var start = from?.ToDateTime(TimeOnly.MinValue);
+            var end = to?.ToDateTime(TimeOnly.MinValue);
+            var opening = start is null ? 0m : events.Where(e => e.Date < start).Sum(e => e.Charge - e.Credit);
+            var inPeriod = events.Where(e => (start is null || e.Date >= start) && (end is null || e.Date <= end)).ToList();
+
+            var rows = new List<object?[]>();
+            var running = opening;
+            if (start is not null) rows.Add(new object?[] { start.Value, "Saldo inicial", string.Empty, "Saldo anterior al período", null, null, null, running });
+            foreach (var e in inPeriod)
+            {
+                running += e.Charge - e.Credit;
+                rows.Add(new object?[] { e.Date, e.Type, e.Doc, e.Detail, e.Due, e.Charge == 0 ? null : e.Charge, e.Credit == 0 ? null : e.Credit, running });
+            }
+
+            var period = from is null ? "Todo el historial" : $"Del {from:dd/MM/yyyy} al {to:dd/MM/yyyy}";
+            var ident = string.IsNullOrWhiteSpace(client.Identification) ? string.Empty : $" · {client.Identification}";
+            var statement = new ReportSheet
+            {
+                Name = "Estado de cuenta", Title = $"Estado de cuenta · {client.Name}", Subtitle = $"{client.Name}{ident} · {period} · {generated}",
+                Columns = new()
+                {
+                    new("Fecha", ColumnKind.Date), new("Movimiento", ColumnKind.Text), new("Venta", ColumnKind.Text), new("Detalle", ColumnKind.Text),
+                    new("Vence", ColumnKind.Date), new("Cargos", ColumnKind.Money, Total: true), new("Abonos", ColumnKind.Money, Total: true), new("Saldo", ColumnKind.Money)
+                },
+                Rows = rows,
+                Notes =
+                {
+                    "Cargo = total de la venta con IVA. Abono = pago vigente (los anulados no aparecen). Saldo = saldo corrido; la última fila es lo que el cliente debe al cierre.",
+                    "No incluye ventas anuladas." + (seller is null ? string.Empty : " Solo incluye las ventas de este vendedor.")
+                }
+            };
+
+            var open = sales.Where(s => s.Balance > 0).OrderBy(s => s.DueDate).ThenBy(s => s.SaleDate).ToList();
+            var pending = new ReportSheet
+            {
+                Name = "Pendiente", Title = $"Ventas con saldo · {client.Name}", Subtitle = $"Al {today:dd/MM/yyyy} · {generated}",
+                Columns = new()
+                {
+                    new("Venta", ColumnKind.Text), new("Fecha", ColumnKind.Date), new("Vence", ColumnKind.Date), new("Días vencida", ColumnKind.Integer),
+                    new("Total", ColumnKind.Money, Total: true), new("Cobrado", ColumnKind.Money, Total: true), new("Saldo", ColumnKind.Money, Total: true)
+                },
+                Rows = open.Select(s => new object?[]
+                {
+                    s.SaleNumber, Local(s.SaleDate).Date, s.DueDate, Math.Max(0, today.DayNumber - s.DueDate.DayNumber), s.Total, s.Paid, s.Balance
+                }).ToList(),
+                Notes = { "Siempre al día de hoy y sobre todo el historial, sin importar el período del estado de cuenta." }
+            };
+
+            var safeName = new string(client.Name.Where(char.IsLetterOrDigit).Take(24).ToArray());
+            return Done($"estado_cuenta_{(safeName.Length == 0 ? client.Id.ToString() : safeName)}_{today:yyyyMMdd}", new[] { statement, pending }, user);
         }
 
         // ───────── Ventas por producto (solo administradores: trae costos) ─────────
