@@ -40,5 +40,26 @@ namespace CatalogStore.BackendAPI.Repository.Orders
             var orders = query;
             return await orders.Select(o => new OrderListRow(o, o.OrderLines.Count)).ToListAsync();
         }
+        public Task<int> StampMissingPendingSinceAsync(DateTime nowUtc)
+            => _dbContext.Orders
+                .Where(o => o.OrderStatus == OrderStatus.Pending && o.PendingSince == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(o => o.PendingSince, nowUtc));
+
+        public Task<List<PendingOrderRow>> GetExpiredPendingAsync(DateTime cutoffUtc, int take)
+            => _dbContext.Orders.AsNoTracking()
+                .Where(o => o.OrderStatus == OrderStatus.Pending && o.PendingSince != null && o.PendingSince < cutoffUtc)
+                .OrderBy(o => o.PendingSince)
+                .Select(o => new PendingOrderRow(o.OrderID, o.OrderNumber, o.CreatedBy, o.Client.ClientName, o.OrderTotalAmount, o.PendingSince!.Value))
+                .Take(take)
+                .ToListAsync();
+
+        public Task<List<PendingOrderRow>> GetPendingToWarnAsync(DateTime warnCutoffUtc, DateTime expireCutoffUtc, int take)
+            => _dbContext.Orders.AsNoTracking()
+                .Where(o => o.OrderStatus == OrderStatus.Pending && o.PendingSince != null
+                         && o.PendingSince < warnCutoffUtc && o.PendingSince >= expireCutoffUtc)
+                .OrderBy(o => o.PendingSince)
+                .Select(o => new PendingOrderRow(o.OrderID, o.OrderNumber, o.CreatedBy, o.Client.ClientName, o.OrderTotalAmount, o.PendingSince!.Value))
+                .Take(take)
+                .ToListAsync();
     }
 }

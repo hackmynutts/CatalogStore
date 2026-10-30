@@ -45,5 +45,7 @@ namespace CatalogStore.BackendAPI.DTO.Order
         public string? ModifiedBy { get; set; }
         [Display(Name = "Modificado el")]
         public DateTime? ModifiedOn { get; set; }
+        // Solo en revisión: cuándo se cancela sola si no se completa (UTC). null si no aplica o la función está apagada.
+        public DateTime? ExpiresOn { get; set; }
     }
 }

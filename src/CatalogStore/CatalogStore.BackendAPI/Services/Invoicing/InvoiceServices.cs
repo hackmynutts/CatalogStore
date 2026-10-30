@@ -317,10 +317,21 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             if (sale is null) return OperationResult.Fail(NotFoundMessage);
             if (string.IsNullOrWhiteSpace(sale.ClientEmail)) return OperationResult.Fail("El cliente no tiene correo registrado.");
 
+            // La nota de crédito explica qué factura anula; la factura y el tiquete usan el texto general.
+            string body;
+            if (invoice.DocumentType == InvoiceDocType.NotaCredito)
+            {
+                var original = invoice.ReferenceInvoiceID is int refId ? await _repository.GetAsync(refId) : null;
+                var originalNumber = original?.Consecutive is { Length: 20 } c ? c[10..] : null;
+                body = EmailTemplates.CreditNoteIssued(sale.ClientName, sale.SaleNumber, originalNumber, sale.TotalAmount, invoice.Reason, invoice.PdfUrl, invoice.Clave ?? string.Empty);
+            }
+            else
+                body = EmailTemplates.InvoiceIssued(sale.ClientName, invoice.DocumentType.Humanize(), sale.SaleNumber, sale.TotalAmount, invoice.PdfUrl, invoice.Clave ?? string.Empty);
+
             await _emailServices.QueueAndSaveAsync(new EmailMessage(
                 sale.ClientEmail, sale.ClientName,
                 $"{invoice.DocumentType.Humanize()} {invoice.Consecutive?[10..] ?? string.Empty} - SAM DESIGN".Replace("  ", " "),
-                EmailTemplates.InvoiceIssued(sale.ClientName, invoice.DocumentType.Humanize(), sale.SaleNumber, sale.TotalAmount, invoice.PdfUrl, invoice.Clave ?? string.Empty),
+                body,
                 EmailKinds.Invoice, InvoiceTable, invoice.InvoiceID.ToString(),
                 // El enlace al PDF es personal: se borra de la cola apenas se envía.
                 IsSensitive: true), user);

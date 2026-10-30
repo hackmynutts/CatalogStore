@@ -278,6 +278,11 @@
                                         <a class="btn btn-sm btn-brand btn-brand-auto" asp-action="Invoice" asp-route-id="@Model.SalesHeaderID" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</a>
                                         <a class="btn btn-sm btn-outline-secondary" asp-action="InvoicePdf" asp-route-id="@Model.SalesHeaderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
                                     }
+                                    else if (inv.IsCreditNote && inv.Status == InvoiceUi.Accepted)
+                                    {
+                                        <a class="btn btn-sm btn-brand btn-brand-auto" asp-action="CreditNote" asp-route-id="@Model.SalesHeaderID" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</a>
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="CreditNotePdf" asp-route-id="@Model.SalesHeaderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
+                                    }
                                     else if (!string.IsNullOrEmpty(inv.PdfUrl))
                                     {
                                         <a class="btn btn-sm btn-outline-secondary" href="@inv.PdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF</a>
@@ -294,7 +299,7 @@
                                         }
                                         @if (inv.Status == InvoiceUi.Accepted && !string.IsNullOrEmpty(inv.PdfUrl))
                                         {
-                                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="invoice-email" data-id="@inv.Id" data-email="@Model.ClientEmail"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Enviar al cliente</button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="invoice-email" data-id="@inv.Id" data-email="@Model.ClientEmail" data-doc="@inv.DocumentTypeName.ToLowerInvariant()"><i class="fa-regular fa-envelope" aria-hidden="true"></i> @(inv.IsCreditNote ? "Enviar nota de crédito al cliente" : "Enviar al cliente")</button>
                                         }
                                         @if (inv.Status == InvoiceUi.Uncertain || InvoiceUi.IsStuck(inv))
                                         {

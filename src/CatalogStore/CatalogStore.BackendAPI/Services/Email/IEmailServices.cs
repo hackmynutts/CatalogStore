@@ -20,6 +20,8 @@
         public const string Invoice = "Invoice";
         public const string Proforma = "Proforma";
         public const string PaymentVoided = "PaymentVoided";
+        public const string OrderExpiryWarning = "OrderExpiryWarning";
+        public const string OrderExpired = "OrderExpired";
     }
 
     // Encola correos. El envío real lo hace EmailOutboxWorker en segundo plano, con reintentos.

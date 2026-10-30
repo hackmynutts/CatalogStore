@@ -4,6 +4,9 @@
 @{
     Layout = null;
     var invoice = (InvoiceViewModel)ViewData["Invoice"]!;
+    var reference = ViewData["Reference"] as InvoiceViewModel;
+    bool isCredit = invoice.IsCreditNote;
+    string docName = isCredit ? "Nota de crédito" : "Factura";
     var issued = CatalogStore.UI.Controllers.SalesController.InvoiceLocalTime(invoice);
     string Money(decimal v) => "₡" + v.ToString("N2");
     var contact = string.Join(" · ", new[] { (Configuration["Landing:WhatsApp"] ?? string.Empty).Trim(), (Configuration["Landing:Email"] ?? string.Empty).Trim() }.Where(x => x.Length > 0));
@@ -13,7 +16,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Factura @invoice.Number</title>
+    <title>@docName @invoice.Number</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/print-docs.css" asp-append-version="true" />
@@ -22,7 +25,7 @@
 <body class="print-doc-page">
     <div class="print-toolbar">
         <a asp-action="Details" asp-route-id="@Model.SalesHeaderID" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver a la venta</a>
-        <a asp-action="InvoicePdf" asp-route-id="@Model.SalesHeaderID" class="btn btn-brand btn-sm" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
+        <a asp-action="@(isCredit ? "CreditNotePdf" : "InvoicePdf")" asp-route-id="@Model.SalesHeaderID" class="btn btn-brand btn-sm" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</button>
     </div>
 
@@ -37,7 +40,7 @@
                 }
             </div>
             <div class="pf-title">
-                <h1>FACTURA ELECTRÓNICA</h1>
+                <h1>@(isCredit ? "NOTA DE CRÉDITO" : "FACTURA ELECTRÓNICA")</h1>
                 <div class="pf-number">N.º @invoice.Number</div>
                 <div class="pf-dates">Fecha: @issued.ToString("dd/MM/yyyy HH:mm")</div>
             </div>
@@ -103,6 +106,21 @@
             <div class="pf-notes"><strong>Notas:</strong> @Model.Notes</div>
         }
 
+        @if (isCredit)
+        {
+            <div class="pf-notes">
+                <strong>Anula:</strong> @(reference is null ? "Factura electrónica" : $"Factura electrónica N.º {reference.Number}")<br />
+                @if (!string.IsNullOrWhiteSpace(reference?.Clave))
+                {
+                    <strong>Clave de la factura:</strong> <span style="word-break:break-all;">@reference!.Clave</span><br />
+                }
+                @if (!string.IsNullOrWhiteSpace(invoice.Reason))
+                {
+                    <strong>Motivo:</strong> @invoice.Reason
+                }
+            </div>
+        }
+
         <div class="pf-notes">
             <strong>Clave:</strong> <span style="word-break:break-all;">@invoice.Clave</span><br />
             <strong>Consecutivo:</strong> @invoice.Consecutive<br />
@@ -110,7 +128,7 @@
         </div>
 
         <div class="pf-legal">
-            Representación impresa de la factura electrónica. El comprobante fiscal es el documento XML firmado y aceptado por el
+            Representación impresa de la @(isCredit ? "nota de crédito" : "factura") electrónica. El comprobante fiscal es el documento XML firmado y aceptado por el
             Ministerio de Hacienda, identificado con la clave indicada.
         </div>
     </main>

@@ -287,6 +287,9 @@ namespace CatalogStore.BackendAPI.Data
                 entity.HasIndex(e => new { e.OrderNumber })
                     .HasDatabaseName("IX_Order_OrderNumber")
                     .IsUnique();
+                entity.HasIndex(e => e.PendingSince)
+                    .HasFilter($"[OrderStatus] = {(int)OrderStatus.Pending}")
+                    .HasDatabaseName("IX_Order_PendingSince");
                 entity.HasOne(e => e.Client)
                     .WithMany()
                     .HasForeignKey(e => e.ClientID)
@@ -507,8 +510,6 @@ namespace CatalogStore.BackendAPI.Data
                     .HasForeignKey(e => e.ReferenceInvoiceID)
                     .HasConstraintName("FK_Invoice_Invoice_ReferenceInvoiceID")
                     .OnDelete(DeleteBehavior.Restrict);
-                // Último seguro contra la doble emisión: una venta no puede tener dos comprobantes vigentes del mismo tipo.
-                // Vigente = Enviando(0), Enviada(1), Aceptada(2) o Por conciliar(4). Rechazada(3) y No emitida(5) liberan la venta.
                 entity.HasIndex(e => new { e.SalesHeaderID, e.DocumentType })
                     .IsUnique()
                     .HasFilter("[Status] IN (0,1,2,4)")

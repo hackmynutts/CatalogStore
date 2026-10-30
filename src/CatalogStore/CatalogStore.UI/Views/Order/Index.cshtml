@@ -73,7 +73,15 @@
                         <span class="text-muted">(@o.ClientCC)</span>
                     }
                 </td>
-                <td><span class="badge @OrderStatusStyle.BadgeClass(o.OrderStatus)">@o.OrderStatusName</span></td>
+                <td>
+                    <span class="badge @OrderStatusStyle.BadgeClass(o.OrderStatus)">@o.OrderStatusName</span>
+                    @if (o.ExpiresOn is { } exp)
+                    {
+                        <div class="@OrderExpiry.CssClass(exp)" title="Si no se completa antes de esa fecha, se cancela sola y se libera el inventario reservado.">
+                            <i class="fa-regular fa-clock" aria-hidden="true"></i> @OrderExpiry.Text(exp)
+                        </div>
+                    }
+                </td>
                 <td class="text-end">@o.LineCount</td>
                 <td class="text-end order-amount">
                     ₡@o.OrderTotalAmount.ToString("N2")

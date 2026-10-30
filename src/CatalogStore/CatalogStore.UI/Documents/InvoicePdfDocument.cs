@@ -6,7 +6,7 @@ using QuestPDF.Infrastructure;
 
 namespace CatalogStore.UI.Documents
 {
-    // La factura electrónica aceptada, con el mismo formato que la proforma. Es la representación impresa: el comprobante fiscal
+    // La factura electrónica o la nota de crédito aceptada, con el mismo formato que la proforma. Es la representación impresa: el comprobante fiscal
     // es el XML firmado que aceptó Hacienda (se identifica con la clave y el consecutivo que lleva el documento).
     public class InvoicePdfDocument : IDocument
     {
@@ -17,14 +17,19 @@ namespace CatalogStore.UI.Documents
 
         private readonly SaleViewModel _sale;
         private readonly InvoiceViewModel _invoice;
+        // Solo nota de crédito: la factura que anula.
+        private readonly InvoiceViewModel? _reference;
+        private bool IsCredit => _invoice.IsCreditNote;
+        private string DocName => IsCredit ? "Nota de crédito" : "Factura";
         private readonly DateTime _issued;
         private readonly string _contact;
         private readonly byte[]? _logo;
 
-        public InvoicePdfDocument(SaleViewModel sale, InvoiceViewModel invoice, DateTime issued, string contact, byte[]? logo)
+        public InvoicePdfDocument(SaleViewModel sale, InvoiceViewModel invoice, DateTime issued, string contact, byte[]? logo, InvoiceViewModel? reference = null)
         {
             _sale = sale;
             _invoice = invoice;
+            _reference = reference;
             _issued = issued;
             _contact = contact;
             _logo = logo;
@@ -32,7 +37,7 @@ namespace CatalogStore.UI.Documents
 
         public static string Money(decimal v) => "₡" + v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
 
-        public DocumentMetadata GetMetadata() => new() { Title = $"Factura {_invoice.Number}", Author = "SAM DESIGN" };
+        public DocumentMetadata GetMetadata() => new() { Title = $"{DocName} {_invoice.Number}", Author = "SAM DESIGN" };
 
         public void Compose(IDocumentContainer container) => container.Page(page =>
         {
@@ -44,7 +49,7 @@ namespace CatalogStore.UI.Documents
             page.Footer().AlignCenter().Text(t =>
             {
                 t.DefaultTextStyle(s => s.FontSize(8).FontColor(Muted));
-                t.Span($"Factura {_invoice.Number} · Página ");
+                t.Span($"{DocName} {_invoice.Number} · Página ");
                 t.CurrentPageNumber();
                 t.Span(" de ");
                 t.TotalPages();
@@ -61,7 +66,7 @@ namespace CatalogStore.UI.Documents
             });
             row.ConstantItem(210).AlignRight().Column(col =>
             {
-                col.Item().AlignRight().Text("FACTURA ELECTRÓNICA").FontSize(16).Bold().FontColor(Brand);
+                col.Item().AlignRight().Text(IsCredit ? "NOTA DE CRÉDITO" : "FACTURA ELECTRÓNICA").FontSize(16).Bold().FontColor(Brand);
                 col.Item().AlignRight().Text($"N.º {_invoice.Number}").FontSize(12).Bold();
                 col.Item().AlignRight().Text($"Fecha: {_issued:dd/MM/yyyy HH:mm}").FontSize(9).FontColor("#4B5563");
             });
@@ -150,6 +155,17 @@ namespace CatalogStore.UI.Documents
             if (!string.IsNullOrWhiteSpace(_sale.Notes))
                 col.Item().Text(t => { t.Span("Notas: ").Bold(); t.Span(_sale.Notes); });
 
+            if (IsCredit)
+                col.Item().ShowEntire().Border(0.7f).BorderColor(Line).Background("#FEF9EC").Padding(9).Column(c =>
+                {
+                    c.Item().Text("ANULA").FontSize(7.5f).Bold().FontColor(Muted).LetterSpacing(0.08f);
+                    c.Item().PaddingTop(3).Text(t => { t.Span("Documento: ").Bold(); t.Span(_reference is null ? "Factura electrónica" : $"Factura electrónica N.º {_reference.Number}"); });
+                    if (!string.IsNullOrWhiteSpace(_reference?.Clave))
+                        c.Item().Text(t => { t.Span("Clave: ").Bold(); t.Span(_reference!.Clave!).FontSize(9); });
+                    if (!string.IsNullOrWhiteSpace(_invoice.Reason))
+                        c.Item().Text(t => { t.Span("Motivo: ").Bold(); t.Span(_invoice.Reason!); });
+                });
+
             col.Item().ShowEntire().Border(0.7f).BorderColor(Line).Padding(9).Column(c =>
             {
                 c.Item().Text("DATOS DEL COMPROBANTE").FontSize(7.5f).Bold().FontColor(Muted).LetterSpacing(0.08f);
@@ -158,7 +174,7 @@ namespace CatalogStore.UI.Documents
                 c.Item().Text(t => { t.Span("Estado en Hacienda: ").Bold(); t.Span(string.IsNullOrWhiteSpace(_invoice.HaciendaStatus) ? _invoice.StatusName : _invoice.HaciendaStatus); });
             });
 
-            col.Item().ShowEntire().Text("Representación impresa de la factura electrónica. El comprobante fiscal es el documento XML firmado y aceptado por el Ministerio de Hacienda, identificado con la clave indicada.")
+            col.Item().ShowEntire().Text((IsCredit ? "Representación impresa de la nota de crédito electrónica. " : "Representación impresa de la factura electrónica. ") + "El comprobante fiscal es el documento XML firmado y aceptado por el Ministerio de Hacienda, identificado con la clave indicada.")
                 .FontSize(8.5f).FontColor(Muted);
         });
     }

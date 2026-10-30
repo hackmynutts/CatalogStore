@@ -48,6 +48,8 @@ namespace CatalogStore.UI.Models.Order
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
+        // Solo en revisión: cuándo se cancela sola (UTC).
+        public DateTime? ExpiresOn { get; set; }
     }
 
     // Fila del listado (api/Order). Sin líneas: solo la cantidad.
@@ -65,6 +67,23 @@ namespace CatalogStore.UI.Models.Order
         public int LineCount { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
+        public DateTime? ExpiresOn { get; set; }
+    }
+
+    // Texto y color del aviso "se cancela sola" de una orden en revisión.
+    public static class OrderExpiry
+    {
+        // Días que faltan (redondeados hacia arriba). 0 = vence hoy; negativo = ya pasó y la próxima pasada la cancela.
+        public static int DaysLeft(DateTime expiresOnUtc) => (int)Math.Ceiling((DateTime.SpecifyKind(expiresOnUtc, DateTimeKind.Utc) - DateTime.UtcNow).TotalDays);
+
+        public static string Text(DateTime expiresOnUtc)
+        {
+            var left = DaysLeft(expiresOnUtc);
+            return left <= 0 ? "Se cancela hoy" : left == 1 ? "Se cancela en 1 día" : $"Se cancela en {left} días";
+        }
+
+        // Rojo cuando faltan 2 días o menos; el texto siempre dice el plazo, el color solo refuerza.
+        public static string CssClass(DateTime expiresOnUtc) => DaysLeft(expiresOnUtc) <= 2 ? "order-expiry is-soon" : "order-expiry";
     }
 
     public class OrderLineViewModel

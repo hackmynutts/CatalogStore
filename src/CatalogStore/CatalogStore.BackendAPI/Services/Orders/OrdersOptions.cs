@@ -3,5 +3,7 @@
     public class OrdersOptions
     {
         public decimal MaxSellerDiscountPercent { get; set; } = 5m;
+        public int PendingExpirationDays { get; set; } = 8;
+        public int PendingWarningDays { get; set; } = 6;
     }
 }

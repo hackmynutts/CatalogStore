@@ -34,6 +34,7 @@ namespace CatalogStore.BackendAPI.Models.Order
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
+        public DateTime? PendingSince { get; set; }
         [Timestamp]
         public byte[] RowVersion { get; set; } = null!;
         public Models.Client.Client Client { get; set; } = null!;

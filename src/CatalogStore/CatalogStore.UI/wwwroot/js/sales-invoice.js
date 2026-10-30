@@ -130,8 +130,8 @@ document.addEventListener('DOMContentLoaded', function () {
     async function email(btn) {
         const c = await Swal.fire({
             icon: 'question',
-            title: '¿Enviar el comprobante al cliente?',
-            html: `Se le manda a <strong>${escapeHtml(btn.dataset.email)}</strong> un correo con el enlace al PDF.`,
+            title: `¿Enviar la ${escapeHtml(btn.dataset.doc || 'comprobante')} al cliente?`,
+            html: `Se le manda a <strong>${escapeHtml(btn.dataset.email)}</strong> un correo con el enlace al PDF. No se envía solo: lo decidís vos.`,
             showCancelButton: true,
             confirmButtonText: 'Enviar',
             cancelButtonText: 'Cancelar',

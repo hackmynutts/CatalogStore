@@ -25,6 +25,12 @@
             <h1 class="detail-title">Orden @Model.OrderNumber</h1>
             <div class="detail-subtitle">
                 <span class="badge @OrderStatusStyle.BadgeClass(Model.OrderStatus)">@Model.OrderStatusName</span>
+                @if (Model.ExpiresOn is { } expiresOn)
+                {
+                    <span class="@OrderExpiry.CssClass(expiresOn)" title="Si no se completa antes del @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(expiresOn, DateTimeKind.Utc), "America/Costa_Rica").ToString("dd/MM/yyyy"), se cancela sola y se libera el inventario reservado.">
+                        <i class="fa-regular fa-clock" aria-hidden="true"></i> @OrderExpiry.Text(expiresOn)
+                    </span>
+                }
                 <span>Creada el @Model.CreatedOn.ToString("g") por @Model.CreatedBy</span>
                 @if (isActiveOrder)
                 {

@@ -459,6 +459,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
             }
             RecalculateTotal(order);
             order.OrderStatus = OrderStatus.Pending;
+            order.PendingSince = now;
             Touch(order, user, now);
             await _orderRepository.SaveChangesAsync();
 
@@ -482,6 +483,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 return OperationResult.Fail($"El cliente ya tiene la orden {other.OrderNumber} en proceso. Completala o cancelala antes de reabrir esta.");
 
             order.OrderStatus = OrderStatus.InProcess;
+            order.PendingSince = null;
             Touch(order, user, now);
             await _orderRepository.SaveChangesAsync();
 
@@ -573,14 +575,21 @@ namespace CatalogStore.BackendAPI.Services.Orders
         public async Task<OrderDTO?> GetAsync(int orderId, string user, bool isAdmin)
         {
             var order = await _orderRepository.GetOrderByIdAsync(orderId);
-            return order is null || !CanAccess(order, user, isAdmin) ? null : MapOrder(order);
+            return order is null || !CanAccess(order, user, isAdmin) ? null : MapOrder(order, ExpiresOn(order));
         }
 
         // Para la barra del catálogo y el perfil del cliente. null si no hay o si es de otro vendedor.
         public async Task<OrderDTO?> GetOpenByClientAsync(int clientId, string user, bool isAdmin)
         {
             var order = await _orderRepository.GetInProcessByClientAsync(clientId);
-            return order is null || !CanAccess(order, user, isAdmin) ? null : MapOrder(order);
+            return order is null || !CanAccess(order, user, isAdmin) ? null : MapOrder(order, ExpiresOn(order));
+        }
+
+        // Cuándo se cancela sola una orden en revisión (ver OrderExpirationProcessor). null si no está en revisión o el plazo está apagado.
+        private DateTime? ExpiresOn(Order order)
+        {
+            var days = _ordersOptions.Value.PendingExpirationDays;
+            return order.OrderStatus == OrderStatus.Pending && order.PendingSince is { } since && days > 0 ? since.AddDays(days) : null;
         }
 
         // El vendedor siempre ve solo sus órdenes, aunque no lo pida.
@@ -600,11 +609,12 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 OrderTotalAmount = r.Order.OrderTotalAmount,
                 LineCount = r.LineCount,
                 CreatedBy = r.Order.CreatedBy,
-                CreatedOn = r.Order.CreatedOn
+                CreatedOn = r.Order.CreatedOn,
+                ExpiresOn = ExpiresOn(r.Order)
             }).ToList();
         }
 
-        private static OrderDTO MapOrder(Order order)
+        private static OrderDTO MapOrder(Order order, DateTime? expiresOn = null)
         {
             var lines = order.OrderLines
                 .OrderBy(l => l.OrderLineID)
@@ -653,7 +663,8 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 CreatedBy = order.CreatedBy,
                 CreatedOn = order.CreatedOn,
                 ModifiedBy = order.ModifiedBy,
-                ModifiedOn = order.ModifiedOn
+                ModifiedOn = order.ModifiedOn,
+                ExpiresOn = expiresOn
             };
         }
 

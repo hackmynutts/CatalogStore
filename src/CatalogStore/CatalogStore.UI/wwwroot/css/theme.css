@@ -2961,3 +2961,20 @@ body.order-busy main {
     -webkit-appearance: none;
     margin: 0;
 }
+
+/* ---------- Orden en revisión: aviso de cancelación automática (.order-expiry) ---------- */
+.order-expiry {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.order-expiry.is-soon {
+    color: #9a2b22;
+    font-weight: 600;
+}
+

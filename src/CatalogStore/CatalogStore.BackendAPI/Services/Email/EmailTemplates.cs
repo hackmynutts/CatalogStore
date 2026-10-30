@@ -126,6 +126,17 @@ namespace CatalogStore.BackendAPI.Services.Email
             P($"""<span style="font-size:12px;color:{Muted};word-break:break-all;">Clave: {E(clave)}</span>"""),
             "Este comprobante fue emitido electrónicamente y aceptado por el Ministerio de Hacienda.");
 
+        // Nota de crédito aceptada: le explica al cliente que la factura quedó anulada y le da el enlace al PDF.
+        public static string CreditNoteIssued(string clientName, string saleNumber, string? originalNumber, decimal total, string? reason, string pdfUrl, string clave) => Layout(
+            "Nota de crédito",
+            P($"Hola {E(clientName)},") +
+            P($"Anulamos {(string.IsNullOrWhiteSpace(originalNumber) ? "la factura" : $"la factura <strong>N.º {E(originalNumber)}</strong>")} de la venta <strong>{E(saleNumber)}</strong> " +
+              $"y emitimos la <strong>nota de crédito</strong> por un total de <strong>₡{Money(total)}</strong>.") +
+            (string.IsNullOrWhiteSpace(reason) ? "" : P($"""<span style="font-size:13px;color:{Muted};">Motivo: {E(reason)}</span>""")) +
+            Button("Ver nota de crédito (PDF)", pdfUrl) +
+            P($"""<span style="font-size:12px;color:{Muted};word-break:break-all;">Clave: {E(clave)}</span>"""),
+            "Este comprobante fue emitido electrónicamente y aceptado por el Ministerio de Hacienda.");
+
         // Al vendedor: un administrador anuló un abono de una venta suya.
         public static string PaymentVoided(string sellerName, string saleNumber, string clientName, decimal amount, string method, DateTime paidOn,
             string reason, string voidedBy, decimal balance, string link) => Layout(
@@ -144,6 +155,26 @@ namespace CatalogStore.BackendAPI.Services.Email
             Button("Ver la venta", link) +
             P($"""<span style="font-size:13px;color:{Muted};">Si el cliente ya había pagado, revisá con el administrador antes de volver a cobrarle.</span>"""),
             "Recibís este aviso porque sos el vendedor de la venta. Podés apagar las notificaciones desde tu usuario.");
+
+        // Al vendedor: su orden lleva días en revisión y se cancelará sola si no se completa.
+        public static string OrderExpiryWarning(string sellerName, string orderNumber, string clientName, decimal total, int daysPending, DateTime expiresOn, string link) => Layout(
+            "Tu orden está por cancelarse",
+            P($"Hola {E(sellerName)},") +
+            P($"La orden <strong>{E(orderNumber)}</strong> de {E(clientName)} por <strong>₡{Money(total)}</strong> lleva <strong>{daysPending} días</strong> en revisión.") +
+            P($"Si no se completa antes del <strong>{expiresOn:dd/MM/yyyy}</strong>, se cancelará automáticamente y el inventario reservado volverá a estar disponible.") +
+            Button("Ver la orden", link) +
+            P($"""<span style="font-size:13px;color:{Muted};">Si ya no se va a vender, podés cancelarla vos mismo; si el cliente sigue interesado, completala.</span>"""),
+            "Recibís este aviso porque sos el vendedor de la orden. Podés apagar las notificaciones desde tu usuario.");
+
+        // Al vendedor: su orden se canceló sola por pasar demasiado tiempo en revisión.
+        public static string OrderAutoCancelled(string sellerName, string orderNumber, string clientName, decimal total, int daysPending, string link) => Layout(
+            "Se canceló una orden",
+            P($"Hola {E(sellerName)},") +
+            P($"La orden <strong>{E(orderNumber)}</strong> de {E(clientName)} por <strong>₡{Money(total)}</strong> llevaba <strong>{daysPending} días</strong> en revisión sin completarse, así que se canceló automáticamente.") +
+            P("El inventario que tenía reservado ya volvió a estar disponible.") +
+            Button("Ver la orden", link) +
+            P($"""<span style="font-size:13px;color:{Muted};">Si el cliente todavía la necesita, creá una orden nueva.</span>"""),
+            "Recibís este aviso porque sos el vendedor de la orden. Podés apagar las notificaciones desde tu usuario.");
 
         // Aviso de seguridad después de cualquier cambio de contraseña.
         public static string PasswordChanged(string fullName, DateTime localWhen) => Layout(

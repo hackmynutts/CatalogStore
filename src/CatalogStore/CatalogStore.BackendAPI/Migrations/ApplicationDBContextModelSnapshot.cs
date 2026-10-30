@@ -786,6 +786,9 @@ namespace CatalogStore.BackendAPI.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)");
 
+                    b.Property<DateTime?>("PendingSince")
+                        .HasColumnType("datetime2");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -805,6 +808,10 @@ namespace CatalogStore.BackendAPI.Migrations
 
                     b.HasIndex("OrderStatus")
                         .HasDatabaseName("IX_Order_OrderStatus");
+
+                    b.HasIndex("PendingSince")
+                        .HasDatabaseName("IX_Order_PendingSince")
+                        .HasFilter("[OrderStatus] = 1");
 
                     b.HasIndex("ClientID", "CreatedOn")
                         .HasDatabaseName("IX_Order_ClientID_CreatedOn");

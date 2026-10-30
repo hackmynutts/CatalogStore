@@ -105,6 +105,47 @@ namespace CatalogStore.UI.Controllers
             return File(document.GeneratePdf(), "application/pdf", $"Factura-{invoice.Number}.pdf");
         }
 
+        // GET: Sales/CreditNote/5 — la nota de crédito ACEPTADA de la venta (la que anuló su factura), para imprimirla.
+        public async Task<IActionResult> CreditNote(int id)
+        {
+            var found = await LoadAcceptedCreditNoteAsync(id);
+            if (found is null) return RedirectToAction(nameof(Details), new { id });
+            ViewData["Invoice"] = found.Value.CreditNote;
+            ViewData["Reference"] = found.Value.Original;
+            return View("Invoice", found.Value.Sale);
+        }
+
+        // GET: Sales/CreditNotePdf/5 — la misma nota de crédito como archivo PDF.
+        public async Task<IActionResult> CreditNotePdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
+        {
+            var found = await LoadAcceptedCreditNoteAsync(id);
+            if (found is null) return RedirectToAction(nameof(Details), new { id });
+            var (sale, creditNote, original) = found.Value;
+
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var document = new Documents.InvoicePdfDocument(sale, creditNote, InvoiceLocalTime(creditNote), contact,
+                logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null, original);
+            return File(document.GeneratePdf(), "application/pdf", $"Nota-credito-{creditNote.Number}.pdf");
+        }
+
+        // Venta con IVA y una nota de crédito aceptada. La venta puede estar anulada (es justo lo que la nota habilita).
+        private async Task<(SaleViewModel Sale, InvoiceViewModel CreditNote, InvoiceViewModel? Original)?> LoadAcceptedCreditNoteAsync(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Sale/{id}");
+            if (!response.IsSuccessStatusCode) return null;
+            var sale = await response.Content.ReadFromJsonAsync<SaleViewModel>();
+            if (sale is null || !sale.ApplyIva) return null;
+
+            var invoiceResponse = await client.GetAsync($"api/Invoice/sale/{id}");
+            if (!invoiceResponse.IsSuccessStatusCode) return null;
+            var invoices = await invoiceResponse.Content.ReadFromJsonAsync<List<InvoiceViewModel>>() ?? new();
+            var creditNote = invoices.Where(i => i.IsCreditNote && i.Status == InvoiceUi.Accepted).OrderByDescending(i => i.Id).FirstOrDefault();
+            if (creditNote is null) return null;
+            return (sale, creditNote, invoices.FirstOrDefault(i => i.Id == creditNote.ReferenceInvoiceID));
+        }
+
         public static DateTime InvoiceLocalTime(InvoiceViewModel invoice) =>
             TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(invoice.IssuedOn, DateTimeKind.Utc), "America/Costa_Rica");
 

@@ -30,5 +30,7 @@ namespace CatalogStore.BackendAPI.DTO.Order
         public string CreatedBy { get; set; } = string.Empty;
         [Display(Name = "Creado el")]
         public DateTime CreatedOn { get; set; }
+        // Solo en revisión: cuándo se cancela sola si no se completa (UTC). null si no aplica o la función está apagada.
+        public DateTime? ExpiresOn { get; set; }
     }
 }

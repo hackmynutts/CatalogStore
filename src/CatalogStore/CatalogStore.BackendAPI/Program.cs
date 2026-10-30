@@ -163,6 +163,10 @@ builder.Services.AddScoped<EmailOutboxProcessor>();
 builder.Services.AddSingleton<IEmailTransport, SmtpEmailTransport>();
 builder.Services.AddHostedService<EmailOutboxWorker>();
 
+// Órdenes en revisión (Pending) por más de Orders:PendingExpirationDays: se cancelan solas y se libera lo reservado.
+builder.Services.AddScoped<OrderExpirationProcessor>();
+builder.Services.AddHostedService<OrderExpirationWorker>();
+
 //JWT Services
 builder.Services.AddAuthentication(options =>
 {
