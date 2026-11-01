@@ -48,8 +48,9 @@ namespace CatalogStore.BackendAPI.Services.Orders
         private readonly IOptions<OrdersOptions> _ordersOptions;
         private readonly TimeProvider _time;
         private readonly ISalesServices _salesServices;
+        private readonly ICreditBlockServices _creditBlock;
         public OrderServices(IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices, IProductRepository productRepository, 
-                                IClientServices clientServices, IEventlogServices eventlogServices, IOptions<PricingOptions> pricingOptions, IOptions<OrdersOptions> ordersOptions, TimeProvider time, ISalesServices salesServices)
+                                IClientServices clientServices, IEventlogServices eventlogServices, IOptions<PricingOptions> pricingOptions, IOptions<OrdersOptions> ordersOptions, TimeProvider time, ISalesServices salesServices, ICreditBlockServices creditBlock)
         {
             _orderRepository = orderRepository;
             _inventoryLineRepository = inventoryLineRepository;
@@ -61,6 +62,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
             _ordersOptions = ordersOptions;
             _time = time;
             _salesServices = salesServices;
+            _creditBlock = creditBlock;
         }
 
         // ───────────────────────── Crear / abrir ─────────────────────────
@@ -81,6 +83,11 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 return CanAccess(existing, user, isAdmin)
                     ? OperationResult.Ok(existing.OrderID)
                     : OperationResult.Fail(InProcessByOtherMessage(existing));
+
+            // Solo al crear: una orden que ya estaba en proceso se puede seguir viendo, pero no se podrá completar mientras dure la mora.
+            var blocked = await _creditBlock.BlockMessageAsync(clientId);
+            if (blocked is not null)
+                return OperationResult.Fail(blocked);
 
             var order = await NewOrderAsync(clientId, user, now);
             await _orderRepository.SaveChangesAsync();
@@ -112,7 +119,12 @@ namespace CatalogStore.BackendAPI.Services.Orders
             var order = await _orderRepository.GetInProcessByClientForUpdateAsync(clientId);
             var isNewOrder = order is null;
             if (order is null)
+            {
+                var blocked = await _creditBlock.BlockMessageAsync(clientId);
+                if (blocked is not null)
+                    return OperationResult.Fail(blocked);
                 order = await NewOrderAsync(clientId, user, now);
+            }
             else if (!CanAccess(order, user, isAdmin))
                 return OperationResult.Fail(InProcessByOtherMessage(order));
 
@@ -504,6 +516,11 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 return OperationResult.Fail(loadError!);
             if (order.OrderLines.Count == 0)
                 return OperationResult.Fail("La orden no tiene productos.");
+
+            // La mora se mira otra vez al completar: el cliente pudo cruzar el límite mientras la orden estaba en revisión.
+            var blocked = await _creditBlock.BlockMessageAsync(order.ClientID);
+            if (blocked is not null)
+                return await CompleteFailAsync(order, blocked);
 
             var (products, productError) = await LoadSellableProductsAsync(order);
             if (products is null)

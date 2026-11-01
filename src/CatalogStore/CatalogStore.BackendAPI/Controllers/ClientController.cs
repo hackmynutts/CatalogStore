@@ -44,6 +44,40 @@ namespace CatalogStore.BackendAPI.Controllers
             return Ok(result);
         }
 
+        // GET api/Client/5/credit-status — mora del cliente (ventas vencidas, si está bloqueado, excepción vigente)
+        [HttpGet("{id:int}/credit-status")]
+        public async Task<IActionResult> GetCreditStatus(int id, [FromServices] ICreditBlockServices creditBlock)
+        {
+            var status = await creditBlock.GetStatusAsync(id);
+            return status is null ? NotFound(new { message = CreditBlockServices.NotFoundMessage }) : Ok(status);
+        }
+
+        // PUT api/Client/5/credit-override — el administrador deja vender a un cliente bloqueado hasta una fecha, con motivo
+        [HttpPut("{id:int}/credit-override")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> PutCreditOverride(int id, [FromBody] SetCreditOverrideDTO dto, [FromServices] ICreditBlockServices creditBlock)
+        {
+            var user = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
+            return ToCreditResponse(await creditBlock.SetOverrideAsync(id, dto, user));
+        }
+
+        // DELETE api/Client/5/credit-override — retira la excepción
+        [HttpDelete("{id:int}/credit-override")]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> DeleteCreditOverride(int id, [FromServices] ICreditBlockServices creditBlock)
+        {
+            var user = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
+            return ToCreditResponse(await creditBlock.ClearOverrideAsync(id, user));
+        }
+
+        private IActionResult ToCreditResponse(CatalogStore.BackendAPI.DTO.Common.OperationResult result)
+        {
+            if (result.Success) return Ok(new { id = result.Id });
+            return result.Error == CreditBlockServices.NotFoundMessage
+                ? NotFound(new { message = result.Error })
+                : BadRequest(new { message = result.Error });
+        }
+
         // POST api/<ClientController>
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] AddClientDTO cliente)

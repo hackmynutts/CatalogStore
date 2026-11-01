@@ -21,8 +21,23 @@ namespace CatalogStore.BackendAPI.Repository.Sales
         }
         public async Task<SalesHeader?> GetForUpdateAsync(int salesHeaderId) =>
             await _context.SalesHeaders.Include(s => s.Payments).FirstOrDefaultAsync(s => s.SalesHeaderID == salesHeaderId);
+        // Misma definición de "vencida" que SalesServices.Overdue y GetListAsync: con saldo (Pendiente o Parcial) y vencimiento anterior a hoy.
+        // Las anuladas y las pagadas no cuentan. Cuentan todas: de contado sin pagar, con o sin IVA.
+        public Task<int> CountOverdueByClientAsync(int clientId, DateOnly today) =>
+            _context.SalesHeaders.AsNoTracking()
+                .CountAsync(s => s.ClientID == clientId
+                                 && (s.PaymentStatus == PaymentStatus.Pending || s.PaymentStatus == PaymentStatus.PartiallyPaid)
+                                 && s.DueDate < today);
         public Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
         public void DiscardChanges() => _context.ChangeTracker.Clear();
+
+        public async Task<SalesHeader?> GetForExchangeAsync(int salesHeaderId) =>
+            await _context.SalesHeaders
+                .Include(s => s.Order)
+                .Include(s => s.Lines)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(s => s.SalesHeaderID == salesHeaderId);
+        public void AddExchange(Models.SalesExchange.SalesExchange exchange) => _context.SalesExchanges.Add(exchange);
 
         public async Task<SalesHeader?> GetForVoidAsync(int salesHeaderId) =>
             await _context.SalesHeaders
@@ -35,6 +50,7 @@ namespace CatalogStore.BackendAPI.Repository.Sales
                 .Include(s => s.Order)
                 .Include(s => s.Lines)
                 .Include(s => s.Payments)
+                .Include(s => s.Exchanges)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(s => s.SalesHeaderID == salesHeaderId);
 
@@ -43,6 +59,7 @@ namespace CatalogStore.BackendAPI.Repository.Sales
                 .Include(s => s.Order)
                 .Include(s => s.Lines)
                 .Include(s => s.Payments)
+                .Include(s => s.Exchanges)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(s => s.OrderID == orderId);
 

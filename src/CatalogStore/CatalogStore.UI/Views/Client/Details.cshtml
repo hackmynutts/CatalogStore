@@ -7,6 +7,7 @@
     var clientSales = ViewData["Sales"] as List<CatalogStore.UI.Models.Sales.SaleListItemViewModel> ?? new();
     var clientDebt = clientSales.Where(s => s.PaymentStatus != CatalogStore.UI.Models.Sales.PaymentStatus.Voided).Sum(s => s.Balance);
     var clientOverdue = clientSales.Where(s => s.IsOverdue).Sum(s => s.Balance);
+    var credit = ViewData["Credit"] as CatalogStore.UI.Models.Client.CreditStatusViewModel;
     string CreditoLabel(int? c) => c switch
     {
         0 => "Contado",
@@ -53,6 +54,48 @@
         <a asp-controller="Client" asp-action="Index" class="btn btn-sm btn-outline-secondary" style="width:auto;"><i class="fa-solid fa-arrow-left"></i> Volver</a>
     </div>
 </div>
+
+@if (credit is { IsBlocked: true })
+{
+    <div class="credit-alert is-blocked" role="alert">
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        <div class="credit-alert-body">
+            <strong>Bloqueado por mora</strong>
+            <span>Tiene @credit.OverdueCount ventas vencidas (el límite es @credit.Threshold). No se pueden iniciar ni completar órdenes hasta que se regularicen.</span>
+        </div>
+        @if (canSeeAudit)
+        {
+            <button type="button" class="btn btn-sm btn-outline-danger btn-credit-override" data-client-id="@Model.Id" style="width:auto;">
+                <i class="fa-solid fa-unlock" aria-hidden="true"></i> Autorizar excepción
+            </button>
+        }
+    </div>
+}
+else if (credit is { OverrideActive: true })
+{
+    <div class="credit-alert is-override" role="status">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <div class="credit-alert-body">
+            <strong>Excepción por mora vigente hasta el @credit.OverrideUntil!.Value.ToString("dd/MM/yyyy")</strong>
+            <span>Tiene @credit.OverdueCount ventas vencidas. Motivo: @credit.OverrideReason (autorizó @credit.OverrideBy).</span>
+        </div>
+        @if (canSeeAudit)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-credit-clear" data-client-id="@Model.Id" style="width:auto;">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i> Retirar excepción
+            </button>
+        }
+    </div>
+}
+else if (credit is { OverdueCount: > 0, Threshold: > 0 })
+{
+    <div class="credit-alert is-notice" role="status">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <div class="credit-alert-body">
+            <span>Tiene @(credit.OverdueCount == 1 ? "1 venta vencida" : $"{credit.OverdueCount} ventas vencidas"). Con @credit.Threshold queda bloqueado para iniciar y completar órdenes.</span>
+        </div>
+    </div>
+}
 
 <div class="row">
     <div class="col-12">
@@ -224,5 +267,11 @@
         </div>
         <form style="display:none">@Html.AntiForgeryToken()</form>
         <script src="~/js/order-start.js" asp-append-version="true"></script>
+    }
+
+    @if (canSeeAudit)
+    {
+        <form id="creditTokenForm" hidden>@Html.AntiForgeryToken()</form>
+        <script src="~/js/client-credit.js" asp-append-version="true"></script>
     }
 }

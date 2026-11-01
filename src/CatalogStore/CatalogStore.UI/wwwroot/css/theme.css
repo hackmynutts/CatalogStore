@@ -2014,6 +2014,12 @@ body.order-busy main {
     text-decoration: line-through;
 }
 
+/* Movimiento de inventario "Venta" (verde de la marca) */
+.badge-tx-sale {
+    background: var(--brand-primary);
+    color: #fff;
+}
+
 /* Movimiento de inventario "Devolución por anulación" */
 .badge-tx-return {
     background: #ccfbf1;
@@ -2978,3 +2984,109 @@ body.order-busy main {
     font-weight: 600;
 }
 
+
+/* ---------- Bloqueo por mora en el perfil del cliente (.credit-alert) ---------- */
+.credit-alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+}
+
+.credit-alert > i {
+    font-size: 1.15rem;
+}
+
+.credit-alert-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9rem;
+}
+
+.credit-alert.is-blocked {
+    background: var(--danger-bg);
+    border-color: #f1b5b0;
+    color: #9a2b22;
+}
+
+.credit-alert.is-override {
+    background: #fff6df;
+    border-color: #ecd593;
+    color: #7a5a0d;
+}
+
+.credit-alert.is-notice {
+    background: var(--brand-primary-light);
+    border-color: #c9dcd6;
+    color: var(--brand-primary-dark);
+}
+
+@media (max-width: 575.98px) {
+    .credit-alert {
+        flex-wrap: wrap;
+    }
+}
+
+/* ---------- Cambios por producto defectuoso en el detalle de la venta (.sale-exchange-*) ---------- */
+.sale-exchange-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sale-exchange-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef0f2;
+}
+
+.sale-exchange-list li:last-child {
+    border-bottom: 0;
+}
+
+.sale-exchange-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.sale-exchange-product {
+    font-weight: 600;
+}
+
+.sale-exchange-reason {
+    font-size: 0.88rem;
+    color: #6b7280;
+    overflow-wrap: anywhere;
+}
+
+.sale-exchange-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 0.8rem;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+    .sale-exchange-list li {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .sale-exchange-side {
+        align-items: flex-start;
+        flex-direction: row;
+        gap: 10px;
+    }
+}

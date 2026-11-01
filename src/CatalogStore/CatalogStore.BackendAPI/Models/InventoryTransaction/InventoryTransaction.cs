@@ -15,7 +15,9 @@ namespace CatalogStore.BackendAPI.Models.InventoryTransaction
         AjustePositivo = 6,
         AjusteNegativo = 7,
         [Display(Name = "Devolución por anulación")]
-        Devolucion = 8
+        Devolucion = 8,
+        [Display(Name = "Merma por cambio")]
+        Merma = 9
     }
     public enum ReferenceType
     {

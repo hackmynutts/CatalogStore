@@ -169,6 +169,8 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
                 return "Los movimientos de órdenes requieren el número de orden.";
             if (type is TransactionType.Devolucion && string.IsNullOrWhiteSpace(referenceId))
                 return "Los movimientos de devolución de una venta requieren el número de la venta.";
+            if (type is TransactionType.Merma && (string.IsNullOrWhiteSpace(referenceId) || string.IsNullOrWhiteSpace(reason)))
+                return "Los movimientos de merma requieren el número de la venta y el motivo.";
             return null;
         }
 
@@ -181,6 +183,8 @@ namespace CatalogStore.BackendAPI.Services.InventoryTransactions
             TransactionType.Venta => (-q, -q),
             TransactionType.AjusteNegativo => (-q, 0),
             TransactionType.Devolucion => (q,0),
+            // Cambio por defecto: la unidad de reemplazo sale del stock; la defectuosa que devuelve el cliente se descarta.
+            TransactionType.Merma => (-q, 0),
             _ => throw new ArgumentOutOfRangeException(nameof(type))
         };
 

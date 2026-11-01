@@ -12,6 +12,7 @@ namespace CatalogStore.UI.Models.InventoryTransaction
         Venta = 5,
         AjustePositivo = 6,
         AjusteNegativo = 7,
-        Devolucion = 8
+        Devolucion = 8,
+        Merma = 9
     }
 }

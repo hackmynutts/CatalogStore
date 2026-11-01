@@ -7,6 +7,7 @@ using CatalogStore.BackendAPI.Models.Invoice;
 using CatalogStore.BackendAPI.Repository.Invoices;
 using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
+using CatalogStore.BackendAPI.Models.SalesExchange;
 using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
 using CatalogStore.BackendAPI.Models.SalesPayment;
@@ -313,6 +314,88 @@ namespace CatalogStore.BackendAPI.Services.Sales
             }
         }
 
+        // ───────────────────────── Cambio por producto defectuoso ─────────────────────────
+
+        // Solo admin. El cliente devuelve unidades defectuosas de una línea y recibe las mismas unidades del mismo producto:
+        // no cambia dinero, totales, abonos ni factura (mismo producto, mismo precio). Deja el cambio registrado en la venta
+        // y saca del stock la unidad de reemplazo con un movimiento Merma (la defectuosa se descarta).
+        // Todo en un solo guardado. La cabecera se toca para que el RowVersion detecte una anulación o un abono simultáneos.
+        public async Task<OperationResult> ExchangeAsync(int salesHeaderId, ExchangeSaleDTO dto, string user, bool isAdmin)
+        {
+            if (!isAdmin)
+                return OperationResult.Fail("Solo un administrador puede registrar cambios por producto defectuoso.");
+            var reason = dto.Reason?.Trim();
+            if (string.IsNullOrEmpty(reason))
+                return OperationResult.Fail("Indique el motivo del cambio.");
+            if (reason.Length > 250)
+                return OperationResult.Fail("El motivo no puede exceder los 250 caracteres.");
+            if (dto.Quantity <= 0)
+                return OperationResult.Fail("La cantidad debe ser al menos 1.");
+
+            try
+            {
+                var now = _time.GetUtcNow().UtcDateTime;
+                var sale = await _salesRepository.GetForExchangeAsync(salesHeaderId);
+                if (sale is null)
+                    return OperationResult.Fail(NotFoundMessage);
+                if (sale.PaymentStatus == PaymentStatus.Voided)
+                    return OperationResult.Fail($"La venta {sale.SaleNumber} está anulada: no admite cambios.");
+                if (sale.Order.OrderStatus != OrderStatus.Completed)
+                    return OperationResult.Fail($"La orden {sale.Order.OrderNumber} está {sale.Order.OrderStatus.Humanize().ToLower()}: la venta no admite cambios.");
+
+                var line = sale.Lines.FirstOrDefault(l => l.SalesLineID == dto.SalesLineID);
+                if (line is null)
+                    return OperationResult.Fail("Ese producto no pertenece a la venta.");
+                if (dto.Quantity > line.Quantity)
+                    return OperationResult.Fail($"{line.ProductCode}: la venta tiene {line.Quantity} unidad(es); no se pueden cambiar {dto.Quantity}.");
+
+                var inventoryLines = await _inventoryLineRepository.GetForUpdateByProductsAsync(new[] { line.ProductID });
+                if (!inventoryLines.TryGetValue(line.ProductID, out var inventoryLine))
+                    return OperationResult.Fail($"{line.ProductCode}: no está en el inventario.");
+
+                var move = _inventoryTransactionServices.ApplyMovement(inventoryLine, TransactionType.Merma, dto.Quantity,
+                    ReferenceType.Venta, sale.SaleNumber, $"Cambio por defecto: {reason}", user, now);
+                if (!move.Success)
+                    return OperationResult.Fail($"{line.ProductCode}: no se pudo sacar la unidad de reemplazo del inventario. {move.Error}");
+
+                var exchange = new SalesExchange
+                {
+                    SalesHeaderID = sale.SalesHeaderID,
+                    SalesLineID = line.SalesLineID,
+                    ProductID = line.ProductID,
+                    ProductCode = line.ProductCode,
+                    ProductName = line.ProductName,
+                    Quantity = dto.Quantity,
+                    Reason = reason,
+                    CreatedBy = user,
+                    CreatedOn = now
+                };
+                _salesRepository.AddExchange(exchange);
+                sale.ModifiedBy = user;
+                sale.ModifiedOn = now;
+
+                // Mismo contexto: cambio, inventario y movimiento en un solo guardado.
+                await _salesRepository.SaveChangesAsync();
+
+                await _eventlogServices.LogAsync(typeEvent.Edit, ModuleName, SalesTable, sale.SalesHeaderID.ToString(),
+                    $"Cambio por defecto en la venta {sale.SaleNumber}: {dto.Quantity} x {line.ProductCode}. Motivo: {reason}",
+                    postData: new { sale.SalesHeaderID, sale.SaleNumber, line.SalesLineID, line.ProductID, line.ProductCode, dto.Quantity, Reason = reason });
+                return OperationResult.Ok(sale.SalesHeaderID);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _salesRepository.DiscardChanges();
+                return OperationResult.Fail("La venta o el inventario cambió mientras se procesaba. Revisá el detalle e intentá de nuevo.");
+            }
+            catch (Exception ex)
+            {
+                _salesRepository.DiscardChanges();
+                await _eventlogServices.LogAsync(typeEvent.EditFail, ModuleName, SalesTable, salesHeaderId.ToString(),
+                    "Excepción no controlada al registrar un cambio por producto defectuoso.", stackTrace: ex.ToString());
+                throw;
+            }
+        }
+
         // ───────────────────────── Anulación ─────────────────────────
 
         // Anula la venta completa (solo admin). Exige que no queden abonos vigentes: la plata recibida se anula
@@ -543,6 +626,18 @@ namespace CatalogStore.BackendAPI.Services.Sales
                     VoidedReason = p.VoidedReason,
                     CreatedBy = p.CreatedBy,
                     CreatedOn = p.CreatedOn
+                }).ToList(),
+                Exchanges = sale.Exchanges.OrderByDescending(x => x.CreatedOn).ThenByDescending(x => x.SalesExchangeID).Select(x => new SaleExchangeDTO
+                {
+                    SalesExchangeID = x.SalesExchangeID,
+                    SalesLineID = x.SalesLineID,
+                    ProductID = x.ProductID,
+                    ProductCode = x.ProductCode,
+                    ProductName = x.ProductName,
+                    Quantity = x.Quantity,
+                    Reason = x.Reason,
+                    CreatedBy = x.CreatedBy,
+                    CreatedOn = x.CreatedOn
                 }).ToList()
             };
         }

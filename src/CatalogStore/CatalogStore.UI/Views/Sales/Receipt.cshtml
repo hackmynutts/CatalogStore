@@ -1,85 +1,109 @@
 @model CatalogStore.UI.Models.Sales.SaleViewModel
 @using CatalogStore.UI.Models.Sales
+@inject IConfiguration Configuration
 @{
     Layout = null;
-    var printed = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "America/Costa_Rica");
-    var vigentes = Model.Payments.Where(p => !p.IsVoided).ToList();
+    // Comprobante de una venta SIN IVA: mismo formato que la factura y la proforma, con impresión y descarga. No es un documento fiscal.
+    // No muestra pagos ni saldo: es lo que se le entrega al cliente.
+    var saleLocal = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(Model.SaleDate, DateTimeKind.Utc), "America/Costa_Rica");
     string Money(decimal v) => "₡" + v.ToString("N2");
+    var contact = string.Join(" · ", new[] { (Configuration["Landing:WhatsApp"] ?? string.Empty).Trim(), (Configuration["Landing:Email"] ?? string.Empty).Trim() }.Where(x => x.Length > 0));
 }
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tiquete @Model.SaleNumber</title>
+    <title>Comprobante de venta @Model.SaleNumber</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/print-docs.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
-    <style media="print">@@page { size: 80mm auto; margin: 3mm; }</style>
 </head>
 <body class="print-doc-page">
-    <div class="print-toolbar" style="max-width:302px;">
-        <a asp-action="Details" asp-route-id="@Model.SalesHeaderID" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver</a>
-        <button type="button" class="btn btn-brand btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</button>
+    <div class="print-toolbar">
+        <a asp-action="Details" asp-route-id="@Model.SalesHeaderID" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver a la venta</a>
+        <a asp-action="ReceiptPdf" asp-route-id="@Model.SalesHeaderID" class="btn btn-brand btn-sm" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</button>
     </div>
 
-    <main class="rc-sheet">
-        <div class="rc-center">
-            <div class="rc-brand">SAM DESIGN</div>
-            <div class="rc-title">TIQUETE DE CAJA</div>
-            <div class="rc-legend">Comprobante no fiscal</div>
-        </div>
-        <hr class="rc-sep" />
-        <div class="rc-row"><span>Venta</span><span>@Model.SaleNumber</span></div>
-        <div class="rc-row"><span>Fecha</span><span>@Model.SaleDate.ToString("dd/MM/yyyy HH:mm")</span></div>
-        <div>Cliente: @Model.ClientName</div>
-        <div>Vendedor: @Model.Seller</div>
-        <hr class="rc-sep" />
-
-        @foreach (var l in Model.Lines)
-        {
-            <div class="rc-line">
-                <div class="rc-line-name">@l.ProductName</div>
-                <div class="rc-row">
-                    <span>@l.Quantity x @Money(l.UnitPrice)@(l.Discount > 0 ? $" (-{l.Discount:0.##}%)" : "")</span>
-                    <span>@Money(l.LineSubtotal)</span>
-                </div>
+    <main class="pf-sheet">
+        <header class="pf-head">
+            <div class="pf-brand">
+                <img src="~/img/logos/logo_pequeño-removebg-preview.png" alt="SAM DESIGN" />
+                <div class="pf-brand-name">SAM DESIGN</div>
+                @if (contact.Length > 0)
+                {
+                    <div class="pf-brand-contact">@contact</div>
+                }
             </div>
-        }
-        <hr class="rc-sep" />
+            <div class="pf-title">
+                <h1>COMPROBANTE DE VENTA</h1>
+                <div class="pf-number">N.º @Model.SaleNumber</div>
+                <div class="pf-dates">Fecha: @saleLocal.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </header>
 
-        @if (Model.DiscountTotal > 0)
-        {
-            <div class="rc-row"><span>Subtotal</span><span>@Money(Model.Subtotal + Model.DiscountTotal)</span></div>
-            <div class="rc-row"><span>Descuento</span><span>− @Money(Model.DiscountTotal)</span></div>
-        }
-        <div class="rc-row rc-total"><span>TOTAL</span><span>@Money(Model.TotalAmount)</span></div>
-        <div class="rc-center rc-legend">Venta sin IVA</div>
+        <section class="pf-parties">
+            <div class="pf-box">
+                <h2>Cliente</h2>
+                <strong>@Model.ClientName</strong>@(string.IsNullOrWhiteSpace(Model.ClientCC) ? "" : $" ({Model.ClientCC})")<br />
+                Identificación: @Model.ClientIdentification
+                @if (!string.IsNullOrWhiteSpace(Model.ClientPhone)) { <text><br />Tel. @Model.ClientPhone</text> }
+                @if (!string.IsNullOrWhiteSpace(Model.ClientEmail)) { <text><br />@Model.ClientEmail</text> }
+                @if (!string.IsNullOrWhiteSpace(Model.ClientAddress)) { <text><br />@Model.ClientAddress</text> }
+            </div>
+            <div class="pf-box">
+                <h2>Detalle</h2>
+                Venta: @Model.SaleNumber<br />
+                Vendedor: @Model.Seller<br />
+                Condición: @Model.PaymentTermName<br />
+                Vence: @Model.DueDate.ToString("dd/MM/yyyy")<br />
+                Moneda: colones (₡)
+            </div>
+        </section>
 
-        @if (vigentes.Count > 0)
-        {
-            <hr class="rc-sep" />
-            @foreach (var p in vigentes)
+        <table class="pf-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th class="num">Cant.</th>
+                    <th class="num">Precio</th>
+                    <th class="num">Desc.</th>
+                    <th class="num">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in Model.Lines)
+                {
+                    <tr>
+                        <td>@l.ProductName@if (!string.IsNullOrWhiteSpace(l.ProductCode)) { <span class="pf-code">@l.ProductCode</span> }</td>
+                        <td class="num">@l.Quantity</td>
+                        <td class="num">@Money(l.UnitPrice)</td>
+                        <td class="num">@(l.Discount > 0 ? l.Discount.ToString("0.##") + " %" : "—")</td>
+                        <td class="num">@Money(l.LineSubtotal)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="pf-totals">
+            @if (Model.DiscountTotal > 0)
             {
-                <div class="rc-row"><span>@p.PaymentMethodName @p.PaymentDate.ToString("dd/MM")</span><span>@Money(p.Amount)</span></div>
+                <div><span>Subtotal</span><span>@Money(Model.Subtotal + Model.DiscountTotal)</span></div>
+                <div><span>Descuento</span><span>− @Money(Model.DiscountTotal)</span></div>
             }
-            <div class="rc-row"><span>Pagado</span><span>@Money(Model.AmountPaid)</span></div>
-            <div class="rc-row"><span>Saldo</span><span>@Money(Model.Balance)</span></div>
-            @if (Model.Balance > 0)
-            {
-                <div class="rc-legend">Vence: @Model.DueDate.ToString("dd/MM/yyyy")</div>
-            }
-        }
-        else if (Model.Balance > 0)
+            <div class="pf-total"><span>Total</span><span>@Money(Model.TotalAmount)</span></div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
         {
-            <div class="rc-row"><span>Saldo</span><span>@Money(Model.Balance)</span></div>
-            <div class="rc-legend">Vence: @Model.DueDate.ToString("dd/MM/yyyy")</div>
+            <div class="pf-notes"><strong>Notas:</strong> @Model.Notes</div>
         }
 
-        <hr class="rc-sep" />
-        <div class="rc-center">¡Gracias por su compra!</div>
-        <div class="rc-center rc-legend">Impreso @printed.ToString("dd/MM/yyyy HH:mm")</div>
+        <div class="pf-legal">
+            Venta sin IVA. Este comprobante es un documento no fiscal: no es una factura electrónica ni la sustituye.
+        </div>
     </main>
 </body>
 </html>

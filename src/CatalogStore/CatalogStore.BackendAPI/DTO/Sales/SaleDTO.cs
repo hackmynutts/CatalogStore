@@ -46,6 +46,20 @@ namespace CatalogStore.BackendAPI.DTO.Sales
         public DateTime CreatedOn { get; set; }
         public List<SaleLineDTO> Lines { get; set; } = new();
         public List<SalePaymentDTO> Payments { get; set; } = new();
+        public List<SaleExchangeDTO> Exchanges { get; set; } = new();
+    }
+
+    public class SaleExchangeDTO
+    {
+        public int SalesExchangeID { get; set; }
+        public int SalesLineID { get; set; }
+        public int ProductID { get; set; }
+        public string? ProductCode { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; }
     }
 
     public class SaleLineDTO

@@ -5,9 +5,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Threading.RateLimiting;
 
 
-
-// QuestPDF genera los PDF (proforma). Licencia Community: gratis para empresas con menos de 1 millón de USD de ingresos al año;
-// si el cliente supera ese tope necesita una licencia comercial (https://www.questpdf.com/license/).
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -127,6 +127,7 @@ builder.Services.AddScoped<ICatalogExternalServices, CatalogExternalServices>();
 builder.Services.AddScoped<IProductImportServices, ProductImportServices>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientServices, ClientServices>();
+builder.Services.AddScoped<ICreditBlockServices, CreditBlockServices>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductServices, ProductServices>();
 builder.Services.AddScoped<ICabysServices, CabysServices>();
@@ -233,6 +234,9 @@ if (app.Environment.IsDevelopment())
     }
 
 }
+// HSTS solo fuera de desarrollo: el navegador recuerda que este dominio solo se usa por HTTPS (igual que la UI).
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
 app.UseHttpsRedirection();
 
 // Cultura de cada request (textos de Humanizer, formatos). La API recibe y devuelve JSON, que no depende de la cultura.

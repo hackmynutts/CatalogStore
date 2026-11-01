@@ -55,5 +55,6 @@ namespace CatalogStore.BackendAPI.Models.SalesHeader
         public Models.Order.Order Order { get; set; } = null!;
         public ICollection<Models.SalesLine.SalesLine> Lines { get; set; } = new List<Models.SalesLine.SalesLine>();
         public ICollection<Models.SalesPayment.SalesPayment> Payments { get; set; } = new List<Models.SalesPayment.SalesPayment>();
+        public ICollection<Models.SalesExchange.SalesExchange> Exchanges { get; set; } = new List<Models.SalesExchange.SalesExchange>();
     }
 }

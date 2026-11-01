@@ -35,6 +35,23 @@ namespace CatalogStore.BackendAPI.DTO.Sales
         public string Reason { get; set; } = string.Empty;
     }
 
+    // Cambio por producto defectuoso (solo admin): unidades de una línea de la venta. 250 = largo de SalesExchange.Reason.
+    public class ExchangeSaleDTO
+    {
+        [Display(Name = "Línea")]
+        [Range(1, int.MaxValue, ErrorMessage = "Elija el producto.")]
+        public int SalesLineID { get; set; }
+
+        [Display(Name = "Cantidad")]
+        [Range(1, 100000, ErrorMessage = "La cantidad debe ser al menos 1.")]
+        public int Quantity { get; set; }
+
+        [Display(Name = "Motivo")]
+        [Required(ErrorMessage = "Indique el motivo del cambio.")]
+        [StringLength(250, ErrorMessage = "El motivo no puede exceder los 250 caracteres.")]
+        public string Reason { get; set; } = string.Empty;
+    }
+
     // Anular una venta completa (solo admin). 250 = largo de SalesHeader.VoidedReason.
     public class VoidSaleDTO
     {

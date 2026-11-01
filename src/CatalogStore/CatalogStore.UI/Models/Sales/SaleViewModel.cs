@@ -90,6 +90,20 @@ namespace CatalogStore.UI.Models.Sales
         public bool IsVoided => PaymentStatus == PaymentStatus.Voided;
         public List<SaleLineViewModel> Lines { get; set; } = new();
         public List<SalePaymentViewModel> Payments { get; set; } = new();
+        public List<SaleExchangeViewModel> Exchanges { get; set; } = new();
+    }
+
+    // Cambio por producto defectuoso registrado en la venta (api/Sale/{id} → exchanges).
+    public class SaleExchangeViewModel
+    {
+        public int SalesExchangeID { get; set; }
+        public int SalesLineID { get; set; }
+        public string? ProductCode { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; }
     }
 
     public class SaleLineViewModel

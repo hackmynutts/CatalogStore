@@ -52,6 +52,9 @@ namespace CatalogStore.BackendAPI.Models.Client
         public DateTime CreatedOn { get; set; }
         public string? ModifiedBy { get; set; } 
         public DateTime? ModifiedOn { get; set; }
+        public DateOnly? CreditBlockOverrideUntil { get; set; }
+        public string? CreditBlockOverrideReason { get; set; }
+        public string? CreditBlockOverrideBy { get; set; }
         public Models.Status.Status Status { get; set; } = null!;
     }
 }

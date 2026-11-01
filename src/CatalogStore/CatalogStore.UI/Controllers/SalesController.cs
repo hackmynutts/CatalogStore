@@ -64,21 +64,38 @@ namespace CatalogStore.UI.Controllers
             return View(sale);
         }
 
-        // GET: Sales/Receipt/5 — tiquete de caja (impresión NO fiscal) de una venta sin IVA.
+        // GET: Sales/Receipt/5 — comprobante de venta (NO fiscal) de una venta sin IVA, con el formato de la factura: se imprime y se descarga.
         // Las ventas con IVA llevan factura electrónica y las anuladas no se imprimen: ambas vuelven al detalle.
         public async Task<IActionResult> Receipt(int id)
         {
-            var client = _httpClientFactory.CreateClient("BackendApi");
-            var response = await client.GetAsync($"api/Sale/{id}");
-            if (!response.IsSuccessStatusCode)
-                return NotFound();
-
-            var sale = await response.Content.ReadFromJsonAsync<SaleViewModel>();
-            if (sale is null)
-                return NotFound();
+            var sale = await LoadReceiptSaleAsync(id);
+            if (sale is null) return NotFound();
             if (sale.ApplyIva || sale.IsVoided)
                 return RedirectToAction(nameof(Details), new { id });
             return View(sale);
+        }
+
+        // GET: Sales/ReceiptPdf/5 — el mismo comprobante como archivo PDF.
+        public async Task<IActionResult> ReceiptPdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
+        {
+            var sale = await LoadReceiptSaleAsync(id);
+            if (sale is null) return NotFound();
+            if (sale.ApplyIva || sale.IsVoided)
+                return RedirectToAction(nameof(Details), new { id });
+
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var saleLocal = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc), "America/Costa_Rica");
+            var document = new Documents.SaleReceiptPdfDocument(sale, saleLocal, contact,
+                logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null);
+            return File(document.GeneratePdf(), "application/pdf", $"Comprobante-{sale.SaleNumber}.pdf");
+        }
+
+        private async Task<SaleViewModel?> LoadReceiptSaleAsync(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync($"api/Sale/{id}");
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SaleViewModel>() : null;
         }
 
         // GET: Sales/Invoice/5 — la factura electrónica ACEPTADA de la venta, para imprimirla con el formato de la casa.
@@ -91,7 +108,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Sales/InvoicePdf/5 — la misma factura como archivo PDF.
-        // Solo la factura: el tiquete de caja (ventas sin IVA) es de impresión y no tiene descarga.
+        // Solo la factura electrónica (ventas con IVA); las ventas sin IVA tienen su propio comprobante (ReceiptPdf).
         public async Task<IActionResult> InvoicePdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
         {
             var found = await LoadAcceptedInvoiceAsync(id);
@@ -200,6 +217,19 @@ namespace CatalogStore.UI.Controllers
             return response.IsSuccessStatusCode
                 ? Json(new { success = true })
                 : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo anular el abono.") });
+        }
+
+        // POST: Sales/Exchange — cambio por producto defectuoso: unidades de una línea se cambian por las mismas. Solo admin (lo valida la API).
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Exchange(int salesHeaderId, int salesLineId, int quantity, string? reason)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsJsonAsync($"api/Sale/{salesHeaderId}/exchange",
+                new { salesLineID = salesLineId, quantity, reason = reason ?? string.Empty });
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo registrar el cambio.") });
         }
 
         // POST: Sales/VoidSale — anular la venta completa. Solo admin y sin abonos vigentes (lo valida la API).

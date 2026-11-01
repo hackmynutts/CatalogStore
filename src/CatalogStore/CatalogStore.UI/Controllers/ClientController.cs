@@ -1,3 +1,4 @@
+using CatalogStore.UI.Handlers;
 using CatalogStore.UI.Models.Client;
 using CatalogStore.UI.Models.Order;
 using CatalogStore.UI.Models.Status;
@@ -62,7 +63,39 @@ namespace CatalogStore.UI.Controllers
             ViewData["Sales"] = salesResponse.IsSuccessStatusCode
                 ? await salesResponse.Content.ReadFromJsonAsync<List<CatalogStore.UI.Models.Sales.SaleListItemViewModel>>() ?? new()
                 : new List<CatalogStore.UI.Models.Sales.SaleListItemViewModel>();
+
+            // Mora del cliente (bloqueo por ventas vencidas). Si falla no se muestra el aviso, pero la API igual bloquea al operar.
+            var creditResponse = await client.GetAsync($"api/Client/{id}/credit-status");
+            ViewData["Credit"] = creditResponse.IsSuccessStatusCode
+                ? await creditResponse.Content.ReadFromJsonAsync<CreditStatusViewModel>()
+                : null;
             return View(cliente);
+        }
+
+        // POST: Client/CreditOverride/5 — el administrador autoriza vender a un cliente bloqueado por mora, hasta una fecha y con motivo.
+        [HttpPost]
+        [Authorize(Roles = "Admin,AdminIT")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreditOverride(int id, string? reason, DateOnly? until)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PutAsJsonAsync($"api/Client/{id}/credit-override", new { reason, until });
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo autorizar la excepción.") });
+        }
+
+        // POST: Client/ClearCreditOverride/5 — retira la excepción.
+        [HttpPost]
+        [Authorize(Roles = "Admin,AdminIT")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ClearCreditOverride(int id)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.DeleteAsync($"api/Client/{id}/credit-override");
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo retirar la excepción.") });
         }
 
         // GET: ClientController/Lookup?identification=117001454419 — proxy a Hacienda vía la API

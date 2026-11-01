@@ -12,6 +12,7 @@ using CatalogStore.BackendAPI.Models.Order;
 using CatalogStore.BackendAPI.Models.OrderLine;
 using CatalogStore.BackendAPI.Models.SalesHeader;
 using CatalogStore.BackendAPI.Models.SalesLine;
+using CatalogStore.BackendAPI.Models.SalesExchange;
 using CatalogStore.BackendAPI.Models.SalesPayment;
 using CatalogStore.BackendAPI.Models.EmailOutbox;
 using CatalogStore.BackendAPI.Models.Goal;
@@ -36,6 +37,7 @@ namespace CatalogStore.BackendAPI.Data
         public DbSet<SalesHeader> SalesHeaders { get; set; }
         public DbSet<SalesLine> SalesLines { get; set; }
         public DbSet<SalesPayment> SalesPayments { get; set; }
+        public DbSet<SalesExchange> SalesExchanges { get; set; }
         public DbSet<Goal> Goals { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -125,6 +127,10 @@ namespace CatalogStore.BackendAPI.Data
                     .HasMaxLength(140);
                 entity.Property(e => e.ModifiedBy)
                     .HasMaxLength(140);
+                entity.Property(e => e.CreditBlockOverrideBy)
+                    .HasMaxLength(140);
+                entity.Property(e => e.CreditBlockOverrideReason)
+                    .HasMaxLength(250);
                 entity.HasOne(e => e.Status)
                     .WithMany()
                     .HasForeignKey(e => e.StatusID)
@@ -486,6 +492,28 @@ namespace CatalogStore.BackendAPI.Data
                     t.HasCheckConstraint("CK_SalesPayment_Void_Consistent",
                                         "([IsVoided] = 0 AND [VoidedBy] IS NULL AND [VoidedOn] IS NULL AND [VoidedReason] IS NULL) " +
                                         "OR ([IsVoided] = 1 AND [VoidedBy] IS NOT NULL AND [VoidedOn] IS NOT NULL AND [VoidedReason] IS NOT NULL)");
+                });
+            });
+            builder.Entity<SalesExchange>(entity =>
+            {
+                entity.Property(e => e.ProductCode)
+                    .HasMaxLength(20);
+                entity.Property(e => e.ProductName)
+                    .HasMaxLength(150).IsRequired();
+                entity.Property(e => e.Reason)
+                    .HasMaxLength(250).IsRequired();
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(140).IsRequired();
+                entity.HasOne(e => e.SalesHeader)
+                    .WithMany(h => h.Exchanges)
+                    .HasForeignKey(e => e.SalesHeaderID)
+                    .HasConstraintName("FK_SalesExchange_SalesHeader_SalesHeaderID")
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.SalesHeaderID, e.CreatedOn })
+                    .HasDatabaseName("IX_SalesExchange_SalesHeaderID_CreatedOn");
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_SalesExchange_Quantity_Positive", "[Quantity] > 0");
                 });
             });
             builder.Entity<Invoice>(entity =>

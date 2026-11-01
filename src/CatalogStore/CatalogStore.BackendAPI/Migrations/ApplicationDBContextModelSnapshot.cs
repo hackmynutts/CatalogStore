@@ -181,6 +181,17 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreditBlockOverrideBy")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<string>("CreditBlockOverrideReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<DateOnly?>("CreditBlockOverrideUntil")
+                        .HasColumnType("date");
+
                     b.Property<int?>("Credito")
                         .HasColumnType("int");
 
@@ -1035,6 +1046,59 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.ToTable("ProductImages_TB", "dbo");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesExchange.SalesExchange", b =>
+                {
+                    b.Property<int>("SalesExchangeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesExchangeID"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<int>("SalesHeaderID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SalesLineID")
+                        .HasColumnType("int");
+
+                    b.HasKey("SalesExchangeID");
+
+                    b.HasIndex("SalesHeaderID", "CreatedOn")
+                        .HasDatabaseName("IX_SalesExchange_SalesHeaderID_CreatedOn");
+
+                    b.ToTable("SalesExchange_TB", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalesExchange_Quantity_Positive", "[Quantity] > 0");
+                        });
+                });
+
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
                 {
                     b.Property<int>("SalesHeaderID")
@@ -1623,6 +1687,18 @@ namespace CatalogStore.BackendAPI.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesExchange.SalesExchange", b =>
+                {
+                    b.HasOne("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", "SalesHeader")
+                        .WithMany("Exchanges")
+                        .HasForeignKey("SalesHeaderID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_SalesExchange_SalesHeader_SalesHeaderID");
+
+                    b.Navigation("SalesHeader");
+                });
+
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
                 {
                     b.HasOne("CatalogStore.BackendAPI.Models.Client.Client", "Client")
@@ -1740,6 +1816,8 @@ namespace CatalogStore.BackendAPI.Migrations
 
             modelBuilder.Entity("CatalogStore.BackendAPI.Models.SalesHeader.SalesHeader", b =>
                 {
+                    b.Navigation("Exchanges");
+
                     b.Navigation("Lines");
 
                     b.Navigation("Payments");

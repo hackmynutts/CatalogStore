@@ -13,6 +13,7 @@
     bool justCreated = ViewData["JustCreated"] as bool? == true;
     bool canPay = Model.Balance > 0 && !Model.IsVoided;
     bool canVoidSale = isAdmin && !Model.IsVoided;
+    bool canExchange = isAdmin && !Model.IsVoided;
     var pct = SalesUi.PaidPercent(Model.AmountPaid, Model.TotalAmount);
     var vigentes = Model.Payments.Count(p => !p.IsVoided);
     // Hoy en Costa Rica (el servidor puede estar en otra zona): límite del selector de fecha de pago.
@@ -124,6 +125,10 @@
                             <th class="text-end d-none d-xxl-table-cell">Subtotal</th>
                             <th class="text-end d-none d-xxl-table-cell">IVA</th>
                             <th class="text-end">Total</th>
+                            @if (canExchange)
+                            {
+                                <th class="text-end"><span class="visually-hidden">Acciones</span></th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
@@ -140,12 +145,44 @@
                                 <td class="text-end order-amount d-none d-xxl-table-cell">@SalesUi.Money(l.LineSubtotal)</td>
                                 <td class="text-end order-amount d-none d-xxl-table-cell">@SalesUi.Money(l.LineIva)</td>
                                 <td class="text-end order-amount fw-bold">@SalesUi.Money(l.LineTotalPrice)</td>
+                                @if (canExchange)
+                                {
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" style="width:auto;" data-action="exchange-line"
+                                                data-line-id="@l.SalesLineID" data-product="@l.ProductName" data-code="@l.ProductCode" data-max="@l.Quantity"
+                                                title="Cambio por producto defectuoso">
+                                            <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Cambio
+                                        </button>
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
         </div>
+
+        @if (Model.Exchanges.Any())
+        {
+            <div class="info-card">
+                <h2 class="info-card-title"><i class="fa-solid fa-arrows-rotate"></i> Cambios por defecto <span class="order-card-count">@Model.Exchanges.Count</span></h2>
+                <ul class="sale-exchange-list">
+                    @foreach (var x in Model.Exchanges)
+                    {
+                        <li>
+                            <div class="sale-exchange-main">
+                                <span class="sale-exchange-product">@x.Quantity &times; @x.ProductName <span class="order-line-meta">@x.ProductCode</span></span>
+                                <span class="sale-exchange-reason">@x.Reason</span>
+                            </div>
+                            <div class="sale-exchange-side">
+                                <span>@TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(x.CreatedOn, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica")).ToString("dd/MM/yyyy HH:mm")</span>
+                                <span>@x.CreatedBy</span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
 
         <div class="info-card">
             <h2 class="info-card-title">
@@ -205,16 +242,19 @@
             }
         </div>
 
-        @* Las ventas sin IVA no van a Hacienda: llevan un tiquete de caja (impresión no fiscal). *@
+        @* Las ventas sin IVA no van a Hacienda: llevan un comprobante de venta (mismo formato que la factura, no fiscal) que se imprime y se descarga. *@
         @if (!Model.ApplyIva && !Model.IsVoided)
         {
             <div class="info-card">
-                <h2 class="info-card-title"><i class="fa-solid fa-receipt"></i> Tiquete de caja</h2>
+                <h2 class="info-card-title"><i class="fa-solid fa-receipt"></i> Comprobante de venta</h2>
                 <div class="invoice-start">
                     <a asp-action="Receipt" asp-route-id="@Model.SalesHeaderID" class="btn btn-sm btn-brand btn-brand-auto" target="_blank" rel="noopener">
-                        <i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir tiquete
+                        <i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir
                     </a>
-                    <span class="invoice-hint">Esta venta es sin IVA: no se factura electrónicamente. El tiquete es un comprobante simple, <strong>no fiscal</strong>.</span>
+                    <a asp-action="ReceiptPdf" asp-route-id="@Model.SalesHeaderID" class="btn btn-sm btn-outline-secondary" download>
+                        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF
+                    </a>
+                    <span class="invoice-hint">Esta venta es sin IVA: no se factura electrónicamente. El comprobante es un documento <strong>no fiscal</strong>.</span>
                 </div>
             </div>
         }

@@ -17,6 +17,9 @@ namespace CatalogStore.BackendAPI.Services.Sales
 
         Task<OperationResult> RegisterPaymentAsync(int salesHeaderId, AddSalePaymentDTO dto, string user, bool isAdmin);
         Task<OperationResult> VoidPaymentAsync(int salesHeaderId, int salesPaymentId, VoidSalePaymentDTO dto, string user, bool isAdmin);
+        // Solo admin: unidades defectuosas de una línea se cambian por las mismas del mismo producto. Registra el cambio en la
+        // venta y saca la unidad de reemplazo del stock (Merma). No cambia totales, abonos ni factura.
+        Task<OperationResult> ExchangeAsync(int salesHeaderId, ExchangeSaleDTO dto, string user, bool isAdmin);
         // Solo admin y sin abonos vigentes: devuelve el stock, la venta queda Anulada y su orden Retornada.
         Task<OperationResult> VoidSaleAsync(int salesHeaderId, VoidSaleDTO dto, string user, bool isAdmin);
     }

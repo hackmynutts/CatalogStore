@@ -128,6 +128,48 @@ document.addEventListener('DOMContentLoaded', function () {
     // ───────── Anular venta (solo admin; el botón solo existe para admins) ─────────
     // Con abonos vigentes la API la rechaza: se avisa antes para no pedir un motivo que no va a servir.
 
+    // ───────── Cambio por producto defectuoso ─────────
+
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('[data-action="exchange-line"]');
+        if (!btn) return;
+
+        const max = Number(btn.dataset.max);
+        const { value: form } = await Swal.fire({
+            icon: 'question',
+            title: `Cambio por defecto`,
+            html:
+                `<p style="font-size:.95rem"><strong>${btn.dataset.product}</strong> <span class="text-muted">${btn.dataset.code || ''}</span><br>` +
+                `Se entrega la misma cantidad del mismo producto. No cambia el total, los pagos ni la factura de la venta. ` +
+                `La unidad de reemplazo sale del inventario y la defectuosa se descarta (merma).</p>` +
+                `<label for="exchangeQty" class="form-label" style="display:block;text-align:left">Unidades defectuosas (de ${max} vendidas)</label>` +
+                `<input id="exchangeQty" type="number" class="swal2-input" min="1" max="${max}" step="1" value="1" style="margin:0 0 12px;width:100%">` +
+                `<label for="exchangeReason" class="form-label" style="display:block;text-align:left">Motivo / defecto</label>` +
+                `<textarea id="exchangeReason" class="swal2-textarea" maxlength="250" placeholder="Ej.: llegó con la tapa rota" style="margin:0;width:100%"></textarea>`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Registrar cambio',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: brandColor,
+            preConfirm: () => {
+                const quantity = Number(document.getElementById('exchangeQty').value);
+                const reason = document.getElementById('exchangeReason').value.trim();
+                if (!Number.isInteger(quantity) || quantity < 1 || quantity > max) { Swal.showValidationMessage(`La cantidad debe ser entre 1 y ${max}.`); return false; }
+                if (!reason) { Swal.showValidationMessage('Escribí el motivo del cambio.'); return false; }
+                return { quantity, reason };
+            }
+        });
+        if (!form) return;
+
+        const result = await post('/Sales/Exchange', { salesLineId: btn.dataset.lineId, quantity: form.quantity, reason: form.reason });
+        if (!result.success) {
+            Swal.fire({ icon: 'error', title: 'No se pudo registrar el cambio', text: result.message || 'Intentá de nuevo.' });
+            return;
+        }
+        await Swal.fire({ icon: 'success', title: 'Cambio registrado', text: 'Quedó anotado en la venta y se actualizó el inventario.', timer: 1800, showConfirmButton: false });
+        location.reload();
+    });
+
     document.addEventListener('click', async function (e) {
         const btn = e.target.closest('[data-action="void-sale"]');
         if (!btn) return;
