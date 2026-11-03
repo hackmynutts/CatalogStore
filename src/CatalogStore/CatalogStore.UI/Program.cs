@@ -55,6 +55,21 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Una sola dirección para el sitio: www.samdesigncr.com redirige (301) a samdesigncr.com. Así Google no ve dos sitios iguales.
+// Solo si Seo:SiteUrl está configurado (producción).
+if (Uri.TryCreate((builder.Configuration["Seo:SiteUrl"] ?? string.Empty).Trim().TrimEnd('/'), UriKind.Absolute, out var canonicalSite))
+{
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Host.Host.Equals("www." + canonicalSite.Host, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.Redirect($"{canonicalSite.GetLeftPart(UriPartial.Authority)}{context.Request.Path}{context.Request.QueryString}", permanent: true);
+            return;
+        }
+        await next();
+    });
+}
+
 app.UseHttpsRedirection();
 app.UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}");
 app.UseRouting();

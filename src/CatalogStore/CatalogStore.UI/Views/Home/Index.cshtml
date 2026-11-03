@@ -1,8 +1,11 @@
 @inject IConfiguration Configuration
 @inject IWebHostEnvironment Env
 @{
-    ViewData["Title"] = "SAM Design";
+    ViewData["Title"] = "SAM DESIGN";
     ViewData["FullWidth"] = true;
+    ViewData["Indexable"] = true;
+    ViewData["FullTitle"] = "SAM DESIGN | Capas, jackets, guantes y accesorios para moto en Costa Rica";
+    ViewData["Description"] = "Protegemos tu viaje en dos ruedas. Capas impermeables, jackets de protección, guantes y accesorios para tu moto, en tallas de S a 3XL. Escríbenos por WhatsApp.";
 
     // Canales de contacto: se configuran en appsettings.json (sección "Landing"). Los vacíos no se muestran.
     var whatsApp = (Configuration["Landing:WhatsApp"] ?? string.Empty).Where(char.IsDigit).Aggregate(string.Empty, (acc, c) => acc + c);
@@ -33,6 +36,36 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" />
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    @if (!string.IsNullOrWhiteSpace(Configuration["Seo:SiteUrl"]))
+    {
+        // Datos estructurados (schema.org): le dicen a Google el nombre del sitio, el logo y los canales de contacto.
+        var site = Configuration["Seo:SiteUrl"]!.Trim().TrimEnd('/');
+        var organization = new Dictionary<string, object?>
+        {
+            ["@type"] = "Organization",
+            ["@id"] = site + "/#organization",
+            ["name"] = "SAM DESIGN",
+            ["url"] = site + "/",
+            ["logo"] = site + "/android-chrome-512x512.png",
+            ["image"] = site + "/img/og-sam-design.jpg",
+            ["description"] = "Capas impermeables, jackets de protección, guantes y accesorios para moto en Costa Rica.",
+            ["areaServed"] = "CR",
+            ["email"] = email.Length > 0 ? email : null,
+            ["telephone"] = hasWhatsApp ? "+" + whatsApp : null,
+            ["sameAs"] = instagram.Length > 0 ? new[] { "https://www.instagram.com/" + instagram } : null
+        }.Where(kv => kv.Value is not null).ToDictionary(kv => kv.Key, kv => kv.Value);
+        var website = new Dictionary<string, object?>
+        {
+            ["@type"] = "WebSite",
+            ["@id"] = site + "/#website",
+            ["url"] = site + "/",
+            ["name"] = "SAM DESIGN",
+            ["inLanguage"] = "es-CR"
+        };
+        var graph = new Dictionary<string, object?> { ["@context"] = "https://schema.org", ["@graph"] = new object[] { website, organization } };
+        // Raw: el "+" de ld+json no debe salir codificado como entidad HTML. El serializador ya escapa < y >, así que no puede cerrar el <script>.
+        @Html.Raw("<script type=\"application/ld+json\">" + System.Text.Json.JsonSerializer.Serialize(graph) + "</script>")
+    }
     <script>
         // Solo se ocultan los bloques animables si el usuario acepta movimiento. Sin JS, todo queda visible.
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

@@ -4,6 +4,9 @@
 @{
     ViewData["Title"] = "Catálogo";
     ViewData["FullWidth"] = true;
+    ViewData["Indexable"] = true;
+    ViewData["FullTitle"] = "Catálogo de productos para moto | SAM DESIGN";
+    ViewData["Description"] = "Conoce el catálogo de SAM DESIGN: capas, jackets, guantes, puños, plásticos y accesorios para moto. Arma tu lista y consúltala con un vendedor por WhatsApp.";
 
     // WhatsApp de la sección "Landing" de appsettings.json: solo dígitos para el enlace wa.me.
     var whatsApp = (Configuration["Landing:WhatsApp"] ?? string.Empty).Where(char.IsDigit).Aggregate(string.Empty, (acc, c) => acc + c);
