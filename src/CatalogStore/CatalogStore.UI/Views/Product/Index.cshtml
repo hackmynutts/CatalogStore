@@ -6,15 +6,7 @@
     bool canSeeAll = User.IsInRole("Admin") || User.IsInRole("AdminIT");
     bool isAdminView = ViewContext.RouteData.Values["action"]?.ToString() == "IndexAdmin";
 
-    string CategoriaLabel(int c) => c switch
-    {
-        0 => "Genérica",
-        1 => "Repuestos de moto",
-        2 => "Accesorios de moto",
-        3 => "Capas de moto",
-        4 => "Tapas plásticas de moto",
-        _ => "—"
-    };
+    string CategoriaLabel(int c) => CatalogStore.UI.Models.Product.ProductCategories.Label(c);
 }
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Productos</h1>

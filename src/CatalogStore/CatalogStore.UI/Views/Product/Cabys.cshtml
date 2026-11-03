@@ -1,10 +1,7 @@
 @model List<CatalogStore.UI.Models.Product.ProductViewModel>
 @{
     ViewData["Title"] = "CABYS de productos";
-    var categories = new (int Id, string Label)[]
-    {
-        (0, "Genérica"), (1, "Repuestos de moto"), (2, "Accesorios de moto"), (3, "Capas de moto"), (4, "Tapas plásticas de moto")
-    };
+    var categories = CatalogStore.UI.Models.Product.ProductCategories.All;
     string Label(int c) => categories.FirstOrDefault(x => x.Id == c).Label ?? "—";
     int total = Model.Count;
     int withCabys = Model.Count(p => !string.IsNullOrEmpty(p.CabysCode));

@@ -4,15 +4,7 @@
     bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
     bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
 
-    string CategoriaLabel(int c) => c switch
-    {
-        0 => "Genérica",
-        1 => "Repuestos de moto",
-        2 => "Accesorios de moto",
-        3 => "Capas de moto",
-        4 => "Tapas plásticas de moto",
-        _ => "—"
-    };
+    string CategoriaLabel(int c) => CatalogStore.UI.Models.Product.ProductCategories.Label(c);
 
     string UnidadMedidaLabel(int u) => u switch
     {

@@ -115,7 +115,7 @@ function wireModalContent(productId, modalContent) {
             await refreshAfterChange(productId, modalContent);
             Swal.fire({ icon: 'success', title: 'Imagen subida', timer: 1200, showConfirmButton: false });
         } else {
-            Swal.fire('Error', result.message || 'No se pudo subir la imagen.', 'error');
+            showApiError(result, 'No se pudo subir la imagen.');
         }
     });
 
@@ -150,7 +150,7 @@ function wireThumbDeleteButtons(productId, container) {
                     await refreshAfterChange(productId, container);
                     Swal.fire({ icon: 'success', title: 'Imagen eliminada', timer: 1200, showConfirmButton: false });
                 } else {
-                    Swal.fire('Error', 'No se pudo eliminar la imagen.', 'error');
+                    showApiError(data, 'No se pudo eliminar la imagen.');
                 }
             });
         });
@@ -203,7 +203,7 @@ function wireAdminDeleteButtons() {
                     Swal.fire({ icon: 'success', title: 'Imagen eliminada', timer: 1200, showConfirmButton: false })
                         .then(() => location.reload());
                 } else {
-                    Swal.fire('Error', 'No se pudo eliminar la imagen.', 'error');
+                    showApiError(data, 'No se pudo eliminar la imagen.');
                 }
             });
         });

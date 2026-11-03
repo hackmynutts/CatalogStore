@@ -5,16 +5,20 @@ namespace CatalogStore.BackendAPI.Models.Product
 {
     public enum categoryType
     {
-        [Display(Name ="Generica")]
+        [Display(Name = "Genérica")]
         General = 0,
-        [Display(Name ="Repuestos de moto")]
-        Repuestos = 1,
-        [Display(Name = "Accesorios de moto")]
-        Accesorios = 2,
+        [Display(Name ="Puños para moto")]
+        Punos = 1,
+        [Display(Name = "Guantes de moto")]
+        Guantes = 2,
         [Display(Name = "Capas de moto")]
         Capas = 3,
-        [Display(Name = "Plasticos de moto")]
-        Tapas = 4
+        [Display(Name = "Plásticos de moto")]
+        Plasticos = 4,
+        [Display(Name = "Caucho campana")]
+        CauchoCampana = 5,
+        [Display(Name = "Jacket")]
+        Jacket= 6
     }
     public enum Unit
     {

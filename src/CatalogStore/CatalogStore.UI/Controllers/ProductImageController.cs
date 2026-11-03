@@ -102,10 +102,7 @@ namespace CatalogStore.UI.Controllers
             var response = await client.PostAsync($"api/ProductImage/{id}", content);
 
             if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = "No se pudo subir la imagen.", details = errorBody });
-            }
+                return Json(new { success = false, message = "No se pudo subir la imagen.", errors = await Handlers.ApiErrorReader.ReadMessagesAsync(response, "No se pudo subir la imagen.") });
 
             return Json(new { success = true });
         }
@@ -118,7 +115,9 @@ namespace CatalogStore.UI.Controllers
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.DeleteAsync($"api/ProductImage/{id}");
 
-            return Json(new { success = response.IsSuccessStatusCode });
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = "No se pudo eliminar la imagen.", errors = await Handlers.ApiErrorReader.ReadMessagesAsync(response, "No se pudo eliminar la imagen.") });
         }
     }
 }

@@ -33,3 +33,25 @@ document.addEventListener('DOMContentLoaded', function () {
         }, true);
     });
 });
+
+// Muestra en un SweetAlert por qué falló una acción. result = { message, errors: [..] } como lo arman los controladores de la UI:
+// message es el título y errors cada motivo (si son varios validaciones, salen en una lista).
+window.showApiError = function (result, fallbackTitle) {
+    const title = (result && result.message) || fallbackTitle || 'No se pudo completar la acción';
+    const errors = result && Array.isArray(result.errors) ? result.errors.filter(Boolean) : [];
+    const options = { icon: 'error', title, confirmButtonText: 'Entendido' };
+    if (errors.length === 1) {
+        options.text = errors[0];
+    } else if (errors.length > 1) {
+        const list = document.createElement('ul');
+        list.className = 'text-start mb-0';
+        list.style.fontSize = '0.95rem';
+        errors.forEach(function (message) {
+            const item = document.createElement('li');
+            item.textContent = message;
+            list.appendChild(item);
+        });
+        options.html = list;
+    }
+    return Swal.fire(options);
+};

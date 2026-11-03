@@ -125,10 +125,7 @@ namespace CatalogStore.UI.Controllers
             var response = await client.PostAsJsonAsync("api/Product", model);
 
             if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = "No se pudo crear el producto.", details = errorBody });
-            }
+                return await ErrorJsonAsync(response, "No se pudo crear el producto.");
 
             return Json(new { success = true });
         }
@@ -176,10 +173,7 @@ namespace CatalogStore.UI.Controllers
             var response = await client.PutAsJsonAsync($"api/Product/{id}", model);
 
             if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = "No se pudo actualizar el producto.", details = errorBody });
-            }
+                return await ErrorJsonAsync(response, "No se pudo actualizar el producto.");
 
             return Json(new { success = true });
         }
@@ -213,7 +207,7 @@ namespace CatalogStore.UI.Controllers
 
             var response = await client.PutAsJsonAsync($"api/Product/{id}/inactivate", model);
             if (!response.IsSuccessStatusCode)
-                return Json(new { success = false, message = "No se pudo inactivar el producto." });
+                return await ErrorJsonAsync(response, "No se pudo inactivar el producto.");
 
             return Json(new { success = true });
         }
@@ -229,10 +223,7 @@ namespace CatalogStore.UI.Controllers
             var response = await client.PostAsync($"api/Product/import?dryRun={(dryRun ? "true" : "false")}", null);
 
             if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                return Json(new { success = false, message = "No se pudo importar el catálogo.", details = errorBody });
-            }
+                return await ErrorJsonAsync(response, "No se pudo importar el catálogo.");
 
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();
             return Json(new { success = true, result });
@@ -297,9 +288,15 @@ namespace CatalogStore.UI.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
-            await client.DeleteAsync($"api/Product/{id}");
+            var response = await client.DeleteAsync($"api/Product/{id}");
 
-            return RedirectToAction(nameof(Index));
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : await ErrorJsonAsync(response, "No se pudo eliminar el producto.");
         }
+
+        // Error de la API como JSON para el SweetAlert: message = título, errors = cada motivo (validaciones incluidas).
+        private async Task<IActionResult> ErrorJsonAsync(HttpResponseMessage response, string title) =>
+            Json(new { success = false, message = title, errors = await ApiErrorReader.ReadMessagesAsync(response, title) });
     }
 }

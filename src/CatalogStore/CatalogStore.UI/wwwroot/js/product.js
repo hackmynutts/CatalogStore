@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire({ icon: 'success', title: 'Producto actualizado', timer: 1500, showConfirmButton: false })
                     .then(() => location.reload());
             } else {
-                Swal.fire('Error', result.message || 'No se pudo actualizar el producto.', 'error');
+                showApiError(result, 'No se pudo actualizar el producto.');
             }
         });
     }
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 Swal.fire({ icon: 'success', title: 'Producto creado', timer: 1500, showConfirmButton: false })
                     .then(() => location.reload());
             } else {
-                Swal.fire('Error', result.message || 'No se pudo crear el producto.', 'error');
+                showApiError(result, 'No se pudo crear el producto.');
             }
         });
     }
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     Swal.fire({ icon: 'success', title: 'Producto inactivado', timer: 1500, showConfirmButton: false })
                         .then(() => location.reload());
                 } else {
-                    Swal.fire('Error', data.message || 'No se pudo inactivar el producto.', 'error');
+                    showApiError(data, 'No se pudo inactivar el producto.');
                 }
             });
         });
@@ -139,21 +139,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 confirmButtonText: 'Eliminar',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#dc3545'
-            }).then(function (result) {
+            }).then(async function (result) {
                 if (!result.isConfirmed) return;
 
-                const form = document.createElement('form');
-                form.method = 'post';
-                form.action = `/Product/Delete/${id}`;
-
                 const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (token) {
-                    const clone = token.cloneNode(true);
-                    form.appendChild(clone);
-                }
+                const formData = new FormData();
+                if (token) formData.append('__RequestVerificationToken', token.value);
 
-                document.body.appendChild(form);
-                form.submit();
+                const response = await fetch(`/Product/Delete/${id}`, { method: 'POST', body: formData });
+                const data = response.ok ? await response.json() : { success: false };
+
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Producto eliminado', timer: 1500, showConfirmButton: false })
+                        .then(() => location.reload());
+                } else {
+                    showApiError(data, 'No se pudo eliminar el producto.');
+                }
             });
         });
     });
@@ -209,12 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
             if (data.success) return data.result;
 
-            let text = data.message || 'No se pudo importar el catálogo.';
-            try {
-                const parsed = JSON.parse(data.details);
-                if (parsed && parsed.message) text = parsed.message;
-            } catch (e) { }
-            Swal.fire('Error', text, 'error');
+            showApiError(data, 'No se pudo importar el catálogo.');
         } catch (e) {
             Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
         }

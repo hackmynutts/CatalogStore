@@ -122,7 +122,7 @@ namespace CatalogStore.BackendAPI.Controllers
         {
             edit.ModifiedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
             bool updated = await _productServices.UpdateAsync(id, edit);
-            if(!updated) return NotFound();
+            if(!updated) return NotFound(new { message = "El producto no existe o cambió mientras lo editabas. Recargá la página e intentá de nuevo." });
             return Ok(edit);
         }
         // PUT api/<ProductController>/5
@@ -132,7 +132,7 @@ namespace CatalogStore.BackendAPI.Controllers
         {
             edit.ModifiedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
             bool updated = await _productServices.InactivateAsync(id, edit);
-            if (!updated) return NotFound();
+            if (!updated) return NotFound(new { message = "El producto no existe o cambió mientras lo inactivabas. Recargá la página e intentá de nuevo." });
             return Ok(edit);
         }
 
@@ -185,8 +185,17 @@ namespace CatalogStore.BackendAPI.Controllers
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> Delete(int id)
         {
-            var deleted = await _productServices.DeleteAsync(id);
-            if (!deleted) return NotFound();
+            bool deleted;
+            try
+            {
+                deleted = await _productServices.DeleteAsync(id);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            {
+                // El servicio ya dejó el detalle técnico en la bitácora; aquí se explica el motivo de negocio.
+                return Conflict(new { message = "No se puede eliminar el producto porque ya tiene inventario, órdenes o ventas asociadas. Inactivalo en su lugar." });
+            }
+            if (!deleted) return NotFound(new { message = "El producto no existe." });
             return Ok();
         }
     }

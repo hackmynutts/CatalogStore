@@ -10,14 +10,6 @@ namespace CatalogStore.UI.Models.Home
         // Ya con la dirección pública del backend; null si el producto no tiene foto.
         public string? ImageUrl { get; set; }
 
-        public static string CategoryLabel(int category) => category switch
-        {
-            0 => "Genérica",
-            1 => "Repuestos de moto",
-            2 => "Accesorios de moto",
-            3 => "Capas de moto",
-            4 => "Tapas plásticas de moto",
-            _ => "Otros"
-        };
+        public static string CategoryLabel(int category) => Product.ProductCategories.Label(category, "Otros");
     }
 }
