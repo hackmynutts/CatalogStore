@@ -55,3 +55,20 @@ window.showApiError = function (result, fallbackTitle) {
     }
     return Swal.fire(options);
 };
+
+// "Volver" de las páginas de detalle (enlaces con class="js-back"): si se llegó desde otra página del sitio
+// (catálogo, lista, venta...), vuelve exactamente a esa página con el historial del navegador, no a la lista fija.
+// Así se conserva la página de la tabla, el filtro y la posición. Sin historial útil (enlace directo) sigue el href.
+document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const link = e.target instanceof Element ? e.target.closest('a.js-back') : null;
+    if (!link) return;
+    try {
+        if (!document.referrer || history.length < 2) return;
+        const from = new URL(document.referrer);
+        if (from.origin !== location.origin || from.pathname === location.pathname) return;
+        if (/^\/(Account|Home\/(Error|StatusCode))/i.test(from.pathname)) return;
+        e.preventDefault();
+        history.back();
+    } catch (err) { }
+});

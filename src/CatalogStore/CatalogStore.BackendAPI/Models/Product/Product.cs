@@ -7,18 +7,22 @@ namespace CatalogStore.BackendAPI.Models.Product
     {
         [Display(Name = "Genérica")]
         General = 0,
-        [Display(Name ="Puños para moto")]
+        [Display(Name ="Puños ")]
         Punos = 1,
-        [Display(Name = "Guantes de moto")]
+        [Display(Name = "Guantes")]
         Guantes = 2,
-        [Display(Name = "Capas de moto")]
+        [Display(Name = "Capas")]
         Capas = 3,
         [Display(Name = "Plásticos de moto")]
         Plasticos = 4,
         [Display(Name = "Caucho campana")]
         CauchoCampana = 5,
         [Display(Name = "Jacket")]
-        Jacket= 6
+        Jacket= 6,
+        [Display(Name = "Filtros de aire")]
+        FiltrosAire = 7,
+        [Display(Name = "Filtros de aceite")]
+        FiltrosAceite = 8
     }
     public enum Unit
     {

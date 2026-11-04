@@ -4,7 +4,7 @@
 //
 // Paginación:
 //  - Al cambiar de página con los botones del paginador, la vista sube al inicio de la tabla.
-//  - Si la página se recarga después de modificar algo (location.reload()), la tabla vuelve a la misma página y no a la 1.
+//  - Si la página se recarga después de modificar algo (location.reload()), o se vuelve atrás desde un detalle, la tabla vuelve a la misma página y no a la 1.
 //    También se conserva cuando una tabla cargada por AJAX se vuelve a dibujar, si lleva el atributo data-keep-page
 //    (solo las que se redibujan con los mismos datos; un modal que se reutiliza con otros datos debe empezar en la 1).
 (function () {
@@ -16,13 +16,29 @@
         return 'app-table-page:' + location.pathname + location.search + '#' + tableId;
     }
 
-    // Solo una recarga (F5 o location.reload()) devuelve a la página guardada. Entrar de nuevo a la lista empieza en la 1.
+    // Devuelve a la página guardada una recarga (F5 o location.reload()) o volver atrás en el historial (botón "Volver" de un detalle).
+    // Entrar de nuevo a la lista con un enlace empieza en la 1.
     function wasReloaded() {
         try {
             var nav = performance.getEntriesByType('navigation')[0];
-            return !!nav && nav.type === 'reload';
+            return !!nav && (nav.type === 'reload' || nav.type === 'back_forward');
         } catch (e) {
             return false;
+        }
+    }
+
+    // El tamaño de página elegido (10/25/50/100) se recuerda mientras dure la sesión, también al entrar de nuevo a la lista.
+    function sizeKey(tableId) {
+        return 'app-table-size:' + location.pathname + '#' + tableId;
+    }
+
+    function savedSize($pager, tableId) {
+        try {
+            var size = parseInt(sessionStorage.getItem(sizeKey(tableId)), 10);
+            var valid = $pager.find('.pagesize option').toArray().some(function (o) { return parseInt(o.value, 10) === size; });
+            return valid ? size : 0;
+        } catch (e) {
+            return 0;
         }
     }
 
@@ -90,6 +106,7 @@
                     savedOnLoad[tableId] = 0;
                 }
                 var restoring = wanted > 1;
+                var pageSize = (tableId && savedSize($pager, tableId)) || 10;
                 var userPaged = false;
 
                 // Solo los botones del paginador suben la vista: escribir en el buscador también reinicia la página y no debe mover la pantalla.
@@ -113,7 +130,10 @@
                         }
                     }
 
-                    if (tableId) pages[tableId] = current;
+                    if (tableId) {
+                        pages[tableId] = current;
+                        try { sessionStorage.setItem(sizeKey(tableId), String(config.pager.size)); } catch (e) { }
+                    }
                     if (userPaged) {
                         userPaged = false;
                         scrollToTableStart($table, $search);
@@ -122,7 +142,7 @@
 
                 $table.tablesorterPager({
                     container: $pager,
-                    size: 10,
+                    size: pageSize,
                     output: '{startRow} – {endRow} de {totalRows}',
                     // La página se maneja arriba: la del plugin la restauraba también al entrar de nuevo a la lista.
                     savePages: false,

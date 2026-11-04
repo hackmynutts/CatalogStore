@@ -8,12 +8,14 @@ namespace CatalogStore.UI.Models.Product
         public static readonly (int Id, string Label)[] All =
         {
             (0, "Genérica"),
-            (1, "Puños para moto"),
-            (2, "Guantes de moto"),
-            (3, "Capas de moto"),
+            (1, "Puños"),
+            (2, "Guantes"),
+            (3, "Capas"),
             (4, "Plásticos de moto"),
             (5, "Caucho campana"),
-            (6, "Jacket")
+            (6, "Jacket"),
+            (7, "Filtros de aire"),
+            (8, "Filtros de aceite")
         };
 
         public static string Label(int id, string fallback = "—") =>
