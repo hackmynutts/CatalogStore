@@ -52,8 +52,9 @@ namespace CatalogStore.UI.Documents
         {
             row.RelativeItem().Column(col =>
             {
-                if (_logo is not null) col.Item().Height(44).Image(_logo).FitHeight();
-                col.Item().PaddingTop(4).Text("SAM DESIGN").FontSize(13).Bold().FontColor("#24473D");
+                // El logo completo ya trae el nombre y el lema.
+                if (_logo is not null) col.Item().Height(58).Image(_logo).FitHeight();
+                else col.Item().Text("SAM DESIGN").FontSize(13).Bold().FontColor("#24473D");
                 if (_contact.Length > 0) col.Item().Text(_contact).FontSize(8.5f).FontColor(Muted);
             });
             row.ConstantItem(210).AlignRight().Column(col =>
@@ -144,6 +145,9 @@ namespace CatalogStore.UI.Documents
 
             if (!string.IsNullOrWhiteSpace(_sale.Notes))
                 col.Item().Text(t => { t.Span("Notas: ").Bold(); t.Span(_sale.Notes); });
+
+            col.Item().ShowEntire().Border(0.7f).BorderColor(Line).Padding(9)
+                .Text(SaleDocumentTexts.ReceivedInFull).FontSize(9).FontColor("#1F2937");
 
             col.Item().ShowEntire().Text("Venta sin IVA. Este comprobante es un documento no fiscal: no es una factura electrónica ni la sustituye.")
                 .FontSize(8.5f).FontColor(Muted);

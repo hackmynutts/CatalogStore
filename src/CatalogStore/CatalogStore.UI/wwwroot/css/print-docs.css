@@ -56,6 +56,19 @@ body.print-doc-page {
     width: auto;
 }
 
+.pf-brand img.pf-logo-full {
+    height: 68px;
+}
+
+.pf-receipt-note {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #1f2937;
+}
+
 .pf-brand-name {
     font-size: 1.15rem;
     font-weight: 700;
@@ -88,6 +101,22 @@ body.print-doc-page {
     font-size: 0.85rem;
     color: #4b5563;
     line-height: 1.5;
+}
+
+.pf-title .pf-stamp {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 12px;
+    border: 2px solid #2f5d50;
+    border-radius: 6px;
+    color: #2f5d50;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transform: rotate(-2deg);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 .pf-parties {

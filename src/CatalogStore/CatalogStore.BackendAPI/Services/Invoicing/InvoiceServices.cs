@@ -244,7 +244,17 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             var transport = await _transport.PostAsync(InvoiceJsonBuilder.BuildStatusQuery(invoice.Clave, options), CancellationToken.None);
             var reply = InvoiceResponse.ParseStatus(transport);
             if (!reply.Understood)
-                return OperationResult.Fail(reply.Message ?? "No se pudo consultar el estado.");
+            {
+                // Sin esto no hay forma de saber qué contestó el proveedor: queda en el registro de eventos y, resumido, en el mensaje.
+                var snippet = Trim(transport.Body?.Replace('\r', ' ').Replace('\n', ' ').Trim(), 300);
+                await _eventlogServices.LogAsync(typeEvent.Error, ModuleName, InvoiceTable, invoice.InvoiceID.ToString(),
+                    $"La consulta de estado no se pudo interpretar (HTTP {transport.HttpStatus?.ToString() ?? "sin respuesta"}). {reply.Message}",
+                    postData: new { transport.HttpStatus, transport.NetworkError, Response = Trim(transport.Body, 4000) });
+                var detail = !transport.Delivered
+                    ? $"Sin respuesta del proveedor ({transport.NetworkError})."
+                    : $"HTTP {transport.HttpStatus}: {(string.IsNullOrWhiteSpace(snippet) ? "respuesta vacía" : snippet)}";
+                return OperationResult.Fail($"{reply.Message ?? "No se pudo consultar el estado."} {detail}");
+            }
 
             try
             {

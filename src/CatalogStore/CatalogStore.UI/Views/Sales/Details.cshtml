@@ -323,9 +323,14 @@
                                         <a class="btn btn-sm btn-brand btn-brand-auto" asp-action="CreditNote" asp-route-id="@Model.SalesHeaderID" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir</a>
                                         <a class="btn btn-sm btn-outline-secondary" asp-action="CreditNotePdf" asp-route-id="@Model.SalesHeaderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</a>
                                     }
-                                    else if (!string.IsNullOrEmpty(inv.PdfUrl))
+                                    else if (!string.IsNullOrEmpty(inv.PdfUrl) && inv.Status != InvoiceUi.Accepted)
                                     {
                                         <a class="btn btn-sm btn-outline-secondary" href="@inv.PdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF</a>
+                                    }
+                                    @if (inv.Status == InvoiceUi.Accepted && !string.IsNullOrEmpty(inv.PdfUrl))
+                                    {
+                                        @* El PDF oficial que genera el proveedor, además del de la casa. *@
+                                        <a class="btn btn-sm btn-outline-secondary" href="@inv.PdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> PDF del proveedor</a>
                                     }
                                     @if (isAdmin)
                                     {

@@ -60,8 +60,9 @@ namespace CatalogStore.UI.Documents
         {
             row.RelativeItem().Column(col =>
             {
-                if (_logo is not null) col.Item().Height(44).Image(_logo).FitHeight();
-                col.Item().PaddingTop(4).Text("SAM DESIGN").FontSize(13).Bold().FontColor("#24473D");
+                // El logo completo ya trae el nombre y el lema.
+                if (_logo is not null) col.Item().Height(58).Image(_logo).FitHeight();
+                else col.Item().Text("SAM DESIGN").FontSize(13).Bold().FontColor("#24473D");
                 if (_contact.Length > 0) col.Item().Text(_contact).FontSize(8.5f).FontColor(Muted);
             });
             row.ConstantItem(210).AlignRight().Column(col =>
@@ -69,6 +70,9 @@ namespace CatalogStore.UI.Documents
                 col.Item().AlignRight().Text(IsCredit ? "NOTA DE CRÉDITO" : "FACTURA ELECTRÓNICA").FontSize(16).Bold().FontColor(Brand);
                 col.Item().AlignRight().Text($"N.º {_invoice.Number}").FontSize(12).Bold();
                 col.Item().AlignRight().Text($"Fecha: {_issued:dd/MM/yyyy HH:mm}").FontSize(9).FontColor("#4B5563");
+                if (_invoice.Status == Models.Invoicing.InvoiceUi.Accepted)
+                    col.Item().PaddingTop(6).AlignRight().Border(1.5f).BorderColor(Brand).PaddingHorizontal(8).PaddingVertical(3)
+                        .Text("ACEPTADA POR HACIENDA").FontSize(9).Bold().FontColor(Brand).LetterSpacing(0.06f);
             });
         });
 
@@ -173,6 +177,10 @@ namespace CatalogStore.UI.Documents
                 c.Item().Text(t => { t.Span("Consecutivo: ").Bold(); t.Span(_invoice.Consecutive ?? "—").FontSize(9); });
                 c.Item().Text(t => { t.Span("Estado en Hacienda: ").Bold(); t.Span(string.IsNullOrWhiteSpace(_invoice.HaciendaStatus) ? _invoice.StatusName : _invoice.HaciendaStatus); });
             });
+
+            if (!IsCredit)
+                col.Item().ShowEntire().Border(0.7f).BorderColor(Line).Padding(9)
+                    .Text(SaleDocumentTexts.ReceivedInFull).FontSize(9).FontColor("#1F2937");
 
             col.Item().ShowEntire().Text((IsCredit ? "Representación impresa de la nota de crédito electrónica. " : "Representación impresa de la factura electrónica. ") + "El comprobante fiscal es el documento XML firmado y aceptado por el Ministerio de Hacienda, identificado con la clave indicada.")
                 .FontSize(8.5f).FontColor(Muted);

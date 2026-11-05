@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace CatalogStore.BackendAPI.Services.Invoicing
 {
@@ -107,8 +108,18 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
 
         public static StatusReply ParseStatus(InvoiceTransportResult transport)
         {
-            if (!transport.Delivered || !TryRoot(transport.Body, out var root))
+            // La consulta de estado es de solo lectura, así que tolera lo que el proveedor mete antes o después del JSON
+            // (avisos de PHP, respuestas concatenadas): se lee el primer objeto y se ignora el resto.
+            if (!transport.Delivered)
                 return new StatusReply(false, null, "No se pudo leer la respuesta de la consulta.", null, null);
+            if (!TryFirstObject(transport.Body, out var root))
+            {
+                // Plan B: el JSON está dañado por dentro (por ejemplo un salto de línea sin escapar en un mensaje). Los campos que
+                // importan son texto simple: se buscan sueltos en vez de perder el estado por un detalle del formato.
+                var loose = LooseText(transport.Body, "codigorespuesta");
+                if (loose is null) return new StatusReply(false, null, "No se pudo leer la respuesta de la consulta.", null, null);
+                return new StatusReply(true, loose, LooseText(transport.Body, "DetalleMensaje"), LooseText(transport.Body, "EnlacePDF"), LooseText(transport.Body, "EnlacePDFPV"));
+            }
             var status = Text(root, "codigorespuesta");
             if (status is null)
                 return new StatusReply(false, null, Text(root, "mensaje") ?? Text(root, "message") ?? "La consulta no devolvió estado.", null, null);
@@ -130,6 +141,34 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             try
             {
                 using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object) return false;
+                root = doc.RootElement.Clone();
+                return true;
+            }
+            catch (JsonException) { return false; }
+        }
+
+        // Valor de un campo de texto buscado directamente en el cuerpo, sin exigir que todo sea JSON válido.
+        private static string? LooseText(string body, string name)
+        {
+            var pattern = "\"" + Regex.Escape(name) + "\"" + @"\s*:\s*""((?:[^""\\]|\\.)*)""";
+            var m = Regex.Match(body, pattern, RegexOptions.IgnoreCase);
+            if (!m.Success) return null;
+            var raw = m.Groups[1].Value.Replace("\r", "\\r").Replace("\n", "\\n");
+            try { return JsonSerializer.Deserialize<string>("\"" + raw + "\""); }
+            catch (JsonException) { return m.Groups[1].Value; }
+        }
+
+        // Primer objeto JSON del texto, desde la primera llave; lo que venga después se ignora.
+        private static bool TryFirstObject(string body, out JsonElement root)
+        {
+            root = default;
+            var start = body.IndexOf('{');
+            if (start < 0) return false;
+            try
+            {
+                var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(body.AsSpan(start).ToString()), isFinalBlock: true, state: default);
+                using var doc = JsonDocument.ParseValue(ref reader);
                 if (doc.RootElement.ValueKind != JsonValueKind.Object) return false;
                 root = doc.RootElement.Clone();
                 return true;

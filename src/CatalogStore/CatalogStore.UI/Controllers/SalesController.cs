@@ -83,7 +83,7 @@ namespace CatalogStore.UI.Controllers
             if (sale.ApplyIva || sale.IsVoided)
                 return RedirectToAction(nameof(Details), new { id });
 
-            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "sam_desing-removebg-preview.png");
             var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
             var saleLocal = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc), "America/Costa_Rica");
             var document = new Documents.SaleReceiptPdfDocument(sale, saleLocal, contact,
@@ -115,7 +115,7 @@ namespace CatalogStore.UI.Controllers
             if (found is null) return RedirectToAction(nameof(Details), new { id });
             var (sale, invoice) = found.Value;
 
-            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "sam_desing-removebg-preview.png");
             var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
             var document = new Documents.InvoicePdfDocument(sale, invoice, InvoiceLocalTime(invoice), contact,
                 logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null);
@@ -139,7 +139,7 @@ namespace CatalogStore.UI.Controllers
             if (found is null) return RedirectToAction(nameof(Details), new { id });
             var (sale, creditNote, original) = found.Value;
 
-            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
+            var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "sam_desing-removebg-preview.png");
             var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
             var document = new Documents.InvoicePdfDocument(sale, creditNote, InvoiceLocalTime(creditNote), contact,
                 logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null, original);

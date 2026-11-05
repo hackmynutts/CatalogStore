@@ -1055,9 +1055,22 @@ body::before {
 }
 
 .catalog-card-price {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    column-gap: 5px;
     font-size: 1.05rem;
     font-weight: 700;
     color: var(--text-color);
+}
+
+/* "+ IVA": una nota discreta junto al precio, no parte del precio. */
+.catalog-card-iva {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    white-space: nowrap;
 }
 
 .catalog-card-img,

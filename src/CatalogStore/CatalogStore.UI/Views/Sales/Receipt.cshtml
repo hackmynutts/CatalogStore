@@ -31,8 +31,7 @@
     <main class="pf-sheet">
         <header class="pf-head">
             <div class="pf-brand">
-                <img src="~/img/logos/logo_pequeño-removebg-preview.png" alt="SAM DESIGN" />
-                <div class="pf-brand-name">SAM DESIGN</div>
+                <img class="pf-logo-full" src="~/img/logos/sam_desing-removebg-preview.png" alt="SAM DESIGN - Protegemos tu viaje en dos ruedas" />
                 @if (contact.Length > 0)
                 {
                     <div class="pf-brand-contact">@contact</div>
@@ -101,6 +100,8 @@
         {
             <div class="pf-notes"><strong>Notas:</strong> @Model.Notes</div>
         }
+
+        <div class="pf-receipt-note">@CatalogStore.UI.Documents.SaleDocumentTexts.ReceivedInFull</div>
 
         <div class="pf-legal">
             Venta sin IVA. Este comprobante es un documento no fiscal: no es una factura electrónica ni la sustituye.

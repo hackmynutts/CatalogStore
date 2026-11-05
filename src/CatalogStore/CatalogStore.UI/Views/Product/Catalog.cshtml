@@ -140,7 +140,13 @@ else
                         </div>
                     }
                     <div class="catalog-card-footer">
-                        <span class="catalog-card-price">₡@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</span>
+                        <span class="catalog-card-price">
+                            <span>₡@(p.Price.HasValue ? p.Price.Value.ToString("N2") : "—")</span>
+                            @if (p.Price.HasValue)
+                            {
+                                <small class="catalog-card-iva">+ IVA</small>
+                            }
+                        </span>
                         <a class="btn btn-sm btn-outline-secondary" asp-controller="Product" asp-action="Details" asp-route-id="@p.ProductID">Ver detalle</a>
                     </div>
                 </div>
