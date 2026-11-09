@@ -79,7 +79,8 @@ namespace CatalogStore.BackendAPI.Controllers
         {
             add.CreatedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
             var res = await _productServices.AddAsync(add);
-            return CreatedAtAction(nameof(Get), new { id = res }, add);
+            // El id va en el cuerpo: la UI lo necesita para seguir con el alta en inventario.
+            return CreatedAtAction(nameof(Get), new { id = res }, new { id = res });
         }
 
         // POST api/Product/import?dryRun=true

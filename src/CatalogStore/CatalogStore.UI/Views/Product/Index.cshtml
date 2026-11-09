@@ -48,13 +48,6 @@
             <th>Categoría</th>
             <th>Precio</th>
             <th>Estado</th>
-            <th>Creado por</th>
-            <th>Fecha</th>
-            @if (isAdminView)
-            {
-                <th>Modificado por</th>
-                <th>Modificado el</th>
-            }
             <th class="sorter-false filter-false">Acciones</th>
         </tr>
     </thead>
@@ -77,13 +70,6 @@
                         <span class="badge badge-status-inactive">Inactivo</span>
                     }
                 </td>
-                <td>@p.CreatedBy</td>
-                <td>@p.CreatedOn.ToString("g")</td>
-                @if (isAdminView)
-                {
-                    <td>@(string.IsNullOrEmpty(p.ModifiedBy) ? "—" : p.ModifiedBy)</td>
-                    <td>@(p.ModifiedOn.HasValue ? p.ModifiedOn.Value.ToString("g") : "—")</td>
-                }
                 <td class="text-end">
                     <div class="action-buttons">
                         <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" asp-action="Details" asp-route-id="@p.ProductID"><i class="fa-solid fa-eye"></i></a>

@@ -58,8 +58,6 @@ else
                         <td class="text-end">
                             <div class="action-buttons">
                                 <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" asp-controller="InventoryLine" asp-action="Details" asp-route-id="@line.InventoryLineID"><i class="fa-solid fa-eye"></i></a>
-                                <span class="action-sep">|</span>
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-line" title="Editar" data-id="@line.InventoryLineID"><i class="fa-solid fa-pen-to-square"></i></button>
                                 @if (canInactivate)
                                 {
                                     <span class="action-sep">|</span>

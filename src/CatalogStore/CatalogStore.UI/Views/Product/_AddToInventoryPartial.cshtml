@@ -1,0 +1,105 @@
+@using CatalogStore.UI.Models.Inventory
+@model CatalogStore.UI.Models.Product.AddToInventoryViewModel
+@{
+    var product = (CatalogStore.UI.Models.Product.ProductViewModel)ViewData["Product"]!;
+    var inventories = ViewData["Inventories"] as List<InventoryViewModel> ?? new();
+    bool loaded = ViewData["InventoriesLoaded"] as bool? ?? false;
+    string productLabel = string.IsNullOrWhiteSpace(product.ProductCode) ? product.ProductName : $"{product.ProductCode} · {product.ProductName}";
+}
+
+@* Se muestra después de crear el producto (reemplaza el contenido del modal de creación). Primero solo se pregunta; el formulario
+   aparece únicamente si se responde que sí. Con "Ahora no" todo queda como antes: aviso de producto creado y recarga. *@
+<div class="modal-header">
+    <h5 class="modal-title">Producto creado</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+
+<div class="modal-body" id="invStepBody">
+    <div class="flow-success" role="status">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        <div>
+            <strong>@product.ProductName</strong>
+            @if (!string.IsNullOrWhiteSpace(product.ProductCode))
+            {
+                <span>Código @product.ProductCode</span>
+            }
+        </div>
+    </div>
+
+    @if (!loaded || inventories.Count == 0)
+    {
+        <div class="flow-warning" role="alert">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div>
+                @(loaded ? "No hay una bodega activa para agregar el producto." : "No se pudo consultar la bodega.")
+                Podés agregarlo después desde <a asp-controller="Inventory" asp-action="Index">Inventario</a>.
+            </div>
+        </div>
+        <div class="flow-actions">
+            <button type="button" class="btn btn-brand" id="invStepNo" style="width:auto;">Cerrar</button>
+        </div>
+    }
+    else
+    {
+        <div id="invStepQuestion" class="flow-question">
+            <h6>¿Querés agregarlo al inventario ahora?</h6>
+            <p>Se crea su línea en la bodega y se registra la <strong>carga inicial</strong> de unidades. Si no, el producto queda creado y lo agregás después.</p>
+            <div class="flow-actions">
+                <button type="button" class="btn btn-outline-secondary" id="invStepNo">Ahora no</button>
+                <button type="button" class="btn btn-brand" id="invStepYes" style="width:auto;"><i class="fa-solid fa-warehouse" aria-hidden="true"></i> Sí, agregar al inventario</button>
+            </div>
+        </div>
+    }
+</div>
+
+@if (loaded && inventories.Count > 0)
+{
+    <form id="addToInventoryForm" hidden>
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ProductID" />
+        <div class="modal-body pt-0">
+            <h6 class="flow-section">Ingreso al inventario</h6>
+            <div class="row g-3">
+                <div class="col-12">
+                    @if (inventories.Count == 1)
+                    {
+                        <span class="info-field-label">Bodega</span>
+                        <span class="info-field-value">@inventories[0].Name</span>
+                        <input type="hidden" asp-for="InventoryID" />
+                    }
+                    else
+                    {
+                        <label asp-for="InventoryID" class="form-label">Bodega</label>
+                        <select asp-for="InventoryID" class="form-select">
+                            @foreach (var i in inventories)
+                            {
+                                <option value="@i.InventoryID">@i.Name</option>
+                            }
+                        </select>
+                    }
+                </div>
+                <div class="col-12">
+                    <span class="info-field-label">Tipo de movimiento</span>
+                    @* Fijo: es el primer ingreso del producto a la bodega, así que siempre es una carga inicial. *@
+                    <span class="flow-chip"><i class="fa-solid fa-lock" aria-hidden="true"></i> Carga inicial</span>
+                    <div class="form-text">Primer ingreso de este producto a la bodega.</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="InitialQuantity" class="form-label">Cantidad inicial</label>
+                    <input asp-for="InitialQuantity" type="number" min="0" max="1000000" step="1" class="form-control" value="" inputmode="numeric" placeholder="0" />
+                    <div class="form-text">Unidades que ingresan hoy. Con 0 solo se crea la línea.</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="QuantityRestock" class="form-label">Mínimo para reponer</label>
+                    <input asp-for="QuantityRestock" type="number" min="0" max="1000000" step="1" class="form-control" value="" inputmode="numeric" placeholder="0" />
+                    <div class="form-text">Con este disponible o menos, la línea aparece como "Reponer".</div>
+                </div>
+            </div>
+            <div class="flow-preview" id="invStepPreview" aria-live="polite"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" id="invStepSkip">Ahora no</button>
+            <button type="submit" class="btn btn-brand" style="width:auto; padding-left:24px; padding-right:24px;">Agregar al inventario</button>
+        </div>
+    </form>
+}

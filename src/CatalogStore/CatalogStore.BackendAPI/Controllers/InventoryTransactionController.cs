@@ -28,7 +28,7 @@ namespace CatalogStore.BackendAPI.Controllers
         public async Task<IActionResult> GetByLine(int inventoryLineId) =>
             Ok(await _inventoryTransactionServices.GetByLineAsync(inventoryLineId));
 
-        // POST api/InventoryTransaction/register — movimiento manual (incremento o ajuste)
+        // POST api/InventoryTransaction/register — movimiento manual (carga inicial, incremento o ajuste)
         [HttpPost("register")]
         public async Task<IActionResult> Post([FromBody] RegisterInventoryTransactionDTO dto)
         {
@@ -79,6 +79,6 @@ namespace CatalogStore.BackendAPI.Controllers
         }
 
         private static bool IsManualType(TransactionType type) =>
-            type is TransactionType.IncrementoStock or TransactionType.AjustePositivo or TransactionType.AjusteNegativo;
+            type is TransactionType.CargaInicial or TransactionType.IncrementoStock or TransactionType.AjustePositivo or TransactionType.AjusteNegativo;
     }
 }

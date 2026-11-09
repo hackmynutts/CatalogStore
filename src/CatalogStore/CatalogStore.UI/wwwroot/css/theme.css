@@ -928,6 +928,12 @@ body::before {
 
 .product-media-carousel {
     aspect-ratio: 1 / 1;
+    background: #f3f4f6;
+}
+
+/* En el detalle la foto se ve completa dentro del recuadro (antes se recortaba). Las fotos que no son cuadradas dejan franjas a los lados o arriba. */
+.product-media-carousel .product-media-img {
+    object-fit: contain;
 }
 
 .product-media-placeholder {
@@ -1008,8 +1014,34 @@ body::before {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
+/* Recuadro de imagen del mismo tamaño en todas las tarjetas: la foto se ajusta al recuadro y nunca lo agranda
+   (antes, en las tarjetas con carrusel la foto marcaba su propia altura y la tarjeta crecía). */
 .catalog-card-media {
     aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #f3f4f6;
+}
+
+.catalog-card-media .carousel-inner,
+.catalog-card-media .carousel-item {
+    height: 100%;
+}
+
+.catalog-card-media .catalog-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Fotos verticales: se ven completas dentro del recuadro en vez de recortarse (lo marca product-catalog.js). */
+.catalog-card-media .catalog-card-img.is-portrait {
+    object-fit: contain;
+}
+
+/* El botón no se parte en dos líneas; si falta espacio, el precio es el que baja. */
+.catalog-card-footer .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .catalog-media-placeholder i {
@@ -3101,5 +3133,291 @@ body.order-busy main {
         align-items: flex-start;
         flex-direction: row;
         gap: 10px;
+    }
+}
+
+/* ==========================================================================
+   Alta de producto: pregunta de inventario y carga inicial (Product/_AddToInventoryPartial)
+   ========================================================================== */
+
+.flow-success,
+.flow-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+}
+
+.flow-success {
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+}
+
+.flow-success > i {
+    font-size: 1.25rem;
+    margin-top: 2px;
+}
+
+.flow-success strong,
+.flow-success span {
+    display: block;
+}
+
+.flow-success span {
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+.flow-warning {
+    background: #fff7e6;
+    color: #7a5200;
+}
+
+.flow-question h6 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 4px 0 6px;
+}
+
+.flow-question p {
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.flow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.flow-section {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.flow-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary-dark);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.flow-preview {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: #f9fafb;
+    border: 1px dashed var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.flow-preview:empty {
+    display: none;
+}
+
+/* ==========================================================================
+   Modales de toda la aplicación
+   Apariencia: esquinas más redondeadas, sombra suave, encabezado y pie ordenados, campos con el foco de la marca.
+   Tamaño: no cambia. Solo un formulario largo (que haría scroll) se ensancha: ver "Modales largos" en site.js.
+   ========================================================================== */
+
+.modal {
+    --bs-modal-border-width: 0;
+    --bs-modal-border-radius: var(--radius-lg);
+    --bs-modal-box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    --bs-modal-header-padding: 1.1rem 1.5rem;
+    --bs-modal-header-border-color: var(--border-color);
+    --bs-modal-padding: 1.4rem 1.5rem;
+    --bs-modal-footer-gap: 0.6rem;
+    --bs-modal-footer-border-color: var(--border-color);
+}
+
+.modal-backdrop {
+    --bs-backdrop-bg: #0f172a;
+    --bs-backdrop-opacity: 0.45;
+}
+
+.modal-header {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfc 100%);
+}
+
+.modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--brand-primary-dark);
+}
+
+.modal-footer {
+    background: #f9fafb;
+    padding: 0.9rem 1.5rem;
+}
+
+.modal .btn-close {
+    opacity: 0.55;
+}
+
+.modal .btn-close:hover {
+    opacity: 1;
+}
+
+.modal .form-label {
+    margin-bottom: 0.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.modal .form-control,
+.modal .form-select {
+    border-color: #d1d5db;
+    border-radius: 10px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.modal .input-group > .form-control,
+.modal .input-group > .form-select {
+    border-radius: 10px 0 0 10px;
+}
+
+.modal .input-group > .form-control:last-child,
+.modal .input-group > .form-select:last-child {
+    border-radius: 10px;
+}
+
+.modal .form-control:focus,
+.modal .form-select:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 0.2rem rgba(47, 93, 80, 0.15);
+}
+
+@media (min-width: 992px) {
+    /* Formulario largo: más ancho y con los campos en columnas en vez de una lista alta. */
+    .modal-dialog.modal-fit-2 {
+        --bs-modal-width: 860px;
+        max-width: min(860px, calc(100vw - 2rem));
+    }
+
+    .modal-dialog.modal-fit-3 {
+        --bs-modal-width: 1120px;
+        max-width: min(1120px, calc(100vw - 2rem));
+    }
+
+    .modal-fit-2 .modal-body,
+    .modal-fit-3 .modal-body {
+        display: grid;
+        column-gap: 1.25rem;
+        align-content: start;
+    }
+
+    .modal-fit-2 .modal-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .modal-fit-3 .modal-body { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    /* Las filas de Bootstrap usan el mismo espacio entre columnas que la cuadrícula del modal, para que queden alineadas. */
+    .modal-fit-2 .modal-body > .row,
+    .modal-fit-3 .modal-body > .row {
+        --bs-gutter-x: 1.25rem;
+    }
+
+    /* Lo que no es un campo suelto (filas, títulos, avisos, tablas) ocupa todo el ancho. */
+    .modal-fit-2 .modal-body > *,
+    .modal-fit-3 .modal-body > * {
+        grid-column: 1 / -1;
+    }
+
+    .modal-fit-2 .modal-body > .mb-3:not(:has(textarea)),
+    .modal-fit-3 .modal-body > .mb-3:not(:has(textarea)) {
+        grid-column: auto;
+    }
+}
+
+/* ==========================================================================
+   Resalte al pasar el mouse (hover) en todo el sistema
+   La fila (o el elemento) bajo el cursor cambia de color para saber sobre cuál se está.
+   ========================================================================== */
+
+:root {
+    --row-hover-bg: #e1eeea;
+}
+
+/* Tablas: Bootstrap pinta cada celda de blanco y tapaba el color de la fila, por eso el hover no se veía. Se aplica a las celdas. */
+.app-table tbody td {
+    transition: background-color 120ms ease;
+}
+
+.app-table tbody tr:hover > td,
+.app-table tbody tr:focus-within > td {
+    background-color: var(--row-hover-bg);
+}
+
+/* Barra de la marca al borde de la fila resaltada. La fila vencida de ventas ya trae su barra roja y la conserva. */
+.app-table tbody tr:not(.sales-row-overdue):hover > td:first-child,
+.app-table tbody tr:not(.sales-row-overdue):focus-within > td:first-child {
+    box-shadow: inset 3px 0 0 var(--brand-primary);
+}
+
+/* Listas dentro de tarjetas (abonos, comprobantes): el resalte necesita un margen interno para que no quede pegado al texto. */
+.payment-item,
+.invoice-item {
+    margin-inline: -12px;
+    padding-inline: 12px;
+    border-radius: var(--radius-sm);
+    transition: background-color 120ms ease;
+}
+
+.payment-item:hover,
+.invoice-item:hover {
+    background-color: var(--row-hover-bg);
+}
+
+/* Tarjetas de producto del catálogo: además de subir un poco, se marca el contorno. */
+.catalog-card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1), 0 0 0 2px var(--brand-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-table tbody td,
+    .payment-item,
+    .invoice-item {
+        transition: none;
+    }
+}
+
+/* Al volver de un detalle: la fila (o tarjeta) por la que iba se resalta un momento para encontrarla de un vistazo. */
+@keyframes row-returned {
+    from { background-color: rgba(200, 162, 74, 0.45); }
+    to { background-color: transparent; }
+}
+
+.app-table tbody tr.row-returned > td {
+    animation: row-returned 2.4s ease-out 1;
+}
+
+@keyframes card-returned {
+    from { box-shadow: 0 0 0 3px var(--brand-accent), 0 8px 20px rgba(0, 0, 0, 0.12); }
+    to { box-shadow: var(--shadow-card); }
+}
+
+.catalog-card.card-returned {
+    animation: card-returned 2.4s ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-table tbody tr.row-returned > td,
+    .catalog-card.card-returned {
+        animation: none;
     }
 }

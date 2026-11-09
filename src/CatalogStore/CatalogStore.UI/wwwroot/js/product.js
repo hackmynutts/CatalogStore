@@ -80,11 +80,101 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await response.json();
 
             if (result.success) {
-                createModal.hide();
-                Swal.fire({ icon: 'success', title: 'Producto creado', timer: 1500, showConfirmButton: false })
-                    .then(() => location.reload());
+                // Si la pregunta de inventario no se puede mostrar, todo sigue como antes: aviso y recarga.
+                if (result.id && await showInventoryStep(result.id)) return;
+                finishCreated('Producto creado');
             } else {
                 showApiError(result, 'No se pudo crear el producto.');
+            }
+        });
+    }
+
+    // Cierra el modal con el aviso de siempre y recarga para que el producto aparezca en la lista.
+    function finishCreated(title) {
+        reloadOnClose = false;
+        createModal.hide();
+        Swal.fire({ icon: 'success', title: title, timer: 1500, showConfirmButton: false })
+            .then(() => location.reload());
+    }
+
+    // Después de crear el producto: pregunta si se agrega al inventario. Solo con "Sí" aparece el formulario de la línea
+    // y la carga inicial. Devuelve false si el paso no se pudo cargar (el producto ya está creado).
+    let reloadOnClose = false;
+    async function showInventoryStep(productId) {
+        let html;
+        try {
+            const response = await fetch(`/Product/InventoryStepPartial/${productId}`);
+            if (!response.ok) return false;
+            html = await response.text();
+        } catch (e) {
+            return false;
+        }
+
+        createModalContent.innerHTML = html;
+        // Cerrar el modal con la X o fuera de él también refresca la lista: el producto ya existe.
+        reloadOnClose = true;
+        createModalEl.addEventListener('hidden.bs.modal', function () {
+            if (reloadOnClose) location.reload();
+        }, { once: true });
+        wireInventoryStep();
+        return true;
+    }
+
+    function wireInventoryStep() {
+        const no = createModalContent.querySelector('#invStepNo');
+        const yes = createModalContent.querySelector('#invStepYes');
+        const skip = createModalContent.querySelector('#invStepSkip');
+        const question = createModalContent.querySelector('#invStepQuestion');
+        const form = createModalContent.querySelector('#addToInventoryForm');
+
+        if (no) no.addEventListener('click', () => finishCreated('Producto creado'));
+        if (skip) skip.addEventListener('click', () => finishCreated('Producto creado'));
+        if (!yes || !form) return;
+
+        const quantity = form.querySelector('#InitialQuantity');
+        const restock = form.querySelector('#QuantityRestock');
+        const preview = form.querySelector('#invStepPreview');
+
+        function updatePreview() {
+            const qty = parseInt(quantity.value, 10) || 0;
+            const min = parseInt(restock.value, 10) || 0;
+            if (qty <= 0) {
+                preview.textContent = 'No se registra ingreso: solo se crea la línea del producto en la bodega.';
+            } else {
+                preview.textContent = `Quedará con ${qty} ${qty === 1 ? 'unidad disponible' : 'unidades disponibles'}.` +
+                    (min > 0 && qty <= min ? ' Ya aparecerá como "Reponer".' : '');
+            }
+        }
+        quantity.addEventListener('input', updatePreview);
+        restock.addEventListener('input', updatePreview);
+
+        yes.addEventListener('click', function () {
+            question.hidden = true;
+            form.hidden = false;
+            updatePreview();
+            quantity.focus();
+        });
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const submit = form.querySelector('button[type="submit"]');
+            submit.disabled = true;
+            try {
+                const response = await fetch('/Product/AddToInventory', { method: 'POST', body: new FormData(form) });
+                const result = await response.json();
+                if (result.success) {
+                    const qty = result.quantity || 0;
+                    finishCreated(qty > 0
+                        ? `Producto agregado al inventario con ${qty} ${qty === 1 ? 'unidad' : 'unidades'}`
+                        : 'Producto agregado al inventario');
+                } else {
+                    // Si la línea ya se creó y falló la carga, un nuevo intento reutiliza esa línea.
+                    showApiError(result, 'No se pudo agregar al inventario.');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo agregar al inventario. Revisá tu conexión e intentá de nuevo.', 'error');
+            } finally {
+                submit.disabled = false;
             }
         });
     }

@@ -2,6 +2,7 @@ using CatalogStore.UI.Documents;
 using CatalogStore.UI.Models;
 using CatalogStore.UI.Models.Home;
 using CatalogStore.UI.Models.Order;
+using CatalogStore.UI.Models.Product;
 using QuestPDF.Fluent;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -70,7 +71,7 @@ namespace CatalogStore.UI.Controllers
                 var client = _httpClientFactory.CreateClient("BackendApiAuth");
                 var response = await client.GetAsync("api/PublicCatalog");
                 if (!response.IsSuccessStatusCode) return new List<PublicCatalogItem>();
-                var items = await response.Content.ReadFromJsonAsync<List<PublicCatalogItem>>() ?? new();
+                var items = CatalogOrder.Sort(await response.Content.ReadFromJsonAsync<List<PublicCatalogItem>>() ?? new(), i => i.Category, i => i.Name);
                 var baseUrl = (_configuration["BackendApi:PublicBaseUrl"] ?? string.Empty).TrimEnd('/');
                 foreach (var item in items.Where(i => !string.IsNullOrEmpty(i.ImageUrl))) item.ImageUrl = baseUrl + item.ImageUrl;
                 _cache.Set(CatalogCacheKey, items, TimeSpan.FromSeconds(60));
