@@ -15,7 +15,7 @@ namespace CatalogStore.BackendAPI.DTO.Product
         public string ProductDesc { get; set; } = string.Empty;
         [Display(Name = "Categoría")]
         [Required(ErrorMessage = "El campo {0} es obligatorio.")]
-        public categoryType categoria { get; set; } = categoryType.General;
+        public categoryType categoria { get; set; } = categoryType.Otros;
         [Display(Name = "Precio costo")]
         [Range(0, 99999999.99, ErrorMessage = "El precio costo no puede ser negativo.")]
         public decimal? CostPrice { get; set; }

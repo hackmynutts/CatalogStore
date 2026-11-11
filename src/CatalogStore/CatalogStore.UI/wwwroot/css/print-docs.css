@@ -249,4 +249,10 @@ body.print-doc-page {
     .pf-sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; border-radius: 0; }
     .rc-sheet { box-shadow: none; margin: 0 auto; }
     @page { margin: 12mm; }
+
+    /* Documentos largos: una fila nunca se parte entre dos hojas, el encabezado de la tabla se repite en cada hoja
+       y los bloques de totales y notas no se separan. */
+    .pf-table thead { display: table-header-group; }
+    .pf-table tr { break-inside: avoid; page-break-inside: avoid; }
+    .pf-parties, .pf-totals, .pf-notes, .pf-receipt-note, .pf-legal { break-inside: avoid; page-break-inside: avoid; }
 }

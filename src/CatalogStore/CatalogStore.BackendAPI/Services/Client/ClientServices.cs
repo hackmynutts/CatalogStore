@@ -40,6 +40,7 @@ namespace CatalogStore.BackendAPI.Services.Client
             Models.Client.Client client = new Models.Client.Client
             {
                 Identification = dto.Identification,
+                IdentificationType = Models.Client.IdentificationTypes.Infer(dto.Identification, Models.Client.IdentificationType.Fisica),
                 ClientName = dto.ClientName,
                 ClientPhone = dto.ClientPhone,
                 ClientEmail = dto.ClientEmail,

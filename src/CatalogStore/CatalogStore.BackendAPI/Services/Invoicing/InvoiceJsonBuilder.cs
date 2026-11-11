@@ -61,8 +61,12 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             if (sale.Lines.Count > 200) errors.Add("El comprobante admite como máximo 200 líneas.");
             if (string.IsNullOrWhiteSpace(sale.ClientName)) errors.Add("La venta no tiene nombre de cliente.");
             if (string.IsNullOrWhiteSpace(sale.ClientIdentification)) errors.Add("La venta no tiene identificación del cliente.");
-            if (sale.ClientIdentificationType == IdentificationType.Extranjero)
+            // El tipo se deduce del número: los clientes guardados sin tipo quedaban como "cédula física" y Hacienda rechazaba a las empresas.
+            var idType = IdentificationTypes.Infer(sale.ClientIdentification, sale.ClientIdentificationType);
+            if (idType == IdentificationType.Extranjero)
                 errors.Add("Los clientes extranjeros todavía no se pueden facturar desde el sistema.");
+            else if (!string.IsNullOrWhiteSpace(sale.ClientIdentification) && IdentificationTypes.FormatError(sale.ClientIdentification, idType) is { } idError)
+                errors.Add(idError);
             if (input.PaymentMethod is not (1 or 2 or 3 or 4 or 6 or 7 or 99)) errors.Add("Elegí un medio de pago válido.");
             if (input.DocType == InvoiceDocType.NotaCredito && (input.Reference?.Clave is null || string.IsNullOrWhiteSpace(input.Reason)))
                 errors.Add("La nota de crédito necesita la clave del comprobante original y un motivo.");
@@ -143,7 +147,7 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             var isCredit = sale.PaymentTerm != credit.D0 && input.DocType != InvoiceDocType.NotaCredito;
             var phone = new string((sale.ClientPhone ?? string.Empty).Where(char.IsDigit).ToArray());
             var email = (sale.ClientEmail ?? string.Empty).Trim();
-            var idCode = ((int)sale.ClientIdentificationType).ToString("D2");
+            var idCode = ((int)idType).ToString("D2");
 
             var references = input.DocType == InvoiceDocType.NotaCredito
                 ? new[]
@@ -189,7 +193,7 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
                 receptor = new
                 {
                     nombre = Truncate(Clean(sale.ClientName), 100),
-                    identificacion = new { codigo_tipo = idCode, numero = new string(sale.ClientIdentification.Where(char.IsLetterOrDigit).ToArray()) },
+                    identificacion = new { codigo_tipo = idCode, numero = IdentificationTypes.Normalize(sale.ClientIdentification) },
                     idrealcliente = string.Empty,
                     codclie = string.Empty,
                     codigoactividad = (input.ClientActivity ?? string.Empty).Trim(),

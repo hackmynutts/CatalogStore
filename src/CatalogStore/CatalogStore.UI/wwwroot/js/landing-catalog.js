@@ -8,6 +8,15 @@
     if (!section) return;
 
     const cards = Array.from(section.querySelectorAll('.lp-pcard'));
+
+    // Fotos verticales: se muestran completas (contain) en vez de recortarlas; las demás llenan el recuadro (cover).
+    function fitImage(img) {
+        if (img.naturalWidth && img.naturalHeight / img.naturalWidth > 1.2) img.classList.add('is-portrait');
+    }
+    section.querySelectorAll('.lp-pcard-media img:not(.lp-pcard-fallback)').forEach((img) => {
+        if (img.complete) fitImage(img);
+        else img.addEventListener('load', () => fitImage(img), { once: true });
+    });
     const info = new Map(cards.map((c) => [c.dataset.id, { id: c.dataset.id, name: c.dataset.name, code: c.dataset.code }]));
     const whatsApp = section.dataset.whatsapp || '';
 

@@ -5,8 +5,8 @@ namespace CatalogStore.BackendAPI.Models.Product
 {
     public enum categoryType
     {
-        [Display(Name = "Genérica")]
-        General = 0,
+        [Display(Name = "Otros")]
+        Otros = 0,
         [Display(Name ="Puños ")]
         Punos = 1,
         [Display(Name = "Guantes")]
@@ -22,7 +22,13 @@ namespace CatalogStore.BackendAPI.Models.Product
         [Display(Name = "Filtros de aire")]
         FiltrosAire = 7,
         [Display(Name = "Filtros de aceite")]
-        FiltrosAceite = 8
+        FiltrosAceite = 8,
+        [Display(Name = "Espejos")]
+        Espejos = 9,
+        [Display(Name = "Descansa pies")]
+        DescansaPies = 10,
+        [Display(Name = "Deslizador de cadena")]
+        Deslizador = 11
     }
     public enum Unit
     {
@@ -46,7 +52,7 @@ namespace CatalogStore.BackendAPI.Models.Product
         public string? ProductCode { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string ProductDesc{ get; set; } = string.Empty;
-        public categoryType categoria { get; set; } = categoryType.General;
+        public categoryType categoria { get; set; } = categoryType.Otros;
         public decimal? Price { get; set; }
         // Costo de compra: lo escribe un administrador a mano, nunca viene del API del proveedor ni se muestra a vendedores.
         public decimal? CostPrice { get; set; }
