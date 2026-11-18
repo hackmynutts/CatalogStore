@@ -5,7 +5,7 @@ using QuestPDF.Infrastructure;
 
 namespace CatalogStore.UI.Documents
 {
-    // La lista de consulta que arma un visitante desde la landing: solo productos, sin precios ni cantidades.
+    // La lista de consulta que arma un visitante desde el catálogo público: productos y cuántas unidades quiere consultar, sin precios.
     // No es una cotización, no reserva nada y no garantiza disponibilidad: el cliente la consulta con un vendedor.
     public class ConsultationPdfDocument : IDocument
     {
@@ -14,16 +14,18 @@ namespace CatalogStore.UI.Documents
         private const string Muted = "#6B7280";
         private const string Line = "#E5E7EB";
 
-        private readonly IReadOnlyList<PublicCatalogItem> _lines;
+        private readonly IReadOnlyList<ConsultationLine> _lines;
         private readonly string? _customer;
+        private readonly string? _seller;
         private readonly DateTime _issued;
         private readonly string _contact;
         private readonly byte[]? _logo;
 
-        public ConsultationPdfDocument(IReadOnlyList<PublicCatalogItem> lines, string? customer, DateTime issued, string contact, byte[]? logo)
+        public ConsultationPdfDocument(IReadOnlyList<ConsultationLine> lines, string? customer, string? seller, DateTime issued, string contact, byte[]? logo)
         {
             _lines = lines;
             _customer = customer;
+            _seller = seller;
             _issued = issued;
             _contact = contact;
             _logo = logo;
@@ -60,7 +62,8 @@ namespace CatalogStore.UI.Documents
             {
                 col.Item().AlignRight().Text("LISTA DE CONSULTA").FontSize(17).Bold().FontColor(Brand);
                 col.Item().AlignRight().Text($"Fecha: {_issued:dd/MM/yyyy}").FontSize(9).FontColor("#4B5563");
-                if (!string.IsNullOrWhiteSpace(_customer)) col.Item().AlignRight().Text($"Para: {_customer}").FontSize(9).FontColor("#4B5563");
+                if (!string.IsNullOrWhiteSpace(_customer)) col.Item().AlignRight().Text($"De: {_customer}").FontSize(9).FontColor("#4B5563");
+                if (!string.IsNullOrWhiteSpace(_seller)) col.Item().AlignRight().Text($"Para: {_seller}").FontSize(9).FontColor("#4B5563");
             });
         });
 
@@ -75,6 +78,7 @@ namespace CatalogStore.UI.Documents
                 {
                     c.RelativeColumn(6);
                     c.RelativeColumn(2.4f);
+                    c.RelativeColumn(1.2f);
                 });
 
                 static IContainer HeaderCell(IContainer c) => c.Background("#F3F4F6").PaddingVertical(5).PaddingHorizontal(6);
@@ -82,19 +86,22 @@ namespace CatalogStore.UI.Documents
                 {
                     h.Cell().Element(HeaderCell).Text("PRODUCTO").FontSize(7.5f).Bold().FontColor("#4B5563");
                     h.Cell().Element(HeaderCell).Text("CÓDIGO").FontSize(7.5f).Bold().FontColor("#4B5563");
+                    h.Cell().Element(HeaderCell).AlignRight().Text("CANT.").FontSize(7.5f).Bold().FontColor("#4B5563");
                 });
 
                 static IContainer BodyCell(IContainer c) => c.ShowEntire().BorderBottom(0.6f).BorderColor(Line).PaddingVertical(6).PaddingHorizontal(6);
                 foreach (var item in _lines)
                 {
-                    table.Cell().Element(BodyCell).Text(item.Name);
-                    table.Cell().Element(BodyCell).Text(string.IsNullOrWhiteSpace(item.Code) ? "—" : item.Code).FontColor(Muted);
+                    table.Cell().Element(BodyCell).Text(item.Item.Name);
+                    table.Cell().Element(BodyCell).Text(string.IsNullOrWhiteSpace(item.Item.Code) ? "—" : item.Item.Code).FontColor(Muted);
+                    table.Cell().Element(BodyCell).AlignRight().Text(item.Quantity.ToString()).Bold();
                 }
             });
 
             col.Item().AlignRight().Text(t =>
             {
-                t.Span($"{_lines.Count} producto{(_lines.Count == 1 ? "" : "s")}").Bold();
+                var units = _lines.Sum(l => l.Quantity);
+                t.Span($"{_lines.Count} producto{(_lines.Count == 1 ? "" : "s")} · {units} unidad{(units == 1 ? "" : "es")}").Bold();
             });
 
             col.Item().ShowEntire().BorderTop(0.7f).BorderColor(Line).PaddingTop(8)

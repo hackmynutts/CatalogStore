@@ -70,7 +70,7 @@ src/CatalogStore/
 ## Implemented modules
 
 **Public site** (anonymous)
-- Landing page (`/`) with contact links from the `Landing` configuration, and a public catalog page (`/Home/Catalog`): the visitor builds a consultation list (no quantities, no availability), downloads it as PDF or sends it by WhatsApp. Data comes from the anonymous, cached `GET api/PublicCatalog`.
+- Landing page (`/`) with contact links from the `Landing` configuration, and a public catalog page (`/Home/Catalog`): the visitor builds a consultation list with the quantity wanted of each product (no prices, no availability), downloads it as PDF or sends it by WhatsApp to the seller they choose (`Landing:Sellers`). Data comes from the anonymous, cached `GET api/PublicCatalog`.
 - **SEO and share preview:** title/description per page, Open Graph and Twitter tags, favicons and web manifest, JSON-LD (WebSite + Organization), `/robots.txt` and `/sitemap.xml`, and a 301 from `www` to the main host. Only the landing and the catalog are indexable, and only when `Seo:SiteUrl` is configured; with it empty, every page is `noindex` and `robots.txt` disallows everything, so test copies never get indexed.
 
 **Authentication & Users**
@@ -181,6 +181,7 @@ dotnet user-secrets set "Email:Password" "<SMTP app password>"
 
 - `BaseUrl` is for the UI server's calls to the API (keep it HTTPS: a redirect breaks server-to-server calls). `PublicBaseUrl` builds image URLs the browser loads directly (must be HTTPS).
 - `Landing` empty values hide the corresponding link.
+- `Landing:Sellers` is a list of `{ "Name": "...", "WhatsApp": "..." }` shown as a selector in the public catalog; the WhatsApp message goes to the chosen seller's number (8-digit numbers get the 506 prefix). The general `Landing:WhatsApp` is offered as "Atención general". With no sellers configured there is no selector and the general number is used. In Azure set them as `Landing__Sellers__0__Name`, `Landing__Sellers__0__WhatsApp`, `Landing__Sellers__1__Name`, ... (phone numbers are personal data: prefer app settings over the committed `appsettings.json`).
 - `Seo:SiteUrl` is the public address (e.g. `https://samdesigncr.com`, no trailing slash). Leave it empty everywhere except production.
 
 ### Run locally

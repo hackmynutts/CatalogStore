@@ -29,7 +29,7 @@ namespace CatalogStore.UI.Documents
 
         public static string Money(decimal v) => "₡" + v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
 
-        public DocumentMetadata GetMetadata() => new() { Title = $"Comprobante de venta {_sale.SaleNumber}", Author = "SAM DESIGN" };
+        public DocumentMetadata GetMetadata() => new() { Title = $"Tiquete {_sale.SaleNumber}", Author = "SAM DESIGN" };
 
         public void Compose(IDocumentContainer container) => container.Page(page =>
         {
@@ -41,7 +41,7 @@ namespace CatalogStore.UI.Documents
             page.Footer().AlignCenter().Text(t =>
             {
                 t.DefaultTextStyle(s => s.FontSize(8).FontColor(Muted));
-                t.Span($"Comprobante de venta {_sale.SaleNumber} · Página ");
+                t.Span($"Tiquete {_sale.SaleNumber} · Página ");
                 t.CurrentPageNumber();
                 t.Span(" de ");
                 t.TotalPages();
@@ -59,7 +59,7 @@ namespace CatalogStore.UI.Documents
             });
             row.ConstantItem(210).AlignRight().Column(col =>
             {
-                col.Item().AlignRight().Text("COMPROBANTE DE VENTA").FontSize(15).Bold().FontColor(Brand);
+                col.Item().AlignRight().Text("TIQUETE").FontSize(15).Bold().FontColor(Brand);
                 col.Item().AlignRight().Text($"N.º {_sale.SaleNumber}").FontSize(12).Bold();
                 col.Item().AlignRight().Text($"Fecha: {_saleLocal:dd/MM/yyyy HH:mm}").FontSize(9).FontColor("#4B5563");
             });

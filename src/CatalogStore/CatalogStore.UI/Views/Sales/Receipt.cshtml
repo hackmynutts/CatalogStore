@@ -14,7 +14,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    @{ ViewData["FullTitle"] = $"Comprobante de venta {Model.SaleNumber}"; }
+    @{ ViewData["FullTitle"] = $"Tiquete {Model.SaleNumber}"; }
     <partial name="_SeoHead" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
@@ -38,7 +38,7 @@
                 }
             </div>
             <div class="pf-title">
-                <h1>COMPROBANTE DE VENTA</h1>
+                <h1>TIQUETE</h1>
                 <div class="pf-number">N.º @Model.SaleNumber</div>
                 <div class="pf-dates">Fecha: @saleLocal.ToString("dd/MM/yyyy HH:mm")</div>
             </div>

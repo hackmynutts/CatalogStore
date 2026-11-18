@@ -29,8 +29,9 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             ["Pieza"] = "Unid",
             ["Unidad"] = "Unid",
             ["Litro"] = "L",
-            ["Caja"] = "Cj",
-            ["Paquete"] = "Paq"
+            // La nota 15 de Hacienda (Anexos v4.4) no tiene códigos para caja ni paquete: se factura como "Unid".
+            ["Caja"] = "Unid",
+            ["Paquete"] = "Unid"
         };
 
         // Lo que falta para poder emitir; vacío = configuración completa.

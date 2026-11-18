@@ -15,7 +15,7 @@ namespace CatalogStore.UI.Controllers
     {
         public const string ConsultationPolicy = "ConsultationPdf";
         // La lista de consulta es pública: se acota lo que un visitante puede pedir.
-        private const int MaxLines = 80, MaxCustomerLength = 60;
+        private const int MaxLines = 80, MaxCustomerLength = 60, MaxQuantity = 9999;
         private const string CatalogCacheKey = "public-catalog";
 
         private readonly IHttpClientFactory _httpClientFactory;
@@ -39,23 +39,32 @@ namespace CatalogStore.UI.Controllers
             return View("PublicCatalog", await LoadPublicCatalogAsync());
         }
 
-        // POST: Home/ConsultationPdf — items = "12,15" (ids de producto). Los nombres salen del catálogo del servidor, no de lo que mande el navegador.
+        // POST: Home/ConsultationPdf — items = "12x3,15" (id de producto y, opcional, "x" y la cantidad; sin cantidad es 1).
+        // Los nombres salen del catálogo del servidor, no de lo que mande el navegador. El vendedor solo se acepta si está en la configuración.
         [HttpPost, ValidateAntiForgeryToken, EnableRateLimiting(ConsultationPolicy)]
-        public async Task<IActionResult> ConsultationPdf(string? items, string? customer, [FromServices] IWebHostEnvironment env)
+        public async Task<IActionResult> ConsultationPdf(string? items, string? customer, string? seller, [FromServices] IWebHostEnvironment env)
         {
             var catalog = (await LoadPublicCatalogAsync()).ToDictionary(p => p.Id);
-            var lines = new List<PublicCatalogItem>();
+            var lines = new List<ConsultationLine>();
             foreach (var part in (items ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(MaxLines))
-                if (int.TryParse(part, out var id) && catalog.TryGetValue(id, out var item) && lines.All(l => l.Id != id))
-                    lines.Add(item);
+            {
+                var pieces = part.Split('x', 2, StringSplitOptions.TrimEntries);
+                if (!int.TryParse(pieces[0], out var id) || !catalog.TryGetValue(id, out var item) || lines.Any(l => l.Item.Id == id)) continue;
+                var quantity = pieces.Length == 2 && int.TryParse(pieces[1], out var q) ? Math.Clamp(q, 1, MaxQuantity) : 1;
+                lines.Add(new ConsultationLine(item, quantity));
+            }
             if (lines.Count == 0) return BadRequest("La lista está vacía.");
+
+            var sellerName = string.IsNullOrWhiteSpace(seller)
+                ? null
+                : CatalogSeller.Options(_configuration).FirstOrDefault(s => s.Name.Equals(seller.Trim(), StringComparison.OrdinalIgnoreCase))?.Name;
 
             var name = string.IsNullOrWhiteSpace(customer) ? null : customer.Trim();
             if (name is { Length: > MaxCustomerLength }) name = name[..MaxCustomerLength];
 
             var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "logo_pequeño-removebg-preview.png");
             var contact = string.Join(" · ", new[] { _configuration["Landing:WhatsApp"], _configuration["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
-            var document = new ConsultationPdfDocument(lines, name, OrderDocs.LocalNow(), contact,
+            var document = new ConsultationPdfDocument(lines, name, sellerName, OrderDocs.LocalNow(), contact,
                 logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null);
             return File(document.GeneratePdf(), "application/pdf", $"Lista-consulta-{OrderDocs.LocalNow():yyyyMMdd}.pdf");
         }

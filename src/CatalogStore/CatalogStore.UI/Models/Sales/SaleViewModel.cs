@@ -158,5 +158,7 @@ namespace CatalogStore.UI.Models.Sales
         public bool IsOverdue { get; set; }
         public int DaysOverdue { get; set; }
         public int LineCount { get; set; }
+        // Venta con IVA con su factura electrónica aceptada y vigente: se puede descargar desde la lista.
+        public bool HasAcceptedInvoice { get; set; }
     }
 }

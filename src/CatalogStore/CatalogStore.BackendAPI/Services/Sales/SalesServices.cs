@@ -143,6 +143,9 @@ namespace CatalogStore.BackendAPI.Services.Sales
         {
             var today = TodayLocal();
             var rows = await _salesRepository.GetListAsync(status, clientId, isAdmin ? null : user, overdueOnly ? today : null);
+            // Solo las ventas con IVA que no están anuladas pueden tener una factura para descargar.
+            var withInvoice = await _invoiceRepository.GetSaleIdsWithAcceptedInvoiceAsync(
+                rows.Where(r => r.Sale.ApplyIva && r.Sale.PaymentStatus != PaymentStatus.Voided).Select(r => r.Sale.SalesHeaderID).ToList());
             return rows.Select(r =>
             {
                 var (isOverdue, daysOverdue) = Overdue(r.Sale, today);
@@ -166,7 +169,8 @@ namespace CatalogStore.BackendAPI.Services.Sales
                     PaymentStatusName = r.Sale.PaymentStatus.Humanize(),
                     IsOverdue = isOverdue,
                     DaysOverdue = daysOverdue,
-                    LineCount = r.LineCount
+                    LineCount = r.LineCount,
+                    HasAcceptedInvoice = withInvoice.Contains(r.Sale.SalesHeaderID)
                 };
             }).ToList();
         }

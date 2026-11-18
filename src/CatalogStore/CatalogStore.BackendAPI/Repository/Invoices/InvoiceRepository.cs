@@ -28,6 +28,8 @@ namespace CatalogStore.BackendAPI.Repository.Invoices
         Task<string?> GetClientActivityAsync(int clientId);
         // El comprobante vigente (ver InvoiceStates.Active) de un tipo para una venta, si existe.
         Task<Invoice?> GetActiveAsync(int salesHeaderId, InvoiceDocType type);
+        // De estas ventas, las que tienen una factura ACEPTADA que no fue anulada con una nota de crédito vigente (la que se puede imprimir o descargar).
+        Task<HashSet<int>> GetSaleIdsWithAcceptedInvoiceAsync(IReadOnlyCollection<int> salesHeaderIds);
     }
 
     public class InvoiceRepository : IInvoiceRepository
@@ -55,6 +57,24 @@ namespace CatalogStore.BackendAPI.Repository.Invoices
 
         public Task<string?> GetClientActivityAsync(int clientId) =>
             _context.Clients.AsNoTracking().Where(c => c.Id == clientId).Select(c => c.Cabys).FirstOrDefaultAsync();
+
+        public async Task<HashSet<int>> GetSaleIdsWithAcceptedInvoiceAsync(IReadOnlyCollection<int> salesHeaderIds)
+        {
+            if (salesHeaderIds.Count == 0) return new HashSet<int>();
+            var accepted = await _context.Invoices.AsNoTracking()
+                .Where(i => salesHeaderIds.Contains(i.SalesHeaderID) && i.DocumentType == InvoiceDocType.Factura && i.Status == InvoiceStatus.Accepted)
+                .Select(i => new { i.InvoiceID, i.SalesHeaderID })
+                .ToListAsync();
+            if (accepted.Count == 0) return new HashSet<int>();
+
+            var acceptedIds = accepted.Select(a => a.InvoiceID).ToList();
+            var cancelled = await _context.Invoices.AsNoTracking()
+                .Where(i => i.DocumentType == InvoiceDocType.NotaCredito && InvoiceStates.Active.Contains(i.Status)
+                            && i.ReferenceInvoiceID != null && acceptedIds.Contains(i.ReferenceInvoiceID.Value))
+                .Select(i => i.ReferenceInvoiceID!.Value)
+                .ToListAsync();
+            return accepted.Where(a => !cancelled.Contains(a.InvoiceID)).Select(a => a.SalesHeaderID).ToHashSet();
+        }
 
         public Task<Invoice?> GetActiveAsync(int salesHeaderId, InvoiceDocType type) =>
             _context.Invoices.AsNoTracking()

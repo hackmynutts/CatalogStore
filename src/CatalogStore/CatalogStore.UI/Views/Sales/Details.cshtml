@@ -57,7 +57,7 @@
         </div>
     </div>
     <div class="detail-actions">
-        @if (canPay)
+        @if (canPay && isAdmin)
         {
             <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-bs-toggle="modal" data-bs-target="#paymentModal">
                 <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Registrar pago

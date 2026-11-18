@@ -116,8 +116,7 @@ namespace CatalogStore.UI.Controllers
             var (sale, invoice) = found.Value;
 
             var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "sam_desing-removebg-preview.png");
-            var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
-            var document = new Documents.InvoicePdfDocument(sale, invoice, InvoiceLocalTime(invoice), contact,
+            var document = new Documents.InvoicePdfDocument(sale, invoice, InvoiceLocalTime(invoice), Documents.InvoiceIssuer.LegalName(config), Documents.InvoiceIssuer.Lines(config),
                 logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null);
             return File(document.GeneratePdf(), "application/pdf", $"Factura-{invoice.Number}.pdf");
         }
@@ -140,8 +139,7 @@ namespace CatalogStore.UI.Controllers
             var (sale, creditNote, original) = found.Value;
 
             var logoPath = env.WebRootPath is null ? null : Path.Combine(env.WebRootPath, "img", "logos", "sam_desing-removebg-preview.png");
-            var contact = string.Join(" · ", new[] { config["Landing:WhatsApp"], config["Landing:Email"] }.Where(s => !string.IsNullOrWhiteSpace(s)));
-            var document = new Documents.InvoicePdfDocument(sale, creditNote, InvoiceLocalTime(creditNote), contact,
+            var document = new Documents.InvoicePdfDocument(sale, creditNote, InvoiceLocalTime(creditNote), Documents.InvoiceIssuer.LegalName(config), Documents.InvoiceIssuer.Lines(config),
                 logoPath is not null && System.IO.File.Exists(logoPath) ? await System.IO.File.ReadAllBytesAsync(logoPath) : null, original);
             return File(document.GeneratePdf(), "application/pdf", $"Nota-credito-{creditNote.Number}.pdf");
         }

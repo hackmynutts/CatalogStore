@@ -9,7 +9,8 @@
     string docName = isCredit ? "Nota de crédito" : "Factura";
     var issued = CatalogStore.UI.Controllers.SalesController.InvoiceLocalTime(invoice);
     string Money(decimal v) => "₡" + v.ToString("N2");
-    var contact = string.Join(" · ", new[] { (Configuration["Landing:WhatsApp"] ?? string.Empty).Trim(), (Configuration["Landing:Email"] ?? string.Empty).Trim() }.Where(x => x.Length > 0));
+    var issuerName = CatalogStore.UI.Documents.InvoiceIssuer.LegalName(Configuration);
+    var issuerLines = CatalogStore.UI.Documents.InvoiceIssuer.Lines(Configuration);
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -38,9 +39,13 @@
         <header class="pf-head">
             <div class="pf-brand">
                 <img class="pf-logo-full" src="~/img/logos/sam_desing-removebg-preview.png" alt="SAM DESIGN - Protegemos tu viaje en dos ruedas" />
-                @if (contact.Length > 0)
+                @if (issuerName.Length > 0)
                 {
-                    <div class="pf-brand-contact">@contact</div>
+                    <div class="pf-issuer-name">@issuerName</div>
+                }
+                @foreach (var line in issuerLines)
+                {
+                    <div class="pf-brand-contact">@line</div>
                 }
             </div>
             <div class="pf-title">

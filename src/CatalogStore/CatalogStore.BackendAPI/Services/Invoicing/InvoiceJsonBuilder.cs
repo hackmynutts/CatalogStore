@@ -41,6 +41,11 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
 
         private const decimal Tolerance = 0.005m;
 
+        // Formato de correo que exige Hacienda (Anexos v4.4): sin espacios ni caracteres especiales, con arroba y dominio.
+        private static readonly System.Text.RegularExpressions.Regex ValidEmail = new(
+            @"^[^<>()\[\]\.,;:\s@""]+(\.[^<>()\[\]\.,;:\s@""]+)*@([^<>()\[\]\.,;:\s@""]+\.)+[^<>()\[\]\.,;:\s@""]{2,}$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
         // Las ventas sin IVA no van a Hacienda: llevan un tiquete de caja (impresión no fiscal). Decisión del negocio 2026-10-27.
         public const string NoIvaMessage = "Las ventas sin IVA no se facturan electrónicamente: usá el tiquete de caja (impresión no fiscal).";
 
@@ -60,6 +65,7 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
             if (sale.Lines.Count == 0) errors.Add("La venta no tiene productos.");
             if (sale.Lines.Count > 200) errors.Add("El comprobante admite como máximo 200 líneas.");
             if (string.IsNullOrWhiteSpace(sale.ClientName)) errors.Add("La venta no tiene nombre de cliente.");
+            else if (sale.ClientName.Trim().Length < 3) errors.Add("El nombre del cliente debe tener al menos 3 caracteres (lo exige Hacienda).");
             if (string.IsNullOrWhiteSpace(sale.ClientIdentification)) errors.Add("La venta no tiene identificación del cliente.");
             // El tipo se deduce del número: los clientes guardados sin tipo quedaban como "cédula física" y Hacienda rechazaba a las empresas.
             var idType = IdentificationTypes.Infer(sale.ClientIdentification, sale.ClientIdentificationType);
@@ -88,6 +94,7 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
                 if (product is null || !options.UnitCodes.TryGetValue(product.UnidadMedida.ToString(), out unit) || string.IsNullOrWhiteSpace(unit))
                     withoutUnit.Add(line.ProductName);
                 if (line.Quantity <= 0) errors.Add($"{line.ProductName}: la cantidad tiene que ser mayor a cero.");
+                if (Clean(line.ProductName ?? string.Empty).Length < 3) errors.Add($"La descripción de un producto debe tener al menos 3 caracteres: \"{line.ProductName}\".");
 
                 var gross = line.UnitPrice * line.Quantity;
                 var lineDiscount = Math.Max(gross - line.LineSubtotal, 0m);
@@ -145,8 +152,12 @@ namespace CatalogStore.BackendAPI.Services.Invoicing
                 return new InvoiceBuildResult(null, errors, subtotal, iva, total, lines.Count);
 
             var isCredit = sale.PaymentTerm != credit.D0 && input.DocType != InvoiceDocType.NotaCredito;
+            // Teléfono y correo son opcionales, pero si van mal formados Hacienda rechaza todo el comprobante (mínimo 8 dígitos; formato de correo):
+            // en ese caso se omiten en vez de bloquear la factura. Los datos de la venta no cambian al editar al cliente, así que no se podrían corregir.
             var phone = new string((sale.ClientPhone ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (phone.Length < 8) phone = string.Empty;
             var email = (sale.ClientEmail ?? string.Empty).Trim();
+            if (!ValidEmail.IsMatch(email)) email = string.Empty;
             var idCode = ((int)idType).ToString("D2");
 
             var references = input.DocType == InvoiceDocType.NotaCredito

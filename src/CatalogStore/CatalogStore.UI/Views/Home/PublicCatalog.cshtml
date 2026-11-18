@@ -8,9 +8,10 @@
     ViewData["FullTitle"] = "Catálogo de productos para moto | SAM DESIGN";
     ViewData["Description"] = "Conoce el catálogo de SAM DESIGN: capas, jackets, guantes, puños, plásticos y accesorios para moto. Arma tu lista y consúltala con un vendedor por WhatsApp.";
 
-    // WhatsApp de la sección "Landing" de appsettings.json: solo dígitos para el enlace wa.me.
-    var whatsApp = (Configuration["Landing:WhatsApp"] ?? string.Empty).Where(char.IsDigit).Aggregate(string.Empty, (acc, c) => acc + c);
-    bool hasWhatsApp = whatsApp.Length > 0;
+    // A quién se le puede escribir por WhatsApp: cada vendedor de "Landing:Sellers" y, al final, la atención general ("Landing:WhatsApp").
+    // Con una sola opción se usa directo; con varias, el visitante elige y el mensaje va al número de ese vendedor.
+    var contacts = CatalogSeller.Options(Configuration);
+    bool hasWhatsApp = contacts.Count > 0;
     var catalog = Model;
 }
 
@@ -25,7 +26,7 @@
     <!-- Catálogo público: sin precios. El visitante arma una lista, la descarga en PDF o la manda por WhatsApp (landing-catalog.js). -->
 @if (catalog.Count > 0)
 {
-    <section class="lp-section lp-catalog" id="catalogo" data-whatsapp="@(hasWhatsApp ? whatsApp : "")">
+    <section class="lp-section lp-catalog" id="catalogo" data-whatsapp="@(contacts.Count == 1 ? contacts[0].WhatsApp : "")" data-contact-name="@(contacts.Count == 1 ? contacts[0].Name : "")">
         <div class="lp-wrap">
             <h1 class="lp-h2">Catálogo</h1>
             <p class="lp-catalog-intro">Elegí los productos que te interesan y armá tu lista de consulta. Es solo una consulta: un vendedor te confirma disponibilidad y precio.</p>
@@ -63,6 +64,14 @@
                             {
                                 <p class="lp-pcard-code">Código @p.Code</p>
                             }
+                            <div class="lp-pcard-qty" hidden>
+                                <span class="lp-pcard-qty-label">Cantidad</span>
+                                <div class="lp-qty" role="group" aria-label="Cantidad de @p.Name">
+                                    <button type="button" data-qty-step="-1" aria-label="Restar una unidad de @p.Name"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                                    <input type="number" min="1" max="9999" step="1" value="1" inputmode="numeric" data-card-qty aria-label="Cantidad de @p.Name" />
+                                    <button type="button" data-qty-step="1" aria-label="Sumar una unidad de @p.Name"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
                             <div class="lp-pcard-add">
                                 <button type="button" class="lp-btn lp-btn-primary lp-add" data-toggle aria-pressed="false">Agregar a mi lista</button>
                             </div>
@@ -97,18 +106,30 @@
         <div class="lp-list-foot">
             <label for="lpCustomer">Tu nombre (opcional)</label>
             <input type="text" id="lpCustomer" maxlength="60" autocomplete="name" />
+            @if (contacts.Count > 1)
+            {
+                <label for="lpSeller">¿Con quién querés consultar?</label>
+                <select id="lpSeller" class="lp-select">
+                    <option value="">Elegí un vendedor</option>
+                    @foreach (var c in contacts)
+                    {
+                        <option value="@c.WhatsApp" data-name="@c.Name">@c.Name</option>
+                    }
+                </select>
+            }
             <div class="lp-actions">
                 <form method="post" asp-action="ConsultationPdf" asp-controller="Home" id="lpPdfForm">
                     <input type="hidden" name="items" id="lpPdfItems" />
                     <input type="hidden" name="customer" id="lpPdfCustomer" />
+                    <input type="hidden" name="seller" id="lpPdfSeller" />
                     <button type="submit" class="lp-btn lp-btn-ghost" id="lpPdfBtn"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF</button>
                 </form>
                 @if (hasWhatsApp)
                 {
-                    <a href="#" class="lp-btn lp-btn-primary" id="lpWhatsBtn" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar por WhatsApp</a>
+                    <a href="#" class="lp-btn lp-btn-primary" id="lpWhatsBtn" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span id="lpWhatsLabel">Enviar por WhatsApp</span></a>
                 }
             </div>
-            <p class="lp-list-hint"><strong>Esta lista es solo de consulta y no garantiza disponibilidad.</strong> Consultala con un vendedor para confirmar disponibilidad y precio.@(hasWhatsApp ? " El botón de WhatsApp abre el chat con tu lista escrita; si preferís mandar el PDF, descargalo y adjuntalo en el chat." : "")</p>
+            <p class="lp-list-hint"><strong>Esta lista es solo de consulta y no garantiza disponibilidad.</strong> Consultala con un vendedor para confirmar disponibilidad y precio.@(hasWhatsApp ? " El botón de WhatsApp abre el chat con tu vendedor y tu lista escrita, con las cantidades; si preferís mandar el PDF, descargalo y adjuntalo en el chat." : "")</p>
             <button type="button" class="lp-list-clear" id="lpListClear">Vaciar lista</button>
         </div>
     </aside>

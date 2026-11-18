@@ -22,16 +22,18 @@ namespace CatalogStore.UI.Documents
         private bool IsCredit => _invoice.IsCreditNote;
         private string DocName => IsCredit ? "Nota de crédito" : "Factura";
         private readonly DateTime _issued;
-        private readonly string _contact;
+        private readonly string _issuerName;
+        private readonly IReadOnlyList<string> _issuerLines;
         private readonly byte[]? _logo;
 
-        public InvoicePdfDocument(SaleViewModel sale, InvoiceViewModel invoice, DateTime issued, string contact, byte[]? logo, InvoiceViewModel? reference = null)
+        public InvoicePdfDocument(SaleViewModel sale, InvoiceViewModel invoice, DateTime issued, string issuerName, IReadOnlyList<string> issuerLines, byte[]? logo, InvoiceViewModel? reference = null)
         {
             _sale = sale;
             _invoice = invoice;
             _reference = reference;
             _issued = issued;
-            _contact = contact;
+            _issuerName = issuerName;
+            _issuerLines = issuerLines;
             _logo = logo;
         }
 
@@ -63,7 +65,9 @@ namespace CatalogStore.UI.Documents
                 // El logo completo ya trae el nombre y el lema.
                 if (_logo is not null) col.Item().Height(58).Image(_logo).FitHeight();
                 else col.Item().Text("SAM DESIGN").FontSize(13).Bold().FontColor("#24473D");
-                if (_contact.Length > 0) col.Item().Text(_contact).FontSize(8.5f).FontColor(Muted);
+                // Datos de la empresa que emite: razón social, dirección, correo, teléfono y cédula.
+                if (_issuerName.Length > 0) col.Item().PaddingTop(4).Text(_issuerName).FontSize(10).Bold();
+                foreach (var line in _issuerLines) col.Item().Text(line).FontSize(8.5f).FontColor("#4B5563");
             });
             row.ConstantItem(210).AlignRight().Column(col =>
             {

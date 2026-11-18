@@ -24,5 +24,7 @@ namespace CatalogStore.BackendAPI.DTO.Sales
         public bool IsOverdue { get; set; }
         public int DaysOverdue { get; set; }
         public int LineCount { get; set; }
+        // Venta con IVA que ya tiene su factura electrónica aceptada y vigente: se puede descargar desde la lista.
+        public bool HasAcceptedInvoice { get; set; }
     }
 }

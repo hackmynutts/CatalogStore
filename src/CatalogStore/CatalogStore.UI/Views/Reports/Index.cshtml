@@ -76,7 +76,7 @@
             <input type="hidden" name="key" value="statement" />
             <div class="mb-3">
                 <label class="form-label" for="statement-client">Cliente</label>
-                <select class="form-select" id="statement-client" name="clientId" required>
+                <select class="form-select" id="statement-client" name="clientId" required data-searchable data-placeholder="Escribí el nombre o la cédula del cliente…">
                     <option value="">Elegí un cliente…</option>
                     @foreach (var c in clients)
                     {

@@ -37,7 +37,7 @@ namespace CatalogStore.BackendAPI.Models.Client
                 IdentificationType.Dimex => id.Length is 11 or 12,
                 _ => false
             };
-            return ok ? null : $"La identificación del cliente tiene {id.Length} dígitos y no corresponde a ningún tipo válido (cédula física 9, jurídica 10, DIMEX 11 o 12). Corregila en el cliente.";
+            return ok ? null : $"La identificación del cliente tiene {id.Length} dígitos y no corresponde a ningún tipo válido (cédula física 9, jurídica 10, DIMEX 11 o 12). Los datos de la venta son los del momento de la venta: editar al cliente no los cambia.";
         }
     }
 }

@@ -256,3 +256,6 @@ body.print-doc-page {
     .pf-table tr { break-inside: avoid; page-break-inside: avoid; }
     .pf-parties, .pf-totals, .pf-notes, .pf-receipt-note, .pf-legal { break-inside: avoid; page-break-inside: avoid; }
 }
+
+/* Razón social de la empresa que emite la factura. */
+.pf-issuer-name { font-weight: 700; font-size: 1rem; margin-top: 4px; }

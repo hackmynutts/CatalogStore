@@ -154,7 +154,26 @@
                     <td>@s.Seller</td>
                 }
                 <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" aria-label="Ver detalle de @s.SaleNumber" asp-action="Details" asp-route-id="@s.SalesHeaderID"><i class="fa-solid fa-eye"></i></a>
+                    <div class="row-actions">
+                        <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" aria-label="Ver detalle de @s.SaleNumber" asp-action="Details" asp-route-id="@s.SalesHeaderID"><i class="fa-solid fa-eye"></i></a>
+                        @* El PDF del documento de la venta, junto al ojo: la factura electrónica (ventas con IVA, ya aceptada) o el comprobante (ventas sin IVA). Anuladas no tienen. *@
+                        @if (voided)
+                        {
+                            <span class="btn btn-sm btn-outline-secondary disabled" title="La venta está anulada: no tiene documento para descargar" aria-disabled="true"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></span>
+                        }
+                        else if (!s.ApplyIva)
+                        {
+                            <a class="btn btn-sm btn-outline-secondary" title="Descargar comprobante en PDF" aria-label="Descargar el comprobante en PDF de @s.SaleNumber" asp-action="ReceiptPdf" asp-route-id="@s.SalesHeaderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></a>
+                        }
+                        else if (s.HasAcceptedInvoice)
+                        {
+                            <a class="btn btn-sm btn-outline-secondary" title="Descargar factura electrónica en PDF" aria-label="Descargar la factura en PDF de @s.SaleNumber" asp-action="InvoicePdf" asp-route-id="@s.SalesHeaderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></a>
+                        }
+                        else
+                        {
+                            <span class="btn btn-sm btn-outline-secondary disabled" title="Todavía no tiene factura electrónica aceptada" aria-disabled="true"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></span>
+                        }
+                    </div>
                 </td>
             </tr>
         }
