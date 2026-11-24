@@ -32,19 +32,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
         options.SlidingExpiration = true;
     });
-// "Olvidé mi contraseña" es público: como mucho 5 envíos cada 15 minutos por IP. El límite va aquí y no en la API
-// porque la API ve siempre la IP de la UI, no la del usuario. La API además limita a un correo por usuario cada 5 min.
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy(AccountController.PasswordFormsPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(15), QueueLimit = 0 }));
-    // La lista de consulta en PDF también es pública y genera un archivo en el servidor: 10 por minuto por IP.
-    options.AddPolicy(HomeController.ConsultationPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
-});
+// Límites de peticiones (ver Handlers/UiRateLimiting.cs): inicio de sesión y formularios públicos por IP, PDFs y correos por persona.
+builder.Services.AddUiRateLimiting(builder.Configuration);
 
 var app = builder.Build();
 
@@ -73,9 +62,9 @@ if (Uri.TryCreate((builder.Configuration["Seo:SiteUrl"] ?? string.Empty).Trim().
 app.UseHttpsRedirection();
 app.UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}");
 app.UseRouting();
-app.UseRateLimiter();
-
+// El limitador va DESPUÉS de autenticar: así cuenta por persona (no solo por IP).
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapStaticAssets();

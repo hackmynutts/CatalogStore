@@ -1,4 +1,6 @@
-﻿using CatalogStore.BackendAPI.Services.Client.Hacienda;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using CatalogStore.BackendAPI.Services.Security;
+using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +18,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
 
         [HttpGet("lookup/{identification}")]
+        [EnableRateLimiting(RateLimitPolicies.External)]
         public async Task<IActionResult> Lookup(string identification)
         {
             var result = await _haciendaServices.LookupAsync(identification);

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.RateLimiting;
+using CatalogStore.BackendAPI.Services.Security;
 using CatalogStore.BackendAPI.DTO.Common;
 using CatalogStore.BackendAPI.DTO.Invoicing;
 using CatalogStore.BackendAPI.Services.Invoicing;
@@ -7,29 +9,31 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace CatalogStore.BackendAPI.Controllers
 {
-    // Facturación electrónica de las ventas. Emitir, anular, descartar y enviar son solo de administradores; el vendedor
+    // Facturación electrónica de las ventas. Emitir, anular, descartar y enviar son de administradores y de Bodega; el vendedor
     // solo consulta el estado de sus propias ventas. Errores: 400 { message }, 404 { message } si no existe.
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+    [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
     public class InvoiceController : ControllerBase
     {
         private readonly IInvoiceServices _invoiceServices;
         public InvoiceController(IInvoiceServices invoiceServices) { _invoiceServices = invoiceServices; }
         private string CurrentUser => User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
         private bool IsAdmin => User.IsInRole("Admin") || User.IsInRole("AdminIT");
+        // Bodega solo consulta (todas las ventas); el resto de acciones de esta clase exige Admin/AdminIT.
+        private bool SeesAll => IsAdmin || User.IsInRole("Bodega");
 
         // GET api/Invoice/sale/5 — los comprobantes de una venta (factura o tiquete y su nota de crédito)
         [HttpGet("sale/{salesHeaderId:int}")]
         public async Task<IActionResult> GetBySale(int salesHeaderId)
         {
-            var list = await _invoiceServices.GetBySaleAsync(salesHeaderId, CurrentUser, IsAdmin);
+            var list = await _invoiceServices.GetBySaleAsync(salesHeaderId, CurrentUser, SeesAll);
             return list is null ? NotFound(new { message = InvoiceServices.NotFoundMessage }) : Ok(list);
         }
 
         // GET api/Invoice/sale/5/preview?paymentMethod=1 — revisa todo sin enviar ni guardar nada
         [HttpGet("sale/{salesHeaderId:int}/preview")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Preview(int salesHeaderId, [FromQuery] int? paymentMethod)
         {
             var preview = await _invoiceServices.PreviewAsync(salesHeaderId, paymentMethod);
@@ -38,37 +42,42 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // POST api/Invoice/sale/5/emit — factura (con IVA) o tiquete (sin IVA). ¡Emite un comprobante REAL ante Hacienda!
         [HttpPost("sale/{salesHeaderId:int}/emit")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.Invoicing)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Emit(int salesHeaderId, [FromBody] EmitInvoiceDTO dto) =>
             ToResponse(await _invoiceServices.EmitAsync(salesHeaderId, dto, CurrentUser));
 
         // POST api/Invoice/sale/5/credit-note — anula por completo el comprobante aceptado de la venta
         [HttpPost("sale/{salesHeaderId:int}/credit-note")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.Invoicing)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> CreditNote(int salesHeaderId, [FromBody] CreditNoteDTO dto) =>
             ToResponse(await _invoiceServices.EmitCreditNoteAsync(salesHeaderId, dto, CurrentUser));
 
         // POST api/Invoice/9/refresh — consulta el estado en Hacienda y trae los enlaces del PDF
         [HttpPost("{id:int}/refresh")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.Invoicing)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Refresh(int id) =>
             ToResponse(await _invoiceServices.RefreshAsync(id, CurrentUser));
 
         // POST api/Invoice/9/discard — el intento "por conciliar" se verificó y NO se emitió
         [HttpPost("{id:int}/discard")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.Invoicing)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Discard(int id, [FromBody] DiscardInvoiceDTO dto) =>
             ToResponse(await _invoiceServices.DiscardAsync(id, dto, CurrentUser));
 
         // POST api/Invoice/9/email — manda el enlace del PDF al correo del cliente
         [HttpPost("{id:int}/email")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Email(int id) =>
             ToResponse(await _invoiceServices.SendEmailAsync(id, CurrentUser));
 
         // GET api/Invoice/9/xml — el XML firmado
         [HttpGet("{id:int}/xml")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Xml(int id)
         {
             var xml = await _invoiceServices.GetXmlAsync(id);

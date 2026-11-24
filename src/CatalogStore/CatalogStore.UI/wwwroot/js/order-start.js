@@ -5,9 +5,33 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!btn) return;
 
     btn.addEventListener('click', async function () {
+        // Administración elige a nombre de qué vendedor queda la orden; los demás roles no ven esta pregunta (la UI les responde 403).
+        let seller = '';
+        try {
+            const response = await fetch('/Order/Sellers');
+            const list = response.ok ? await response.json() : null;
+            if (list && list.success) {
+                const options = { '': 'A mi nombre' };
+                list.sellers.forEach(s => { options[s.email] = s.name; });
+                const ask = await Swal.fire({
+                    title: 'Iniciar orden',
+                    text: 'Elegí a nombre de qué vendedor queda. Será el mismo en toda la orden y en su venta.',
+                    input: 'select',
+                    inputOptions: options,
+                    inputLabel: 'Vendedor',
+                    showCancelButton: true,
+                    confirmButtonText: 'Iniciar orden',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (!ask.isConfirmed) return;
+                seller = ask.value || '';
+            }
+        } catch (e) { /* sin lista de vendedores: se sigue a nombre de quien la crea */ }
+
         const token = document.querySelector('#orderStartTokenForm input[name="__RequestVerificationToken"]').value;
         const body = new FormData();
         body.append('__RequestVerificationToken', token);
+        if (seller) body.append('seller', seller);
 
         const icon = btn.querySelector('i');
         btn.disabled = true;

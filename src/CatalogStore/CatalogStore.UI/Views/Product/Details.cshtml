@@ -1,7 +1,7 @@
 @model CatalogStore.UI.Models.Product.ProductViewModel
 @{
     ViewData["Title"] = "Detalle del producto";
-    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Bodega");
     bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
 
     string CategoriaLabel(int c) => CatalogStore.UI.Models.Product.ProductCategories.Label(c);

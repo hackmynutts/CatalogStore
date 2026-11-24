@@ -102,7 +102,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: ProductController/IndexAdmin — todos, incluidos inactivos
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> IndexAdmin()
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -115,14 +115,14 @@ namespace CatalogStore.UI.Controllers
             return View("Index", productos ?? new List<ProductViewModel>());
         }
 
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public IActionResult CreatePartial()
         {
             return PartialView("_CreateProductPartial", new AddProductViewModel());
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(AddProductViewModel model)
         {
@@ -139,7 +139,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Product/InventoryStepPartial/5 — paso 2 del alta: ¿se agrega el producto recién creado al inventario?
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> InventoryStepPartial(int id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -168,7 +168,7 @@ namespace CatalogStore.UI.Controllers
         // Son dos llamadas a la API. Si la segunda falla la línea ya existe (con 0 unidades); el mensaje lo dice y un reintento
         // reutiliza esa línea en vez de intentar crearla otra vez.
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToInventory(AddToInventoryViewModel model)
         {
@@ -230,7 +230,7 @@ namespace CatalogStore.UI.Controllers
             return Json(new { success = true, lineId, quantity = model.InitialQuantity });
         }
 
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> EditPartial(int id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -265,7 +265,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, UpdateProductViewModel model)
         {
@@ -280,7 +280,7 @@ namespace CatalogStore.UI.Controllers
 
         // POST: ProductController/Inactivate/5 — sin form propio: trae el producto actual y lo reenvía con StatusID inactivo.
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Inactivate(int id)
         {
@@ -315,7 +315,7 @@ namespace CatalogStore.UI.Controllers
         // POST: ProductController/ImportCatalog?dryRun=true — dispara la importación del catálogo del proveedor externo.
         // Con dryRun solo simula: devuelve el resumen sin guardar nada. El resumen del backend se reenvía tal cual al JS.
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportCatalog(bool dryRun = true)
         {
@@ -332,7 +332,7 @@ namespace CatalogStore.UI.Controllers
         // ───────── CABYS (factura electrónica) ─────────
 
         // GET: Product/Cabys — todos los productos con su CABYS, para completar los que faltan
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Cabys(bool onlyMissing = false)
         {
             ViewData["OnlyMissing"] = onlyMissing;
@@ -345,7 +345,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Product/CabysSearch?q=casco — busca en el catálogo oficial; el JSON de la API se reenvía tal cual
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> CabysSearch(string? q)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -357,7 +357,7 @@ namespace CatalogStore.UI.Controllers
 
         // POST: Product/SetCabys — asigna o quita (vacío) el CABYS de un producto
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SetCabys(int id, string? cabysCode)
         {
@@ -370,7 +370,7 @@ namespace CatalogStore.UI.Controllers
 
         // POST: Product/SetCabysBulk — el mismo CABYS para una categoría; responde cuántos productos cambió
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SetCabysBulk(int category, string? cabysCode, bool onlyEmpty = true)
         {
@@ -383,7 +383,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {

@@ -9,7 +9,7 @@ namespace CatalogStore.UI.Controllers
 {
     // Líneas de inventario (qué productos tiene cada bodega). Todo se muestra dentro del detalle de la bodega:
     // la tabla llega como parcial por AJAX y los formularios en un modal, sin recargar la página.
-    [Authorize(Roles = "Admin,AdminIT")]
+    [Authorize(Roles = "Admin,AdminIT,Bodega")]
     public class InventoryLineController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;

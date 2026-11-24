@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const clientSearch = document.getElementById('orderClientSearch');
     const clientList = document.getElementById('orderClientList');
     const clientHint = document.getElementById('orderClientHint');
+    const sellerSelect = document.getElementById('orderSeller'); // solo existe para Admin / AdminIT
+    let sellersLoaded = false;
 
     // Mismo formato que el servidor usa en las tarjetas (ToString("N2")): ₡3,500.00
     const money = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -189,16 +191,19 @@ document.addEventListener('DOMContentLoaded', function () {
             <button type="button" class="btn btn-sm btn-outline-brand order-panel-discount" data-action="order-discount">
                 <i class="fa-solid fa-percent" aria-hidden="true"></i> Descuento a toda la orden
             </button>`}
+            <div class="order-panel-notes">
+                <label for="orderPanelNotes">Notas de la orden <span>(opcional)</span></label>
+                <textarea id="orderPanelNotes" class="form-control" rows="2" maxlength="500" placeholder="Ej. entregar el lunes, enviar por encomienda...">${esc(order.notes || '')}</textarea>
+            </div>
             <dl class="order-totals">
                 <div><dt>Subtotal</dt><dd>${fmt(order.subtotal)}</dd></div>
                 <div><dt>IVA</dt><dd>${fmt(order.ivaTotal)}</dd></div>
                 <div class="order-totals-total"><dt>Total</dt><dd>${fmt(order.orderTotalAmount)}</dd></div>
             </dl>
-            <button type="button" class="btn btn-brand" data-action="submit" ${order.lines.length === 0 ? 'disabled' : ''}>
-                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar a revisión
-            </button>
+            ${order.lines.length === 0
+                ? `<button type="button" class="btn btn-brand" disabled><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Revisar orden</button>`
+                : `<a class="btn btn-brand" href="/Order/Details/${order.orderID}"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Revisar orden</a>`}
             <div class="order-panel-links">
-                <a class="order-panel-release" href="/Order/Details/${order.orderID}">Ver detalle completo</a>
                 <button type="button" class="btn btn-link order-panel-release" data-action="release">Dejar de usar esta orden</button>
             </div>`;
     }
@@ -248,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ───────── agregar desde el catálogo ─────────
 
-    async function addProduct(btn, clientId) {
+    async function addProduct(btn, clientId, seller) {
         const icon = btn.querySelector('i');
         btn.disabled = true;
         btn.classList.add('is-loading');
@@ -261,6 +266,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (quantity > max) { showError('No hay tantas unidades', `Solo hay ${max} disponibles de "${btn.dataset.productName}".`); return; }
             const data = { productId: btn.dataset.productId, quantity };
             if (clientId) data.clientId = clientId;
+            if (clientId && seller) data.seller = seller;
             const result = await post('/Order/AddItem', data);
 
             if (result.success) {
@@ -322,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
             : 'Si el cliente ya tiene una orden en proceso, se abre esa.');
         clientSearch.value = '';
         clientModal.show();
+        loadSellers();
 
         if (!clients) {
             clientList.innerHTML = '<div class="order-client-empty"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando clientes…</div>';
@@ -334,6 +341,18 @@ document.addEventListener('DOMContentLoaded', function () {
             clients = result.clients;
         }
         renderClients();
+    }
+
+    // Administración: llena el selector de vendedor la primera vez que se abre el selector de cliente.
+    async function loadSellers() {
+        if (!sellerSelect || sellersLoaded) return;
+        try {
+            const response = await fetch('/Order/Sellers');
+            const result = response.ok ? await response.json() : { success: false };
+            if (!result.success) return;
+            sellersLoaded = true;
+            result.sellers.forEach(s => sellerSelect.add(new Option(s.name, s.email)));
+        } catch { /* sin lista, queda "A mi nombre" */ }
     }
 
     function renderClients() {
@@ -361,15 +380,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!item) return;
         const clientId = item.getAttribute('data-client-id');
         const btn = pendingAddBtn;
+        const seller = sellerSelect ? sellerSelect.value : '';
         pendingAddBtn = null;
         clientModal.hide();
 
         if (btn) {
-            await addProduct(btn, clientId);
+            await addProduct(btn, clientId, seller);
             return;
         }
         // "Elegir cliente" sin producto: abre (o crea vacía) la orden en proceso del cliente.
-        const result = await post(`/Order/Start/${clientId}`, {});
+        const result = await post(`/Order/Start/${clientId}`, seller ? { seller } : {});
         if (!result.success) {
             showError('No se pudo abrir la orden', result.message);
             return;
@@ -447,44 +467,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await runLineAction(() => post('/Order/SetDiscount', { orderId: order.orderID, discount: String(discount) }));
             if (result?.success) toast.fire({ icon: 'success', title: discount === 0 ? 'Descuentos quitados' : `Descuento de ${discount} % aplicado` });
         }
-        else if (action === 'submit') {
-            const confirm = await Swal.fire({
-                icon: 'question',
-                title: `¿Enviar ${order.orderNumber} a revisión?`,
-                html: `Total <strong>${fmt(order.orderTotalAmount)}</strong>. Los precios se actualizan con los vigentes y la orden queda bloqueada hasta que se complete o se devuelva a edición.`,
-                showCancelButton: true,
-                confirmButtonText: 'Enviar a revisión',
-                cancelButtonText: 'Seguir editando',
-                confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim() || undefined
-            });
-            if (!confirm.isConfirmed) return;
-
-            setBusy(true);
-            try {
-                const number = order.orderNumber;
-                const submittedId = order.orderID;
-                const result = await post('/Order/Submit', { orderId: submittedId });
-                if (!result.success) { showError('No se pudo enviar a revisión', result.message); await loadOrder(); return; }
-                panel.hide();
-                await loadOrder();
-                const done = await Swal.fire({
-                    icon: 'success',
-                    title: `${number} enviada a revisión`,
-                    text: 'Queda pendiente para validarla y completarla. La encontrás en Operación › Ventas › Órdenes.',
-                    showCancelButton: true,
-                    confirmButtonText: 'Ver orden',
-                    cancelButtonText: 'Seguir en el catálogo',
-                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim() || undefined
-                });
-                if (done.isConfirmed) location.href = `/Order/Details/${submittedId}`;
-            } finally {
-                setBusy(false);
-            }
-        }
     });
 
-    panelEl.addEventListener('change', function (e) {
+    panelEl.addEventListener('change', async function (e) {
         if (!order) return;
+        if (e.target.id === 'orderPanelNotes') {
+            const notes = e.target.value.trim();
+            if (notes === (order.notes || '')) return;
+            const result = await post('/Order/UpdateNotes', { orderId: order.orderID, clientId: order.clientID, notes });
+            if (result.success) { order.notes = notes; toast.fire({ icon: 'success', title: 'Notas guardadas' }); }
+            else showError('No se pudieron guardar las notas', result.message);
+            return;
+        }
         if (e.target.id === 'orderApplyIva') {
             const applyIva = e.target.checked;
             runLineAction(() => post('/Order/SetIva', { orderId: order.orderID, applyIva }));

@@ -195,6 +195,15 @@
                             <a class="nav-link @(currentController == "Home" && ViewContext.RouteData.Values["action"]?.ToString() != "Catalog" ? "active" : "")" asp-area="" asp-controller="Home" asp-action="Index">Inicio</a>
                         </li>
 
+                        @* Bodega: solo inventario, órdenes, productos y ventas (alfabético). *@
+                        @if (User.IsInRole("Bodega"))
+                        {
+                            <li class="nav-item"><a class="nav-link @(currentController == "Inventory" || currentController == "InventoryLine" ? "active" : "")" asp-area="" asp-controller="Inventory" asp-action="Index">Inventario</a></li>
+                            <li class="nav-item"><a class="nav-link @(currentController == "Order" ? "active" : "")" asp-area="" asp-controller="Order" asp-action="Index">Órdenes</a></li>
+                            <li class="nav-item"><a class="nav-link @(currentController == "Product" || currentController == "ProductImage" ? "active" : "")" asp-area="" asp-controller="Product" asp-action="IndexAdmin">Productos</a></li>
+                            <li class="nav-item"><a class="nav-link @(currentController == "Sales" ? "active" : "")" asp-area="" asp-controller="Sales" asp-action="Index">Ventas</a></li>
+                        }
+
                         @if (User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Vendedor"))
                         {
                             <li class="nav-item dropdown">

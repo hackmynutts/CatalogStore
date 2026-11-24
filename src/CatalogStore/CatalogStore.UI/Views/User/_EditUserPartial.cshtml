@@ -10,14 +10,28 @@
         <dl class="row mb-3">
             <dt class="col-sm-3">Usuario</dt>
             <dd class="col-sm-9">@Model.UserName</dd>
-            <dt class="col-sm-3">Rol</dt>
-            <dd class="col-sm-9">
-                @foreach (var role in Model.Roles)
-                {
-                    <span class="badge badge-role me-1">@role</span>
-                }
-            </dd>
         </dl>
+
+        @{
+            var currentRole = Model.Roles.FirstOrDefault() ?? string.Empty;
+            var roleOptions = new[] { "AdminIT", "Admin", "Bodega", "Vendedor", "Cliente" };
+            var isSelf = string.Equals(Model.Id.ToString(), ViewData["SelfId"] as string, StringComparison.OrdinalIgnoreCase);
+        }
+        <div class="mb-3">
+            <label for="newRole" class="form-label">Rol</label>
+            <input type="hidden" name="currentRole" value="@currentRole" />
+            <select id="newRole" name="newRole" class="form-select" @(isSelf ? "disabled" : "")>
+                @if (currentRole.Length > 0 && !roleOptions.Contains(currentRole))
+                {
+                    <option value="@currentRole" selected>@currentRole</option>
+                }
+                @foreach (var r in roleOptions)
+                {
+                    <option value="@r" selected="@(r == currentRole)">@r</option>
+                }
+            </select>
+            <div class="form-text">@(isSelf ? "No podés cambiar tu propio rol." : "El cambio se aplica en pocos segundos; la persona entra de nuevo con su rol nuevo.")</div>
+        </div>
 
         <div class="mb-3">
             <label asp-for="FullName" class="form-label">Nombre completo</label>

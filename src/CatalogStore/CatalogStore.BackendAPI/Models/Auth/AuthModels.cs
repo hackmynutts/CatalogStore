@@ -11,7 +11,8 @@ namespace CatalogStore.BackendAPI.Models.Auth
         public record LinkDelivery(string? EmailSentTo, string? ManualLink);
         // Delivery null con Succeeded true: el usuario se creó pero la invitación no se pudo enviar (se reenvía después).
         public record RegisterResult(bool Succeeded, IEnumerable<string> Errors, LinkDelivery? Delivery = null);
-        public record LoginResult(bool Succeeded, string? Token, bool MustChangePassword = false);
+        // Throttled: demasiados intentos fallidos con ese correo (RetryAfter dice cuánto falta). Inactive: la contraseña era correcta pero el usuario está inactivo.
+        public record LoginResult(bool Succeeded, string? Token, bool MustChangePassword = false, bool Throttled = false, TimeSpan RetryAfter = default, bool Inactive = false);
         public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
         public record ChangePasswordResult(bool Succeeded, IEnumerable<string> Errors);
         public record ResetPasswordResult(bool Succeeded, IEnumerable<string> Errors, LinkDelivery? Delivery = null);

@@ -8,7 +8,7 @@ namespace CatalogStore.UI.Controllers
 {
     // Movimientos manuales de stock desde el detalle de una línea. El historial se renderiza en
     // InventoryLine/Details; aquí solo vive el formulario (modal) y su envío.
-    [Authorize(Roles = "Admin,AdminIT")]
+    [Authorize(Roles = "Admin,AdminIT,Bodega")]
     public class InventoryTransactionController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;

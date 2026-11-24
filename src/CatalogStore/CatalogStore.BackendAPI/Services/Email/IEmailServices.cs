@@ -19,6 +19,7 @@
         public const string PasswordChanged = "PasswordChanged";
         public const string Invoice = "Invoice";
         public const string Proforma = "Proforma";
+        public const string Receipt = "Receipt";
         public const string PaymentVoided = "PaymentVoided";
         public const string OrderExpiryWarning = "OrderExpiryWarning";
         public const string OrderExpired = "OrderExpired";

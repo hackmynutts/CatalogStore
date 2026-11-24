@@ -3,6 +3,8 @@ using CatalogStore.BackendAPI.Models.Auth;
 
 namespace CatalogStore.BackendAPI.Services.User
 {
+    public record UserActionResult(bool Succeeded, string? Error = null, bool NotFound = false);
+
     public interface IUserServices
     {
         // Crea el usuario sin contraseña y le envía la invitación para que la cree.
@@ -24,7 +26,9 @@ namespace CatalogStore.BackendAPI.Services.User
         Task<UserDTO?> GetUserAsync(Guid id);
         Task<List<UserDTO>> GetAllUsersAsync();
         Task<bool> UpdateUserAsync(Guid id, UpdateUserDTO request);
-        Task<bool> ChangeRoleAsync(Guid id, string newRole);
-        Task<bool> DeleteUserAsync(Guid id);
+        // Cambiar rol, inactivar/reactivar y eliminar: devuelven el motivo si una regla lo impide (ver UserServices).
+        Task<UserActionResult> ChangeRoleAsync(Guid id, string newRole, Guid actorId);
+        Task<UserActionResult> SetActiveAsync(Guid id, bool active, Guid actorId);
+        Task<UserActionResult> DeleteUserAsync(Guid id, Guid actorId);
     }
 }

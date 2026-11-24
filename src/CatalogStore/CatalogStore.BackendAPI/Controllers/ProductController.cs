@@ -1,4 +1,6 @@
-﻿using CatalogStore.BackendAPI.DTO.Product;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using CatalogStore.BackendAPI.Services.Security;
+using CatalogStore.BackendAPI.DTO.Product;
 using CatalogStore.BackendAPI.Models.Product;
 using CatalogStore.BackendAPI.Services.Product;
 using CatalogStore.BackendAPI.Services.Product.Cabys;
@@ -28,7 +30,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
         // GET: api/<ProductController>
         [HttpGet]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> GetAll()
         {
             List<Product> lista = await _productServices.GetAllProductsAsync();
@@ -36,7 +38,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
         // GET: api/<ProductController>
         [HttpGet("active")]
-        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
         public async Task<IActionResult> GetActive()
         {
             List<Product> lista = await _productServices.GetActiveProductsAsync();
@@ -46,7 +48,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // GET api/<ProductController>/5
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
         public async Task<IActionResult> Get(int id)
         {
             Product  producto = await _productServices.GetProductAsync(id);
@@ -56,7 +58,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
         // GET api/<ProductController>/5
         [HttpGet("code/{code}")]
-        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
         public async Task<IActionResult> GetByCode(string code)
         {
             Product  producto = await _productServices.GetByProductCode(code);
@@ -74,7 +76,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // POST api/<ProductController>
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Post([FromBody] AddProductDTO add)
         {
             add.CreatedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
@@ -85,7 +87,8 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // POST api/Product/import?dryRun=true
         [HttpPost("import")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.Heavy)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Import([FromQuery] bool dryRun = false, CancellationToken cancellationToken = default)
         {
             var requestedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
@@ -118,7 +121,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // PUT api/<ProductController>/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Put(int id, [FromBody] UpdateProductDTO edit)
         {
             edit.ModifiedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
@@ -128,7 +131,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
         // PUT api/<ProductController>/5
         [HttpPut("{id}/inactivate")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> PutInactivate(int id, [FromBody] UpdateProductDTO edit)
         {
             edit.ModifiedBy = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
@@ -139,12 +142,13 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // GET api/Product/availability — { productId: unidades disponibles } para las tarjetas del catálogo
         [HttpGet("availability")]
-        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
         public async Task<IActionResult> GetAvailability() => Ok(await _productServices.GetAvailabilityAsync());
 
         // GET api/Product/cabys/search?q=casco — busca en el catálogo oficial CABYS de Hacienda
         [HttpGet("cabys/search")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [EnableRateLimiting(RateLimitPolicies.External)]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> SearchCabys([FromQuery] string? q, CancellationToken cancellationToken)
         {
             try
@@ -160,13 +164,13 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // PUT api/Product/5/cabys — asignar o quitar (null) el CABYS de un producto
         [HttpPut("{id:int}/cabys")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> PutCabys(int id, [FromBody] SetCabysDTO dto) =>
             ToResponse(await _productServices.SetCabysAsync(id, dto.CabysCode, CurrentUser));
 
         // PUT api/Product/cabys/bulk — el mismo CABYS para una categoría; responde { id } con cuántos se actualizaron
         [HttpPut("cabys/bulk")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> PutCabysBulk([FromBody] BulkCabysDTO dto) =>
             ToResponse(await _productServices.SetCabysByCategoryAsync(dto, CurrentUser));
 
@@ -183,7 +187,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // DELETE api/<ProductController>/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Delete(int id)
         {
             bool deleted;

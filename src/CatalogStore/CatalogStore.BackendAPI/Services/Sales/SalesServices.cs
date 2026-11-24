@@ -503,6 +503,29 @@ namespace CatalogStore.BackendAPI.Services.Sales
         // ───────────────────────── Helpers ─────────────────────────
 
         // Admin ve y cobra cualquier venta; el vendedor solo las suyas.
+        public async Task<OperationResult> SendReceiptByEmailAsync(int salesHeaderId, string user, bool isAdmin)
+        {
+            // GetAsync ya aplica la regla de que el vendedor solo ve sus ventas.
+            var sale = await GetAsync(salesHeaderId, user, isAdmin);
+            if (sale is null) return OperationResult.Fail(NotFoundMessage);
+            if (sale.ApplyIva) return OperationResult.Fail("Esta venta lleva IVA: su comprobante es la factura electrónica, no un tiquete.");
+            if (sale.PaymentStatus == PaymentStatus.Voided) return OperationResult.Fail($"La venta {sale.SaleNumber} está anulada: no tiene tiquete para enviar.");
+            if (!_emailServices.Enabled) return OperationResult.Fail("El envío de correos está deshabilitado (Email:Enabled).");
+            if (string.IsNullOrWhiteSpace(sale.ClientEmail)) return OperationResult.Fail("El cliente no tiene correo registrado.");
+
+            var issued = TimeZoneInfo.ConvertTime(new DateTimeOffset(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc)), _time.LocalTimeZone).DateTime;
+            var lines = sale.Lines.Select(l => new Services.Email.EmailTemplates.ProformaLine(l.ProductCode, l.ProductName, l.Quantity, l.UnitPrice, l.Discount, l.LineSubtotal)).ToList();
+            await _emailServices.QueueAndSaveAsync(new Services.Email.EmailMessage(
+                sale.ClientEmail, sale.ClientName, $"Tiquete {sale.SaleNumber} - SAM DESIGN",
+                Services.Email.EmailTemplates.Receipt(sale.ClientName, sale.SaleNumber, issued, lines, sale.Subtotal, sale.DiscountTotal, sale.IvaTotal,
+                    sale.TotalAmount, sale.ApplyIva, sale.Notes),
+                Services.Email.EmailKinds.Receipt, "SalesHeader", sale.SalesHeaderID.ToString()), user);
+
+            await _eventlogServices.LogAsync(typeEvent.Edit, "Sales", "SalesHeader", sale.SalesHeaderID.ToString(),
+                $"Tiquete {sale.SaleNumber} enviado por correo a {sale.ClientEmail}.");
+            return OperationResult.Ok(sale.SalesHeaderID);
+        }
+
         private static bool CanAccess(SalesHeader sale, string user, bool isAdmin) => isAdmin || sale.Seller == user;
 
         private DateOnly TodayLocal() => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);

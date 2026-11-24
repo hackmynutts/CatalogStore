@@ -3520,3 +3520,34 @@ input[type="search"]::-webkit-search-decoration {
     gap: 6px;
     white-space: nowrap;
 }
+
+/* Usuario inactivo: la fila se atenúa, sin dejar de leerse. */
+.app-table tbody tr.row-inactive > td {
+    color: var(--text-muted);
+}
+
+.app-table tbody tr.row-inactive > td .badge-role {
+    opacity: 0.6;
+}
+
+/* Notas de la orden dentro del panel del catálogo. */
+.order-panel-notes {
+    margin: 4px 0 2px;
+}
+
+.order-panel-notes label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.order-panel-notes label span {
+    font-weight: 400;
+}
+
+.order-panel-notes textarea {
+    font-size: 0.85rem;
+    resize: vertical;
+}

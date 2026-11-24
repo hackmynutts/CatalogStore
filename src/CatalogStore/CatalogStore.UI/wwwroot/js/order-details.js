@@ -62,10 +62,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         else if (action === 'submit') {
             if (await confirm({
-                title: `¿Enviar ${orderNumber} a revisión?`,
-                html: 'Los precios se actualizan con los vigentes y la orden queda bloqueada hasta que se complete o se devuelva a edición.',
-                confirmButtonText: 'Enviar a revisión'
-            })) run('/Order/Submit', {}, 'Orden enviada a revisión', 'No se pudo enviar a revisión');
+                title: `¿Enviar ${orderNumber} a la oficina?`,
+                html: 'Los precios se actualizan con los vigentes y la orden queda bloqueada hasta que la oficina la complete o se devuelva a edición.',
+                confirmButtonText: 'Enviar a oficina'
+            })) run('/Order/Submit', {}, 'Orden enviada a la oficina', 'No se pudo enviar a la oficina');
         }
         else if (action === 'reopen') {
             if (await confirm({

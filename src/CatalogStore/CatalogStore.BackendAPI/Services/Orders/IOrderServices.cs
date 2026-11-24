@@ -15,7 +15,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
     public interface IOrderServices
     {
         // Crear / abrir
-        Task<OperationResult> StartAsync(int clientId, string user, bool isAdmin);
+        Task<OperationResult> StartAsync(int clientId, string user, bool isAdmin, string? notes = null, string? seller = null);
         Task<OperationResult> AddItemAsync(int clientId, AddOrderLineDTO dto, string user, bool isAdmin);
 
         // Editar (solo InProcess)

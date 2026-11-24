@@ -65,7 +65,7 @@ src/CatalogStore/
 - **Dates:** stored in UTC. A global JSON converter writes `DateTime` to clients in Costa Rica local time and converts incoming local times back to UTC.
 - **Roles are passed to Services as plain `bool`s** (e.g. `isAdmin`), so Services stay free of claims logic. Rules (discount cap, ownership) are enforced server-side, never trusted from the client.
 - The UI mirrors backend enums by hand (the projects don't share types). Product categories live in one UI list, `Models/Product/ProductCategories.cs`.
-- Roles: `AdminIT`, `Admin`, `Vendedor` (seller). A seller only sees and works on their own orders, sales and goals.
+- Roles: `AdminIT`, `Admin`, `Bodega` (warehouse), `Vendedor` (seller). A seller only sees and works on their own orders, sales and goals. `Bodega` manages inventory and products (same rights as `Admin` there) and sees all orders and sales, but cannot create or edit orders or sales: its only write on orders is completing a pending one (which creates the sale, still under the original seller). Completing a pending order is restricted to `Bodega`, `Admin` and `AdminIT`; a seller creates the order (In process) and sends it to Pending, but cannot complete it. Admins change a user's role from Users → Edit (new role applies on next login; you cannot change your own role).
 
 ## Implemented modules
 
@@ -124,6 +124,10 @@ src/CatalogStore/
 **Reports** (Excel, `Operación → Ventas → Reportes`) — sales, receivables (aging), payments, products (historic cost), goals, valued stock and client statement. Sellers get only their own sales, receivables and payments; cost-based reports are admin-only.
 
 **Email** — outbox with retries (1/5/15/60 min). Templates: invitation, password reset, password changed, proforma, payment voided, order expired/expiry warning, invoice.
+
+**Rate limiting** — API (`Services/Security/ApiRateLimiting.cs`, section `RateLimiting`): the API is always called by the UI, so it counts **per user** (token `sub`), never per IP. Each user has a read bucket (300/min) and a write bucket (90/min); sensitive actions (emails, user admin) 10/min, invoicing 20/min, reports/import 20/min, external lookups 30/min; endpoints without session share one bucket (30/min). Failed logins are counted per email (8 failures pause that email 15 min). UI (`Handlers/UiRateLimiting.cs`): real IP is visible there, so login is 10 per 5 min per IP, PDFs 20/min and emails 10/min per person, plus a general per-person cap. Over the limit: `429` + `Retry-After`. Tune or disable (`RateLimiting:Enabled=false`) in config.
+
+**Users** — an admin can change roles and inactivate/reactivate users (inactive = Identity lockout until max date, no migration; nothing is deleted). Rules: nobody changes their own role/state or deletes themselves; only `AdminIT` can grant or touch `AdminIT`; one active `AdminIT` must remain. Every API request checks that the user still exists, is active and has the roles in the token (20 s cache), so inactivating or changing a role takes effect in seconds; the UI renews the token on its own.
 
 ## Known issues and gaps
 

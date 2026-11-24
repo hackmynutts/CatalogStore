@@ -28,9 +28,12 @@ namespace CatalogStore.BackendAPI.Services.User
         private readonly IEmailServices _emailServices;
         private readonly TimeProvider _time;
         private readonly ILogger<UserServices> _logger;
+        private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
+        private readonly Security.LoginThrottle _loginThrottle;
 
         public UserServices(UserManager<Data.ApplicationUser> userManager, IJwtTokenService jwtTokenService, IEventlogServices eventlogServices,
-            IEmailServices emailServices, TimeProvider time, ILogger<UserServices> logger)
+            IEmailServices emailServices, TimeProvider time, ILogger<UserServices> logger,
+            Microsoft.Extensions.Caching.Memory.IMemoryCache cache, Security.LoginThrottle loginThrottle)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;
@@ -38,6 +41,8 @@ namespace CatalogStore.BackendAPI.Services.User
             _emailServices = emailServices;
             _time = time;
             _logger = logger;
+            _cache = cache;
+            _loginThrottle = loginThrottle;
         }
 
         public async Task<AuthModels.RegisterResult> RegisterAsync(AuthModels.RegisterRequest request, string actor)
@@ -164,9 +169,14 @@ namespace CatalogStore.BackendAPI.Services.User
         //login
         public async Task<AuthModels.LoginResult> LoginAsync(AuthModels.LoginRequest request)
         {
+            // Demasiados intentos fallidos con este correo: pausa (no se mira ni la contraseña).
+            if (_loginThrottle.IsBlocked(request.Email, out var retryAfter))
+                return new AuthModels.LoginResult(false, null, Throttled: true, RetryAfter: retryAfter);
+
             Data.ApplicationUser? user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null)
             {
+                _loginThrottle.RecordFailure(request.Email);
                 await _eventlogServices.LogAsync(
                     typeEvent.LogInFail,
                     "Administration/Users",
@@ -180,6 +190,7 @@ namespace CatalogStore.BackendAPI.Services.User
             bool passCheck = await _userManager.CheckPasswordAsync(user, request.Password);
             if (!passCheck)
             {
+                _loginThrottle.RecordFailure(request.Email);
                 await _eventlogServices.LogAsync(
                     typeEvent.LogInFail,
                     "Administration/Users",
@@ -190,6 +201,20 @@ namespace CatalogStore.BackendAPI.Services.User
                 return new AuthModels.LoginResult(false, null);
             }
 
+            // Contraseña correcta pero el administrador lo inactivó: no entra. Recién aquí se dice, para no revelar quién tiene cuenta.
+            if (Security.UserSessionGuard.IsInactive(user))
+            {
+                await _eventlogServices.LogAsync(
+                    typeEvent.LogInFail,
+                    "Administration/Users",
+                    UsersTable,
+                    user.Id.ToString(),
+                    "Intento de inicio de sesión de un usuario inactivo.",
+                    actorOverride: request.Email);
+                return new AuthModels.LoginResult(false, null, Inactive: true);
+            }
+
+            _loginThrottle.Reset(request.Email);
             IList<string> roles = await _userManager.GetRolesAsync(user);
             var token = _jwtTokenService.GenerateToken(user, roles);
 
@@ -210,7 +235,7 @@ namespace CatalogStore.BackendAPI.Services.User
             if (userId == null) return null;
 
             var user = await _userManager.FindByIdAsync(userId.Value.ToString());
-            if (user == null) return null;
+            if (user == null || Security.UserSessionGuard.IsInactive(user)) return null;
 
             var roles = await _userManager.GetRolesAsync(user);
             return _jwtTokenService.GenerateToken(user, roles);
@@ -511,6 +536,7 @@ namespace CatalogStore.BackendAPI.Services.User
                 FullName = user.FullName ?? string.Empty,
                 SendNotifications = user.SendNotifications,
                 HasPassword = user.PasswordHash != null,
+                IsActive = !Security.UserSessionGuard.IsInactive(user),
                 Roles = roles
             };
         }
@@ -532,6 +558,7 @@ namespace CatalogStore.BackendAPI.Services.User
                     FullName = user.FullName ?? string.Empty,
                     SendNotifications = user.SendNotifications,
                     HasPassword = user.PasswordHash != null,
+                    IsActive = !Security.UserSessionGuard.IsInactive(user),
                     Roles = roles
                 });
             }
@@ -597,16 +624,70 @@ namespace CatalogStore.BackendAPI.Services.User
             return true;
         }
 
-        public async Task<bool> ChangeRoleAsync(Guid id, string newRole)
+        // ───────── Roles, inactivación y eliminación (reglas de seguridad) ─────────
+        //  · Nadie cambia su propio rol, su estado ni se elimina a sí mismo (evita dejarse sin acceso).
+        //  · Solo un AdminIT puede dar el rol AdminIT o tocar a un AdminIT: un Admin no se puede subir de nivel.
+        //  · Siempre tiene que quedar al menos un AdminIT activo.
+
+        private const string TopRole = "AdminIT";
+
+        // null si se puede; si no, el motivo.
+        private async Task<string?> CheckAdminChangeAsync(Data.ApplicationUser target, IList<string> targetRoles, Guid actorId, string? newRole, bool losesAccess, string verb)
+        {
+            if (target.Id == actorId) return $"No podés {verb} tu propio usuario.";
+
+            var actor = await _userManager.FindByIdAsync(actorId.ToString());
+            var actorIsTop = actor is not null && await _userManager.IsInRoleAsync(actor, TopRole);
+            var targetIsTop = targetRoles.Contains(TopRole);
+            if (!actorIsTop && (targetIsTop || newRole == TopRole))
+                return "Solo un AdminIT puede dar el rol AdminIT o modificar a otro AdminIT.";
+
+            // Si el usuario es AdminIT y deja de serlo (o se inactiva), tiene que quedar otro AdminIT activo.
+            var stopsBeingTop = targetIsTop && (losesAccess || (newRole is not null && newRole != TopRole));
+            if (stopsBeingTop)
+            {
+                var tops = await _userManager.GetUsersInRoleAsync(TopRole);
+                if (!tops.Any(u => u.Id != target.Id && !Security.UserSessionGuard.IsInactive(u)))
+                    return "Tiene que quedar al menos un AdminIT activo.";
+            }
+            return null;
+        }
+
+        public async Task<UserActionResult> ChangeRoleAsync(Guid id, string newRole, Guid actorId)
         {
             var usuario = await _userManager.FindByIdAsync(id.ToString());
             if (usuario == null)
-                return false;
+                return new UserActionResult(false, NotFound: true);
 
             var currentRoles = await _userManager.GetRolesAsync(usuario);
-            if (currentRoles.Any())
+            if (currentRoles.Count == 1 && currentRoles[0] == newRole)
+                return new UserActionResult(true);
+
+            var blocked = await CheckAdminChangeAsync(usuario, currentRoles, actorId, newRole, losesAccess: false, verb: "cambiar el rol de");
+            if (blocked is not null) return new UserActionResult(false, blocked);
+
+            // Primero se agrega el rol nuevo y después se quitan los otros: si algo falla, el usuario no se queda sin rol.
+            if (!currentRoles.Contains(newRole))
             {
-                var removeResult = await _userManager.RemoveFromRolesAsync(usuario, currentRoles);
+                var addResult = await _userManager.AddToRoleAsync(usuario, newRole);
+                if (!addResult.Succeeded)
+                {
+                    await _eventlogServices.LogAsync(
+                        typeEvent.EditFail,
+                        "Administration/Users",
+                        UserRolesTable,
+                        id.ToString(),
+                        $"No se pudo asignar el rol '{newRole}'.",
+                        preData: currentRoles,
+                        postData: addResult.Errors.Select(e => e.Description));
+                    return new UserActionResult(false, $"No se pudo asignar el rol '{newRole}'.");
+                }
+            }
+
+            var toRemove = currentRoles.Where(r => r != newRole).ToList();
+            if (toRemove.Count > 0)
+            {
+                var removeResult = await _userManager.RemoveFromRolesAsync(usuario, toRemove);
                 if (!removeResult.Succeeded)
                 {
                     await _eventlogServices.LogAsync(
@@ -614,27 +695,14 @@ namespace CatalogStore.BackendAPI.Services.User
                         "Administration/Users",
                         UserRolesTable,
                         id.ToString(),
-                        "No se pudieron quitar los roles actuales del usuario.",
+                        "No se pudieron quitar los roles anteriores del usuario.",
                         preData: currentRoles,
                         postData: removeResult.Errors.Select(e => e.Description));
-                    return false;
+                    return new UserActionResult(false, "No se pudieron quitar los roles anteriores del usuario.");
                 }
             }
 
-            var addResult = await _userManager.AddToRoleAsync(usuario, newRole);
-            if (!addResult.Succeeded)
-            {
-                await _eventlogServices.LogAsync(
-                    typeEvent.EditFail,
-                    "Administration/Users",
-                    UserRolesTable,
-                    id.ToString(),
-                    $"No se pudo asignar el rol '{newRole}'.",
-                    preData: currentRoles,
-                    postData: addResult.Errors.Select(e => e.Description));
-                return false;
-            }
-
+            Security.UserSessionGuard.Invalidate(_cache, id);
             await _eventlogServices.LogAsync(
                 typeEvent.Edit,
                 "Administration/Users",
@@ -644,16 +712,62 @@ namespace CatalogStore.BackendAPI.Services.User
                 preData: currentRoles,
                 postData: new List<string> { newRole });
 
-            return true;
+            return new UserActionResult(true);
         }
 
-        public async Task<bool> DeleteUserAsync(Guid id)
+        // Inactivar = bloqueo permanente de Identity (LockoutEnd al máximo): no borra nada y se puede deshacer. No necesita migración.
+        public async Task<UserActionResult> SetActiveAsync(Guid id, bool active, Guid actorId)
         {
             var usuario = await _userManager.FindByIdAsync(id.ToString());
             if (usuario == null)
-                return false;
+                return new UserActionResult(false, NotFound: true);
+
+            var wasActive = !Security.UserSessionGuard.IsInactive(usuario);
+            if (wasActive == active)
+                return new UserActionResult(true);
 
             var roles = await _userManager.GetRolesAsync(usuario);
+            var blocked = await CheckAdminChangeAsync(usuario, roles, actorId, newRole: null, losesAccess: !active, verb: active ? "reactivar" : "inactivar");
+            if (blocked is not null) return new UserActionResult(false, blocked);
+
+            var enable = await _userManager.SetLockoutEnabledAsync(usuario, true);
+            var set = enable.Succeeded
+                ? await _userManager.SetLockoutEndDateAsync(usuario, active ? null : DateTimeOffset.MaxValue)
+                : enable;
+            if (!set.Succeeded)
+            {
+                await _eventlogServices.LogAsync(
+                    typeEvent.EditFail,
+                    "Administration/Users",
+                    UsersTable,
+                    id.ToString(),
+                    active ? "No se pudo reactivar el usuario." : "No se pudo inactivar el usuario.",
+                    postData: set.Errors.Select(e => e.Description));
+                return new UserActionResult(false, active ? "No se pudo reactivar el usuario." : "No se pudo inactivar el usuario.");
+            }
+
+            Security.UserSessionGuard.Invalidate(_cache, id);
+            await _eventlogServices.LogAsync(
+                typeEvent.Edit,
+                "Administration/Users",
+                UsersTable,
+                id.ToString(),
+                active ? "Usuario reactivado." : "Usuario inactivado.",
+                preData: new { IsActive = wasActive },
+                postData: new { IsActive = active });
+            return new UserActionResult(true);
+        }
+
+        public async Task<UserActionResult> DeleteUserAsync(Guid id, Guid actorId)
+        {
+            var usuario = await _userManager.FindByIdAsync(id.ToString());
+            if (usuario == null)
+                return new UserActionResult(false, NotFound: true);
+
+            var roles = await _userManager.GetRolesAsync(usuario);
+            var blocked = await CheckAdminChangeAsync(usuario, roles, actorId, newRole: null, losesAccess: true, verb: "eliminar");
+            if (blocked is not null) return new UserActionResult(false, blocked);
+
             var before = new UserDTO
             {
                 Id = usuario.Id,
@@ -675,9 +789,10 @@ namespace CatalogStore.BackendAPI.Services.User
                     "No se pudo eliminar el usuario.",
                     preData: before,
                     postData: result.Errors.Select(e => e.Description));
-                return false;
+                return new UserActionResult(false, "No se pudo eliminar el usuario.");
             }
 
+            Security.UserSessionGuard.Invalidate(_cache, id);
             await _eventlogServices.LogAsync(
                 typeEvent.Delete,
                 "Administration/Users",
@@ -686,7 +801,7 @@ namespace CatalogStore.BackendAPI.Services.User
                 "Usuario eliminado.",
                 preData: before);
 
-            return true;
+            return new UserActionResult(true);
         }
 
     }

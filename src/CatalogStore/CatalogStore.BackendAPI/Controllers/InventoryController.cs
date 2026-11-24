@@ -10,7 +10,7 @@ namespace CatalogStore.BackendAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,AdminIT")]
+    [Authorize(Roles = "Admin,AdminIT,Bodega")]
     public class InventoryController : ControllerBase
     {
         private readonly IInventoryServices _inventoryServices;

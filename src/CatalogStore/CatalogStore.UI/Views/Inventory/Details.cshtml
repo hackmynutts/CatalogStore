@@ -1,7 +1,7 @@
 @model CatalogStore.UI.Models.Inventory.InventoryViewModel
 @{
     ViewData["Title"] = "Detalle del inventario";
-    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Bodega");
     bool canSeeAudit = User.IsInRole("Admin") || User.IsInRole("AdminIT");
 }
 

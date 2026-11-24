@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.RateLimiting;
+using CatalogStore.BackendAPI.Services.Security;
 using CatalogStore.BackendAPI.Services.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +24,7 @@ namespace CatalogStore.BackendAPI.Controllers
         // GET api/Report/sales?from=2026-10-01&to=2026-10-31&seller=correo&includeVoided=true
         // GET api/Report/statement?clientId=5[&from=2026-01-01&to=2026-10-31]   ·   GET api/Report/goals?year=2026&month=10   ·   receivables, payments, products y stock: ver ReportKeys
         [HttpGet("{key}")]
+        [EnableRateLimiting(RateLimitPolicies.Heavy)]
         public async Task<IActionResult> Get(string key, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] string? seller,
             [FromQuery] bool includeVoided = false, [FromQuery] int? year = null, [FromQuery] int? month = null, [FromQuery] int? clientId = null)
         {

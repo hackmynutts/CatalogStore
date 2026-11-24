@@ -1,4 +1,5 @@
 ﻿using CatalogStore.UI.Handlers;
+using Microsoft.AspNetCore.RateLimiting;
 using CatalogStore.UI.Models.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ namespace CatalogStore.UI.Controllers
                 return View(new List<UserViewModel>());
 
             var users = await response.Content.ReadFromJsonAsync<List<UserViewModel>>();
+            ViewData["SelfId"] = User.FindFirst("sub")?.Value;
             return View(users ?? new List<UserViewModel>());
         }
         public async Task<IActionResult> EditPartial(Guid id)
@@ -38,12 +40,13 @@ namespace CatalogStore.UI.Controllers
             if (user == null)
                 return NotFound();
 
+            ViewData["SelfId"] = User.FindFirst("sub")?.Value;
             return PartialView("_EditUserPartial", user);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, UserViewModel model)
+        public async Task<IActionResult> Edit(Guid id, UserViewModel model, string? currentRole, string? newRole)
         {
             var updateDto = new UpdateUserViewModel
             {
@@ -58,6 +61,14 @@ namespace CatalogStore.UI.Controllers
             if (!response.IsSuccessStatusCode)
                 return Json(new { success = false, message = "No se pudo actualizar el usuario." });
 
+            // Rol: solo se llama a la API si de verdad cambió.
+            if (!string.IsNullOrWhiteSpace(newRole) && newRole != currentRole)
+            {
+                var roleResponse = await client.PutAsJsonAsync($"api/User/{id}/role", newRole);
+                if (!roleResponse.IsSuccessStatusCode)
+                    return Json(new { success = false, message = await ApiErrorReader.ReadAsync(roleResponse, "Se guardaron los datos, pero no se pudo cambiar el rol.") });
+            }
+
             return Json(new { success = true });
         }
 
@@ -68,6 +79,7 @@ namespace CatalogStore.UI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
         public async Task<IActionResult> Create(RegisterViewModel model)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -77,6 +89,7 @@ namespace CatalogStore.UI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
         public async Task<IActionResult> ResetPassword(Guid id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -86,6 +99,7 @@ namespace CatalogStore.UI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
         public async Task<IActionResult> ResendInvitation(Guid id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -110,14 +124,28 @@ namespace CatalogStore.UI.Controllers
             });
         }
 
+        // POST: User/SetActive/5 — inactivar o reactivar (no borra nada). Las reglas las valida la API.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetActive(Guid id, bool active)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PutAsJsonAsync($"api/User/{id}/active", active);
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, active ? "No se pudo reactivar el usuario." : "No se pudo inactivar el usuario.") });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
         public async Task<IActionResult> Delete(Guid id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.DeleteAsync($"api/User/{id}");
-
-            return RedirectToAction(nameof(Index));
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo eliminar el usuario.") });
         }
     }
 }

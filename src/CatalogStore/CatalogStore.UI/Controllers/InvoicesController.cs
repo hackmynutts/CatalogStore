@@ -1,4 +1,5 @@
 using CatalogStore.UI.Handlers;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -7,7 +8,7 @@ namespace CatalogStore.UI.Controllers
 {
     // Acciones de facturación electrónica de una venta. Solo administradores; llaman a api/Invoice.
     // Las acciones POST devuelven JSON { success, message } para sales-invoice.js.
-    [Authorize(Roles = "Admin,AdminIT")]
+    [Authorize(Roles = "Admin,AdminIT,Bodega")]
     public class InvoicesController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
@@ -46,6 +47,7 @@ namespace CatalogStore.UI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
         public Task<IActionResult> Email(int id) => Send($"api/Invoice/{id}/email", null, "No se pudo enviar el correo.");
 
         // GET: Invoices/Xml/9 — descarga el XML firmado

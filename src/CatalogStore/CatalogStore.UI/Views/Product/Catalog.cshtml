@@ -186,6 +186,17 @@ else
                 </div>
                 <div class="modal-body">
                     <p class="order-client-hint" id="orderClientHint">Si el cliente ya tiene una orden en proceso, el producto se agrega a esa.</p>
+                    @if (User.IsInRole("Admin") || User.IsInRole("AdminIT"))
+                    {
+                        @* Solo administración: elegir a nombre de qué vendedor queda la orden (y su venta). *@
+                        <div class="mb-3" id="orderSellerWrap">
+                            <label for="orderSeller" class="form-label mb-1">Vendedor de la orden</label>
+                            <select id="orderSeller" class="form-select form-select-sm">
+                                <option value="">A mi nombre</option>
+                            </select>
+                            <div class="form-text">Queda igual en toda la orden y en su venta. Si el cliente ya tiene una orden en proceso, se abre esa.</div>
+                        </div>
+                    }
                     <div class="app-table-search-wrap mb-3">
                         <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
                         <input type="text" class="app-table-search" id="orderClientSearch" placeholder="Nombre, conocido como o cédula" aria-label="Buscar cliente" autocomplete="off" />

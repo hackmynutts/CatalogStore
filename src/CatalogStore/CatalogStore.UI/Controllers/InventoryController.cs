@@ -13,7 +13,7 @@ namespace CatalogStore.UI.Controllers
         {
             _httpClientFactory = httpClientFactory;
         }
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Index()
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -25,7 +25,7 @@ namespace CatalogStore.UI.Controllers
             var inventoryList = await response.Content.ReadFromJsonAsync<List<InventoryViewModel>>();
             return View(inventoryList ?? new List<InventoryViewModel>());
         }
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> IndexAdmin()
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -38,7 +38,7 @@ namespace CatalogStore.UI.Controllers
             return View("Index", inventoryList ?? new List<InventoryViewModel>());
         }
 
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Details(int id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -51,14 +51,14 @@ namespace CatalogStore.UI.Controllers
             return View(inventory);
         }
 
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public IActionResult CreatePartial()
         {
             return PartialView("_CreateInventoryPartial", new AddInventoryViewModel());
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(AddInventoryViewModel model)
         {
@@ -76,7 +76,7 @@ namespace CatalogStore.UI.Controllers
             return Json(new { success = true });
         }
 
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> EditPartial(int id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -107,7 +107,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, UpdateInventoryViewModel model)
         {
@@ -127,7 +127,7 @@ namespace CatalogStore.UI.Controllers
 
         // POST: InventoryController/Inactivate/5 — sin form propio: trae el inventario actual y lo reenvía con StatusID inactivo.
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Inactivate(int id)
         {
@@ -156,7 +156,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {

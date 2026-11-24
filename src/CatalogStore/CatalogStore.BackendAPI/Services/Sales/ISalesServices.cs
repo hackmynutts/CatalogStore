@@ -22,5 +22,7 @@ namespace CatalogStore.BackendAPI.Services.Sales
         Task<OperationResult> ExchangeAsync(int salesHeaderId, ExchangeSaleDTO dto, string user, bool isAdmin);
         // Solo admin y sin abonos vigentes: devuelve el stock, la venta queda Anulada y su orden Retornada.
         Task<OperationResult> VoidSaleAsync(int salesHeaderId, VoidSaleDTO dto, string user, bool isAdmin);
+        // Reenvía por correo el tiquete (no fiscal) de una venta sin IVA al correo que el cliente tiene registrado.
+        Task<OperationResult> SendReceiptByEmailAsync(int salesHeaderId, string user, bool isAdmin);
     }
 }

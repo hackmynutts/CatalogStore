@@ -43,7 +43,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: ProductImageController/Index — ventana administrativa con todas las imágenes del sistema
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Index()
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -60,7 +60,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: ProductImageController/ManagePartial/5 — contenido del modal de gestión de imágenes
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> ManagePartial(int id)
         {
             var imagenes = await GetImagesForProduct(id);
@@ -84,7 +84,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upload(int id, IFormFile file)
         {
@@ -108,7 +108,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {

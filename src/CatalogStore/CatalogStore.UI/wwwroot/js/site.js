@@ -143,3 +143,18 @@ document.addEventListener('click', function (e) {
         }
     });
 })();
+
+// Si el servidor responde 429 (demasiadas solicitudes seguidas), cualquier fetch de la página avisa con el mismo mensaje breve
+// en vez de fallar en silencio. El navegador deja de repetir la acción por su cuenta; basta con esperar unos segundos.
+(function () {
+    const nativeFetch = window.fetch;
+    let lastNotice = 0;
+    window.fetch = async function () {
+        const response = await nativeFetch.apply(this, arguments);
+        if (response.status === 429 && window.Swal && Date.now() - lastNotice > 4000) {
+            lastNotice = Date.now();
+            Swal.fire({ toast: true, position: 'bottom-end', icon: 'warning', title: 'Demasiadas solicitudes seguidas. Esperá unos segundos.', showConfirmButton: false, timer: 3500 });
+        }
+        return response;
+    };
+})();

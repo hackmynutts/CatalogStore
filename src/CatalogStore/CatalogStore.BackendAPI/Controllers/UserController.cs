@@ -1,4 +1,6 @@
-﻿using CatalogStore.BackendAPI.DTO.User;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using CatalogStore.BackendAPI.Services.Security;
+using CatalogStore.BackendAPI.DTO.User;
 using CatalogStore.BackendAPI.Models.Auth;
 using CatalogStore.BackendAPI.Services.User;
 using Microsoft.AspNetCore.Authorization;
@@ -28,18 +30,29 @@ namespace CatalogStore.BackendAPI.Controllers
         };
 
         [HttpPost("register")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> Register([FromBody] AuthModels.RegisterRequest request)
         {
+            if (request.Role == "AdminIT" && !User.IsInRole("AdminIT"))
+                return BadRequest(new { message = "Solo un AdminIT puede crear otro AdminIT." });
             var result = await _userServices.RegisterAsync(request, CurrentUser);
             return result.Succeeded ? Ok(LinkResponse("Usuario registrado exitosamente.", result.Delivery))
                                     : BadRequest(new { Message = string.Join(" ", result.Errors) });
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting(RateLimitPolicies.Anonymous)]
         public async Task<IActionResult> Login([FromBody] AuthModels.LoginRequest request)
         {
             var result = await _userServices.LoginAsync(request);
+            if (result.Throttled)
+            {
+                Response.Headers.RetryAfter = ((int)Math.Ceiling(result.RetryAfter.TotalSeconds)).ToString();
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Demasiados intentos fallidos. Esperá unos minutos e intentá de nuevo." });
+            }
+            if (result.Inactive)
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Tu usuario está inactivo. Hablá con un administrador." });
             return result.Succeeded
                                     ? Ok(new { Token = result.Token, MustChangePassword = result.MustChangePassword })
                                     : Unauthorized();
@@ -78,6 +91,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
 
         [HttpPost("{id}/reset-password")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> ResetPassword(Guid id)
         {
@@ -88,6 +102,7 @@ namespace CatalogStore.BackendAPI.Controllers
         }
 
         [HttpPost("{id}/resend-invitation")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> ResendInvitation(Guid id)
         {
@@ -99,6 +114,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // Público. Misma respuesta exista o no el correo: no sirve para averiguar quién tiene cuenta.
         [HttpPost("forgot-password")]
+        [EnableRateLimiting(RateLimitPolicies.Anonymous)]
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] AuthModels.ForgotPasswordRequest request)
         {
@@ -108,6 +124,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // Público. La UI lo llama antes de mostrar el formulario del enlace.
         [HttpPost("password-link/check")]
+        [EnableRateLimiting(RateLimitPolicies.Anonymous)]
         [AllowAnonymous]
         public async Task<IActionResult> CheckPasswordLink([FromBody] AuthModels.PasswordLinkRequest request)
         {
@@ -116,6 +133,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // Público. Crea la contraseña con el enlace de la invitación o del reset.
         [HttpPost("password-link")]
+        [EnableRateLimiting(RateLimitPolicies.Anonymous)]
         [AllowAnonymous]
         public async Task<IActionResult> SetPasswordFromLink([FromBody] AuthModels.SetPasswordRequest request)
         {
@@ -162,22 +180,37 @@ namespace CatalogStore.BackendAPI.Controllers
             return Ok();
         }
 
+        private static readonly string[] AssignableRoles = { "AdminIT", "Admin", "Bodega", "Vendedor", "Cliente" };
+
+        private Guid CurrentUserId => Guid.TryParse(User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value, out var id) ? id : Guid.Empty;
+
+        private IActionResult ToResponse(UserActionResult result) =>
+            result.Succeeded ? Ok()
+            : result.NotFound ? NotFound()
+            : BadRequest(new { message = result.Error });
+
+        // PUT api/User/5/role — cuerpo: "Bodega". Reglas (propio usuario, AdminIT, último AdminIT) en el servicio.
         [HttpPut("{id}/role")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
         [Authorize(Roles = "Admin,AdminIT")]
         public async Task<IActionResult> ChangeRole(Guid id, [FromBody] string newRole)
         {
-            var updated = await _userServices.ChangeRoleAsync(id, newRole);
-            if (!updated) return NotFound();
-            return Ok();
+            if (!AssignableRoles.Contains(newRole))
+                return BadRequest(new { message = "Ese rol no existe." });
+            return ToResponse(await _userServices.ChangeRoleAsync(id, newRole, CurrentUserId));
         }
 
-        [HttpDelete("{id}")]
+        // PUT api/User/5/active — cuerpo: true o false. Inactivo = no inicia sesión ni usa el sistema (sin borrar nada).
+        [HttpPut("{id}/active")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
         [Authorize(Roles = "Admin,AdminIT")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var deleted = await _userServices.DeleteUserAsync(id);
-            if (!deleted) return NotFound();
-            return Ok();
-        }
+        public async Task<IActionResult> SetActive(Guid id, [FromBody] bool active) =>
+            ToResponse(await _userServices.SetActiveAsync(id, active, CurrentUserId));
+
+        [HttpDelete("{id}")]
+        [EnableRateLimiting(RateLimitPolicies.Sensitive)]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> Delete(Guid id) =>
+            ToResponse(await _userServices.DeleteUserAsync(id, CurrentUserId));
     }
 }

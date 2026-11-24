@@ -1,4 +1,5 @@
 ﻿using CatalogStore.UI.Handlers;
+using Microsoft.AspNetCore.RateLimiting;
 using CatalogStore.UI.Models.Client;
 using CatalogStore.UI.Models.Order;
 using CatalogStore.UI.Models.Sales;
@@ -19,9 +20,11 @@ namespace CatalogStore.UI.Controllers
     // "Orden activa": la orden en proceso a la que el "+" del catálogo agrega productos. Se guarda en una cookie
     // propia con el usuario dueño, y SIEMPRE se valida contra la API antes de usarla (pudo completarse, cancelarse
     // o ser de otra sesión en el mismo navegador).
-    [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+    [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
     public class OrderController : Controller
     {
+        // Acciones de operación comercial: Bodega no entra (solo consulta y, en órdenes, completa).
+        private const string NoBodega = "Admin,AdminIT,Vendedor";
         private const string ActiveOrderCookie = "cs_active_order";
         private readonly IHttpClientFactory _httpClientFactory;
         public OrderController(IHttpClientFactory httpClientFactory) { _httpClientFactory = httpClientFactory; }
@@ -75,6 +78,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Order/Proforma/5 — la cotización imprimible (no fiscal). Solo órdenes abiertas.
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Proforma(int id)
         {
             var (order, clientInfo, notFound) = await LoadProformaAsync(id);
@@ -85,6 +89,8 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Order/ProformaPdf/5 — la misma proforma como archivo PDF (Proforma-PRO-0000123.pdf)
+        [Authorize(Roles = NoBodega)]
+        [EnableRateLimiting(UiRateLimitPolicies.Pdf)]
         public async Task<IActionResult> ProformaPdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
         {
             var (order, clientInfo, notFound) = await LoadProformaAsync(id);
@@ -126,6 +132,8 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/ProformaEmail/5 — manda la proforma al correo del cliente
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
         public async Task<IActionResult> ProformaEmail(int id)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -140,6 +148,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/Activate — "Agregar productos": deja la orden como activa y manda al catálogo.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Activate(int orderId)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -157,6 +166,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/UpdateNotes — reenvía el mismo cliente; la API solo cambia lo que difiere.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> UpdateNotes(int orderId, int clientId, string? notes)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -167,6 +177,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/Reopen — pendiente → en proceso
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Reopen(int orderId)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -174,9 +185,10 @@ namespace CatalogStore.UI.Controllers
             return await ToJsonAsync(response, "No se pudo devolver la orden a edición.");
         }
 
-        // POST: Order/Complete — pendiente → completada (descuenta el inventario)
+        // POST: Order/Complete — pendiente → completada (descuenta el inventario). Solo Bodega o administración; el vendedor no.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Complete(int orderId)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -198,6 +210,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/Cancel — libera lo reservado. Si era la orden activa, se suelta.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Cancel(int orderId, string? reason)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -211,6 +224,7 @@ namespace CatalogStore.UI.Controllers
 
         // GET: Order/Active — la orden activa con líneas y totales, o 204 si no hay (o ya no está en proceso).
         [HttpGet]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Active()
         {
             var order = await LoadActiveOrderAsync();
@@ -220,6 +234,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/Release — "Soltar orden": deja de agregar a esa orden sin cancelarla (sigue en proceso).
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public IActionResult Release()
         {
             ClearActiveOrder();
@@ -228,6 +243,7 @@ namespace CatalogStore.UI.Controllers
 
         // GET: Order/Clients — clientes activos para el selector del catálogo.
         [HttpGet]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Clients()
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -245,15 +261,38 @@ namespace CatalogStore.UI.Controllers
             });
         }
 
+        // GET: Order/Sellers — vendedores activos, para que un administrador elija a nombre de quién crea la orden.
+        // Los demás roles reciben 403: el cliente de la UI lo usa para saber si mostrar el selector.
+        [HttpGet]
+        [Authorize(Roles = "Admin,AdminIT")]
+        public async Task<IActionResult> Sellers()
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.GetAsync("api/User");
+            if (!response.IsSuccessStatusCode)
+                return Json(new { success = false, message = "No se pudo cargar la lista de vendedores." });
+
+            var users = await response.Content.ReadFromJsonAsync<List<Models.User.UserViewModel>>() ?? new();
+            return Json(new
+            {
+                success = true,
+                sellers = users
+                    .Where(u => u.IsActive && u.Roles.Contains("Vendedor"))
+                    .OrderBy(u => string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName)
+                    .Select(u => new { email = u.Email, name = string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName })
+            });
+        }
+
         // ───────── Crear / agregar ─────────
 
         // POST: Order/Start/5 — "Iniciar orden" desde el perfil del cliente. La deja activa y manda al catálogo.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Start(int id)
+        [Authorize(Roles = NoBodega)]
+        public async Task<IActionResult> Start(int id, string? notes = null, string? seller = null)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
-            var response = await client.PostAsync($"api/Order/start/{id}", null);
+            var response = await client.PostAsJsonAsync($"api/Order/start/{id}", new { notes, seller });
             if (!response.IsSuccessStatusCode)
                 return Json(new { success = false, message = await ReadErrorAsync(response, "No se pudo iniciar la orden.") });
 
@@ -266,14 +305,16 @@ namespace CatalogStore.UI.Controllers
         // sin clientId usa la orden activa. needsClient = true le indica al catálogo que pida el cliente.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddItem(int productId, int quantity = 1, int? clientId = null)
+        [Authorize(Roles = NoBodega)]
+        public async Task<IActionResult> AddItem(int productId, int quantity = 1, int? clientId = null, string? notes = null, string? seller = null)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var body = new { productID = productId, quantity, discount = 0m };
 
             if (clientId.HasValue)
             {
-                var created = await client.PostAsJsonAsync($"api/Order/add-item/{clientId.Value}", body);
+                // Las notas solo cuentan si este "+" crea la orden; la API las ignora si el cliente ya tenía una en proceso.
+                var created = await client.PostAsJsonAsync($"api/Order/add-item/{clientId.Value}", new { productID = productId, quantity, discount = 0m, notes, seller });
                 if (!created.IsSuccessStatusCode)
                     return Json(new { success = false, message = await ReadErrorAsync(created, "No se pudo agregar el producto.") });
 
@@ -302,6 +343,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/UpdateLine — cantidad. El descuento se reenvía tal cual (texto invariante: "5.5", no "5,5").
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> UpdateLine(int orderId, int lineId, int quantity, string? discount)
         {
             if (!decimal.TryParse(discount ?? "0", NumberStyles.Number, CultureInfo.InvariantCulture, out var discountValue))
@@ -315,6 +357,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/RemoveLine
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> RemoveLine(int orderId, int lineId)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -325,6 +368,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/SetIva
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> SetIva(int orderId, bool applyIva)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -335,6 +379,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/SetDiscount — el mismo % en todas las líneas (texto invariante: "5.5"). 0 = quitar descuentos.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> SetDiscount(int orderId, string? discount)
         {
             if (!decimal.TryParse(discount ?? "0", NumberStyles.Number, CultureInfo.InvariantCulture, out var discountValue))
@@ -348,13 +393,14 @@ namespace CatalogStore.UI.Controllers
         // POST: Order/Submit — en proceso → pendiente. La orden deja de estar activa: ya no se le agregan productos.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Submit(int orderId)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
             var response = await client.PostAsync($"api/Order/{orderId}/submit", null);
             if (response.IsSuccessStatusCode && ReadActiveOrderId() == orderId)
                 ClearActiveOrder();
-            return await ToJsonAsync(response, "No se pudo enviar la orden a revisión.");
+            return await ToJsonAsync(response, "No se pudo enviar la orden a la oficina.");
         }
 
         // ───────── Helpers ─────────

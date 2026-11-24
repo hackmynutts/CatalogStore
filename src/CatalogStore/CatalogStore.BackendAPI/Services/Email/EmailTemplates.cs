@@ -77,7 +77,28 @@ namespace CatalogStore.BackendAPI.Services.Email
 
         // Proforma (cotización, no fiscal): la tabla va en el cuerpo del correo porque la cola no admite adjuntos.
         public static string Proforma(string clientName, string number, DateTime issued, int validDays, IReadOnlyList<ProformaLine> lines,
-            decimal subtotal, decimal discount, decimal iva, decimal total, bool applyIva, string? notes)
+            decimal subtotal, decimal discount, decimal iva, decimal total, bool applyIva, string? notes) => Layout(
+                $"Proforma {number}",
+                P($"Hola {E(clientName)},") +
+                P($"Esta es tu proforma del {issued:dd/MM/yyyy}. Los precios son válidos por <strong>{validDays} días</strong>.") +
+                LinesTable(lines, subtotal, discount, iva, total, applyIva) +
+                (string.IsNullOrWhiteSpace(notes) ? "" : P($"""<span style="font-size:13px;color:{Muted};">Notas: {E(notes)}</span>""")) +
+                P($"""<span style="font-size:12px;color:{Muted};">Documento informativo: no es un comprobante fiscal ni una factura.</span>"""),
+                "Para aceptar esta proforma, respondé a tu vendedor.");
+
+        // Tiquete de una venta sin IVA (no fiscal): el mismo contenido del comprobante que se imprime, en el cuerpo del correo.
+        public static string Receipt(string clientName, string saleNumber, DateTime issued, IReadOnlyList<ProformaLine> lines,
+            decimal subtotal, decimal discount, decimal iva, decimal total, bool applyIva, string? notes) => Layout(
+                $"Tiquete {saleNumber}",
+                P($"Hola {E(clientName)},") +
+                P($"Te reenviamos el tiquete de tu compra <strong>{E(saleNumber)}</strong> del {issued:dd/MM/yyyy}.") +
+                LinesTable(lines, subtotal, discount, iva, total, applyIva) +
+                (string.IsNullOrWhiteSpace(notes) ? "" : P($"""<span style="font-size:13px;color:{Muted};">Notas: {E(notes)}</span>""")) +
+                P($"""<span style="font-size:12px;color:{Muted};">Este tiquete es un documento no fiscal: no es una factura electrónica.</span>"""),
+                "Gracias por tu compra.");
+
+        // Detalle de productos y totales, común a la proforma y al tiquete.
+        private static string LinesTable(IReadOnlyList<ProformaLine> lines, decimal subtotal, decimal discount, decimal iva, decimal total, bool applyIva)
         {
             var rows = string.Concat(lines.Select(l => $"""
                 <tr>
@@ -90,11 +111,7 @@ namespace CatalogStore.BackendAPI.Services.Email
             string Total(string label, decimal value, bool bold = false) =>
                 $"""<tr><td style="padding:3px 6px;text-align:right;font-size:13px;{(bold ? "font-weight:700;font-size:15px;" : "")}">{label}</td><td style="padding:3px 6px;text-align:right;font-size:13px;white-space:nowrap;{(bold ? "font-weight:700;font-size:15px;" : "")}">₡{Money(value)}</td></tr>""";
 
-            return Layout(
-                $"Proforma {number}",
-                P($"Hola {E(clientName)},") +
-                P($"Esta es tu proforma del {issued:dd/MM/yyyy}. Los precios son válidos por <strong>{validDays} días</strong>.") +
-                $"""
+            return $"""
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;border-collapse:collapse;">
                   <tr style="background:#f9fafb;">
                     <th align="left" style="padding:8px 6px;font-size:11px;color:{Muted};text-transform:uppercase;">Producto</th>
@@ -111,10 +128,7 @@ namespace CatalogStore.BackendAPI.Services.Email
                   {Total("Total", total, bold: true)}
                 </table>
                 <div style="clear:both;"></div>
-                """ +
-                (string.IsNullOrWhiteSpace(notes) ? "" : P($"""<span style="font-size:13px;color:{Muted};">Notas: {E(notes)}</span>""")) +
-                P($"""<span style="font-size:12px;color:{Muted};">Documento informativo: no es un comprobante fiscal ni una factura.</span>"""),
-                "Para aceptar esta proforma, respondé a tu vendedor.");
+                """;
         }
 
         // Comprobante electrónico aceptado: el enlace lleva al PDF (el XML lo conserva el emisor).

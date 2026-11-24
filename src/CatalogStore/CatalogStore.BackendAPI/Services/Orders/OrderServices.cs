@@ -49,8 +49,10 @@ namespace CatalogStore.BackendAPI.Services.Orders
         private readonly TimeProvider _time;
         private readonly ISalesServices _salesServices;
         private readonly ICreditBlockServices _creditBlock;
+        private readonly Microsoft.AspNetCore.Identity.UserManager<Data.ApplicationUser> _userManager;
         public OrderServices(IOrderRepository orderRepository, IInventoryLineRepository inventoryLineRepository, IInventoryTransactionServices inventoryTransactionServices, IProductRepository productRepository, 
-                                IClientServices clientServices, IEventlogServices eventlogServices, IOptions<PricingOptions> pricingOptions, IOptions<OrdersOptions> ordersOptions, TimeProvider time, ISalesServices salesServices, ICreditBlockServices creditBlock)
+                                IClientServices clientServices, IEventlogServices eventlogServices, IOptions<PricingOptions> pricingOptions, IOptions<OrdersOptions> ordersOptions, TimeProvider time, ISalesServices salesServices, ICreditBlockServices creditBlock,
+                                Microsoft.AspNetCore.Identity.UserManager<Data.ApplicationUser> userManager)
         {
             _orderRepository = orderRepository;
             _inventoryLineRepository = inventoryLineRepository;
@@ -63,15 +65,16 @@ namespace CatalogStore.BackendAPI.Services.Orders
             _time = time;
             _salesServices = salesServices;
             _creditBlock = creditBlock;
+            _userManager = userManager;
         }
 
         // ───────────────────────── Crear / abrir ─────────────────────────
 
         // Botón "Iniciar orden" del perfil del cliente: si ya tiene una en proceso la devuelve, si no crea una vacía.
-        public Task<OperationResult> StartAsync(int clientId, string user, bool isAdmin) =>
-            WithRetryAsync(() => StartCoreAsync(clientId, user, isAdmin), clientId.ToString(), "iniciar una orden", typeEvent.OrderFail);
+        public Task<OperationResult> StartAsync(int clientId, string user, bool isAdmin, string? notes = null, string? seller = null) =>
+            WithRetryAsync(() => StartCoreAsync(clientId, user, isAdmin, notes, seller), clientId.ToString(), "iniciar una orden", typeEvent.OrderFail);
 
-        private async Task<OperationResult> StartCoreAsync(int clientId, string user, bool isAdmin)
+        private async Task<OperationResult> StartCoreAsync(int clientId, string user, bool isAdmin, string? notes, string? seller)
         {
             var now = _time.GetUtcNow().UtcDateTime;
             var client = await _clientServices.GetClientAsync(clientId);
@@ -89,9 +92,13 @@ namespace CatalogStore.BackendAPI.Services.Orders
             if (blocked is not null)
                 return OperationResult.Fail(blocked);
 
-            var order = await NewOrderAsync(clientId, user, now);
+            var (owner, ownerError) = await ResolveOwnerAsync(user, isAdmin, seller);
+            if (owner is null)
+                return OperationResult.Fail(ownerError!);
+
+            var order = await NewOrderAsync(clientId, owner, now, notes);
             await _orderRepository.SaveChangesAsync();
-            await LogOrderCreatedAsync(order);
+            await LogOrderCreatedAsync(order, user);
             return OperationResult.Ok(order.OrderID);
         }
 
@@ -123,7 +130,10 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 var blocked = await _creditBlock.BlockMessageAsync(clientId);
                 if (blocked is not null)
                     return OperationResult.Fail(blocked);
-                order = await NewOrderAsync(clientId, user, now);
+                var (owner, ownerError) = await ResolveOwnerAsync(user, isAdmin, dto.Seller);
+                if (owner is null)
+                    return OperationResult.Fail(ownerError!);
+                order = await NewOrderAsync(clientId, owner, now, dto.Notes);
             }
             else if (!CanAccess(order, user, isAdmin))
                 return OperationResult.Fail(InProcessByOtherMessage(order));
@@ -135,7 +145,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
             await _orderRepository.SaveChangesAsync();
 
             if (isNewOrder)
-                await LogOrderCreatedAsync(order);
+                await LogOrderCreatedAsync(order, user);
 
             return OperationResult.Ok(order.OrderID);
         }
@@ -440,7 +450,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
         // InProcess → Pending. Recalcula los precios con los datos actuales de los productos:
         // lo que se valida en Pending es lo que se va a cobrar.
         public Task<OperationResult> SubmitAsync(int orderId, string user, bool isAdmin) =>
-            WithRetryAsync(() => SubmitCoreAsync(orderId, user, isAdmin), orderId.ToString(), "enviar la orden a revisión");
+            WithRetryAsync(() => SubmitCoreAsync(orderId, user, isAdmin), orderId.ToString(), "enviar la orden a la oficina");
 
         private async Task<OperationResult> SubmitCoreAsync(int orderId, string user, bool isAdmin)
         {
@@ -475,7 +485,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
             Touch(order, user, now);
             await _orderRepository.SaveChangesAsync();
 
-            await LogStatusChangeAsync(typeEvent.Edit, order, OrderStatus.InProcess, "enviada a revisión");
+            await LogStatusChangeAsync(typeEvent.Edit, order, OrderStatus.InProcess, "enviada a la oficina");
             return OperationResult.Ok(order.OrderID);
         }
 
@@ -532,7 +542,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 .ToList();
             if (changes.Count > 0)
                 return await CompleteFailAsync(order,
-                    $"Los precios cambiaron desde que se envió a revisión ({string.Join("; ", changes)}). Devolvé la orden a edición y enviala de nuevo.");
+                    $"Los precios cambiaron desde que se envió a la oficina ({string.Join("; ", changes)}). Devolvé la orden a edición y enviala de nuevo.");
 
             var moveError = await ApplyToLinesAsync(order, order.OrderLines.Select(l => (l, l.Quantity)), TransactionType.Venta, null, user, now);
             if (moveError is not null)
@@ -717,7 +727,23 @@ namespace CatalogStore.BackendAPI.Services.Orders
             return (order, null);
         }
 
-        private async Task<Order> NewOrderAsync(int clientId, string user, DateTime now)
+        // A nombre de quién queda una orden nueva (y su venta): de quien la crea, salvo que un administrador elija a un vendedor.
+        // El vendedor elegido tiene que existir, estar activo y tener el rol Vendedor. Se usa solo al CREAR: el dueño no cambia en todo el proceso.
+        private async Task<(string? Owner, string? Error)> ResolveOwnerAsync(string actor, bool isAdmin, string? seller)
+        {
+            seller = seller?.Trim();
+            if (string.IsNullOrEmpty(seller) || string.Equals(seller, actor, StringComparison.OrdinalIgnoreCase))
+                return (actor, null);
+            if (!isAdmin)
+                return (null, "Solo un administrador puede crear una orden a nombre de otro vendedor.");
+
+            var user = await _userManager.FindByEmailAsync(seller);
+            if (user is null || Security.UserSessionGuard.IsInactive(user) || !await _userManager.IsInRoleAsync(user, "Vendedor"))
+                return (null, "El vendedor elegido no existe, está inactivo o no tiene el rol Vendedor.");
+            return (user.Email ?? seller, null);
+        }
+
+        private async Task<Order> NewOrderAsync(int clientId, string user, DateTime now, string? notes = null)
         {
             var next = await _orderRepository.NextOrderNumberAsync();
             var order = new Order
@@ -725,6 +751,7 @@ namespace CatalogStore.BackendAPI.Services.Orders
                 OrderNumber = $"SAM{next:D7}",
                 ClientID = clientId,
                 OrderStatus = OrderStatus.InProcess,
+                Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
                 CreatedBy = user,
                 CreatedOn = now
             };
@@ -864,9 +891,11 @@ namespace CatalogStore.BackendAPI.Services.Orders
 
         // Solo se registra la creación de la orden: cada línea agregada ya deja su ProductoReservado en el kardex.
         // Se pasa un objeto anónimo y no la entidad: Order → OrderLines → Order es un ciclo que el serializador no soporta.
-        private Task LogOrderCreatedAsync(Order order) =>
+        private Task LogOrderCreatedAsync(Order order, string actor) =>
             _eventlogServices.LogAsync(typeEvent.Order, ModuleName, OrdersTable, order.OrderID.ToString(),
-                $"Orden {order.OrderNumber} creada.",
+                string.Equals(order.CreatedBy, actor, StringComparison.OrdinalIgnoreCase)
+                    ? $"Orden {order.OrderNumber} creada."
+                    : $"Orden {order.OrderNumber} creada por {actor} a nombre del vendedor {order.CreatedBy}.",
                 postData: new
                 {
                     order.OrderID,

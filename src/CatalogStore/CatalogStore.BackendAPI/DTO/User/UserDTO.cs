@@ -9,6 +9,8 @@
         public bool SendNotifications { get; set; }
         // false: invitado que todavía no creó su contraseña.
         public bool HasPassword { get; set; }
+        // false: el administrador lo inactivó; no puede iniciar sesión ni usar el sistema.
+        public bool IsActive { get; set; } = true;
         public IList<string> Roles { get; set; } = new List<string>();
     }
 }

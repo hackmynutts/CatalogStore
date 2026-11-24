@@ -181,6 +181,43 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Inactivar / reactivar: no borra nada; el usuario inactivo no puede iniciar sesión y su sesión abierta se cierra en segundos.
+    document.querySelectorAll('.btn-toggle-user').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const id = btn.getAttribute('data-id');
+            const username = btn.getAttribute('data-username');
+            const deactivate = btn.getAttribute('data-active') === 'true';
+
+            const confirm = await Swal.fire({
+                title: deactivate ? `¿Inactivar a ${username}?` : `¿Reactivar a ${username}?`,
+                html: deactivate
+                    ? 'No podrá iniciar sesión y su sesión abierta se cierra en segundos.<br><small>Sus ventas, órdenes y datos se conservan. Podés reactivarlo cuando quieras.</small>'
+                    : 'Podrá iniciar sesión de nuevo con su contraseña actual.',
+                icon: deactivate ? 'warning' : 'question',
+                showCancelButton: true,
+                confirmButtonText: deactivate ? 'Inactivar' : 'Reactivar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: deactivate ? '#dc3545' : undefined
+            });
+            if (!confirm.isConfirmed) return;
+
+            btn.disabled = true;
+            const body = new FormData();
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) body.append('__RequestVerificationToken', token.value);
+            body.append('active', deactivate ? 'false' : 'true');
+            let data;
+            try { data = await (await fetch(`/User/SetActive/${id}`, { method: 'POST', body })).json(); }
+            catch { data = { success: false, message: 'No se pudo completar la acción.' }; }
+            if (data.success) {
+                location.reload();
+            } else {
+                btn.disabled = false;
+                Swal.fire('No se pudo', data.message || 'Intentá de nuevo.', 'error');
+            }
+        });
+    });
+
     document.querySelectorAll('.btn-delete-user').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const id = btn.getAttribute('data-id');
@@ -188,27 +225,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
             Swal.fire({
                 title: `¿Eliminar a ${username}?`,
-                text: 'Esta acción no se puede deshacer.',
+                html: 'Esta acción no se puede deshacer.<br><small>Si solo querés que no entre más, es mejor <strong>inactivarlo</strong>: conserva su historial.</small>',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Eliminar',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#dc3545'
-            }).then(function (result) {
+            }).then(async function (result) {
                 if (!result.isConfirmed) return;
 
-                const form = document.createElement('form');
-                form.method = 'post';
-                form.action = `/User/Delete/${id}`;
-
-                const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (token) {
-                    const clone = token.cloneNode(true);
-                    form.appendChild(clone);
+                const data = await postAction(`/User/Delete/${id}`);
+                if (data.success) {
+                    location.reload();
+                } else {
+                    Swal.fire('No se pudo eliminar', data.message || 'Intentá de nuevo.', 'error');
                 }
-
-                document.body.appendChild(form);
-                form.submit();
             });
         });
     });

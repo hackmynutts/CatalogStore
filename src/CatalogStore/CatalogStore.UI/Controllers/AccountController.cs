@@ -160,6 +160,7 @@ namespace CatalogStore.UI.Controllers
 
         [ValidateAntiForgeryToken]
         [HttpPost]
+        [EnableRateLimiting(UiRateLimitPolicies.Login)]
         public async Task<ActionResult> Login(LoginViewModel model)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -168,7 +169,12 @@ namespace CatalogStore.UI.Controllers
             //validacion 
             if (!resp.IsSuccessStatusCode)
             {
-                ViewData["LoginError"] = "Email o contraseña incorrectos.";
+                ViewData["LoginError"] = resp.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.TooManyRequests => "Demasiados intentos fallidos. Esperá unos minutos e intentá de nuevo.",
+                    System.Net.HttpStatusCode.Forbidden => "Tu usuario está inactivo. Hablá con un administrador.",
+                    _ => "Email o contraseña incorrectos."
+                };
                 return View(model);
             }
 

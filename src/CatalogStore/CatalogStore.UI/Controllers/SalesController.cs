@@ -1,4 +1,5 @@
 using CatalogStore.UI.Handlers;
+using Microsoft.AspNetCore.RateLimiting;
 using CatalogStore.UI.Models.Invoicing;
 using CatalogStore.UI.Models.Sales;
 using Microsoft.AspNetCore.Authorization;
@@ -10,9 +11,11 @@ namespace CatalogStore.UI.Controllers
 {
     // Páginas de ventas (listado y detalle) y acciones de cobro, que llaman a api/Sale.
     // Las acciones POST devuelven JSON { success, message } para sales-details.js.
-    [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+    [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
     public class SalesController : Controller
     {
+        // Acciones de operación comercial: Bodega no entra (solo consulta y, en órdenes, completa).
+        private const string NoBodega = "Admin,AdminIT,Vendedor";
         private readonly IHttpClientFactory _httpClientFactory;
         public SalesController(IHttpClientFactory httpClientFactory) { _httpClientFactory = httpClientFactory; }
 
@@ -76,6 +79,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Sales/ReceiptPdf/5 — el mismo comprobante como archivo PDF.
+        [EnableRateLimiting(UiRateLimitPolicies.Pdf)]
         public async Task<IActionResult> ReceiptPdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
         {
             var sale = await LoadReceiptSaleAsync(id);
@@ -109,6 +113,7 @@ namespace CatalogStore.UI.Controllers
 
         // GET: Sales/InvoicePdf/5 — la misma factura como archivo PDF.
         // Solo la factura electrónica (ventas con IVA); las ventas sin IVA tienen su propio comprobante (ReceiptPdf).
+        [EnableRateLimiting(UiRateLimitPolicies.Pdf)]
         public async Task<IActionResult> InvoicePdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
         {
             var found = await LoadAcceptedInvoiceAsync(id);
@@ -132,6 +137,7 @@ namespace CatalogStore.UI.Controllers
         }
 
         // GET: Sales/CreditNotePdf/5 — la misma nota de crédito como archivo PDF.
+        [EnableRateLimiting(UiRateLimitPolicies.Pdf)]
         public async Task<IActionResult> CreditNotePdf(int id, [FromServices] IWebHostEnvironment env, [FromServices] IConfiguration config)
         {
             var found = await LoadAcceptedCreditNoteAsync(id);
@@ -184,6 +190,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Sales/RegisterPayment — el monto llega como texto invariante ("1500.50") para no depender de la cultura.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> RegisterPayment(int salesHeaderId, string? amount, int? paymentMethod, string? paymentDate, string? reference, string? notes)
         {
             if (!decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountValue) || amountValue <= 0)
@@ -208,6 +215,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Sales/VoidPayment — solo admin (lo valida la API; la vista solo muestra el botón a admins).
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> VoidPayment(int salesHeaderId, int salesPaymentId, string? reason)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -220,6 +228,7 @@ namespace CatalogStore.UI.Controllers
         // POST: Sales/Exchange — cambio por producto defectuoso: unidades de una línea se cambian por las mismas. Solo admin (lo valida la API).
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> Exchange(int salesHeaderId, int salesLineId, int quantity, string? reason)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");
@@ -230,9 +239,23 @@ namespace CatalogStore.UI.Controllers
                 : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo registrar el cambio.") });
         }
 
+        // POST: Sales/ReceiptEmail — reenvía el tiquete (venta sin IVA) al correo que el cliente tiene en el sistema.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting(UiRateLimitPolicies.Mail)]
+        public async Task<IActionResult> ReceiptEmail(int salesHeaderId)
+        {
+            var client = _httpClientFactory.CreateClient("BackendApi");
+            var response = await client.PostAsync($"api/Sale/{salesHeaderId}/receipt/email", null);
+            return response.IsSuccessStatusCode
+                ? Json(new { success = true })
+                : Json(new { success = false, message = await ApiErrorReader.ReadAsync(response, "No se pudo enviar el correo.") });
+        }
+
         // POST: Sales/VoidSale — anular la venta completa. Solo admin y sin abonos vigentes (lo valida la API).
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = NoBodega)]
         public async Task<IActionResult> VoidSale(int salesHeaderId, string? reason)
         {
             var client = _httpClientFactory.CreateClient("BackendApi");

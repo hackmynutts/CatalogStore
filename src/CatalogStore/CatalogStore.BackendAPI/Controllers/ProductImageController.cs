@@ -18,14 +18,14 @@ namespace CatalogStore.BackendAPI.Controllers
         }
         // GET: api/<ProductImageController>
         [HttpGet]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> GetAll()
         {
             List<ProductImage> lista = await _productImageServices.GetAllProductImagesAsync();
             return Ok(lista);
         }
         [HttpGet("product/{productId}")]
-        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
         public async Task<IActionResult> GetAllByProductId(int productId)
         {
             List<ProductImage> lista = await _productImageServices.GetProductImagesByProductIdAsync(productId);
@@ -34,7 +34,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // GET api/<ProductImageController>/5
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,AdminIT,Vendedor")]
+        [Authorize(Roles = "Admin,AdminIT,Vendedor,Bodega")]
         public async Task<IActionResult> Get(int id)
         {
             ProductImage productImage = await _productImageServices.GetProductImageByIdAsync(id);
@@ -44,7 +44,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // POST api/<ProductImageController>
         [HttpPost("{productid}")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Post(int productid, IFormFile image)
         {
             string createdby = User.FindFirst(JwtRegisteredClaimNames.UniqueName)?.Value ?? "Sistema";
@@ -56,7 +56,7 @@ namespace CatalogStore.BackendAPI.Controllers
 
         // DELETE api/<ProductImageController>/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,AdminIT")]
+        [Authorize(Roles = "Admin,AdminIT,Bodega")]
         public async Task<IActionResult> Delete(int id)
         {
             ProductImage productImage = await _productImageServices.GetProductImageByIdAsync(id);

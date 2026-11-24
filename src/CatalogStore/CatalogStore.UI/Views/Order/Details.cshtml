@@ -3,9 +3,13 @@
 @{
     ViewData["Title"] = $"Orden {Model.OrderNumber}";
     bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    // Bodega solo consulta y pasa una orden pendiente a venta (Completar); no edita, devuelve ni cancela.
+    bool canOperate = isAdmin || User.IsInRole("Vendedor");
+    // Completar (pendiente -> venta) es de Bodega o administración; el vendedor solo manda la orden a Pendiente.
+    bool canComplete = isAdmin || User.IsInRole("Bodega");
     bool inProcess = Model.OrderStatus == OrderStatus.InProcess;
     bool pending = Model.OrderStatus == OrderStatus.Pending;
-    bool canCancel = inProcess || pending;
+    bool canCancel = canOperate && (inProcess || pending);
     bool isActiveOrder = ViewData["IsActiveOrder"] as bool? == true;
     // Tope del diálogo "Descuento a toda la orden" (el backend lo valida igual).
     var maxDiscount = isAdmin ? 99.99m : 5m;
@@ -40,19 +44,26 @@
         </div>
     </div>
     <div class="detail-actions">
-        @if ((inProcess || pending) && Model.Lines.Count > 0)
+        @if (canOperate && (inProcess || pending) && Model.Lines.Count > 0)
         {
             <a asp-action="Proforma" asp-route-id="@Model.OrderID" class="btn btn-sm btn-outline-secondary" style="width:auto;" title="Cotización para el cliente (no fiscal)"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> Proforma</a>
+            <a asp-action="ProformaPdf" asp-route-id="@Model.OrderID" class="btn btn-sm btn-outline-secondary" style="width:auto;" title="Descargar la proforma en PDF" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF</a>
         }
-        @if (inProcess)
+        @if (inProcess && canOperate)
         {
             <button type="button" class="btn btn-sm btn-outline-brand" data-action="activate"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar productos</button>
-            <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="submit" @(Model.Lines.Count == 0 ? "disabled" : "")><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar a revisión</button>
+            <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="submit" @(Model.Lines.Count == 0 ? "disabled" : "")><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar a oficina</button>
         }
         @if (pending)
         {
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="reopen"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Devolver a edición</button>
-            <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="complete"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Completar</button>
+            @if (canOperate)
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="reopen"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Devolver a edición</button>
+            }
+            @if (canComplete)
+            {
+                <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="complete"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Completar</button>
+            }
         }
         @if (canCancel)
         {
@@ -94,7 +105,7 @@ else if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel complete
 {
     <div class="order-state-note">
         <i class="fa-solid fa-lock" aria-hidden="true"></i>
-        <span>Orden en revisión: los productos están reservados y no se pueden modificar. Para cambiarla, devolvela a edición.</span>
+        <span>Orden en la oficina: los productos están reservados y no se pueden modificar.@(canComplete ? (canOperate ? " Para cambiarla, devolvela a edición." : " Cuando esté lista para despachar, completala para generar la venta.") : " Para cambiarla, devolvela a edición. Bodega o administración la completan para generar la venta.")</span>
     </div>
 }
 
@@ -235,7 +246,14 @@ else if (ViewData["Sale"] is CatalogStore.UI.Models.Sales.SaleViewModel complete
             <div class="info-field-grid order-client-grid">
                 <div>
                     <span class="info-field-label">Nombre</span>
-                    <a class="info-field-value order-client-link" asp-controller="Client" asp-action="Details" asp-route-id="@Model.ClientID">@Model.ClientName</a>
+                    @if (canOperate)
+                    {
+                        <a class="info-field-value order-client-link" asp-controller="Client" asp-action="Details" asp-route-id="@Model.ClientID">@Model.ClientName</a>
+                    }
+                    else
+                    {
+                        <span class="info-field-value">@Model.ClientName</span>
+                    }
                 </div>
                 <div>
                     <span class="info-field-label">Conocido como</span>

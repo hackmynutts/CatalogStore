@@ -80,10 +80,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 await Swal.fire({
                     icon: 'success',
                     title: isFull ? `${saleNumber} quedó pagada` : 'Abono registrado',
-                    text: `₡${money.format(value)} por ${methodLabel}.`,
+                    text: isFull ? `₡${money.format(value)} por ${methodLabel}. Volvemos a la lista de ventas.` : `₡${money.format(value)} por ${methodLabel}.`,
                     timer: 1800,
                     showConfirmButton: false
                 });
+                // Pago completo: de vuelta a la lista de ventas por donde iba (mismo filtro, página y posición). Abono parcial: se queda aquí.
+                if (isFull) {
+                    let target = '/Sales';
+                    try {
+                        const saved = sessionStorage.getItem('sales:list-url');
+                        if (saved && /^\/sales(\/index)?(\?|$)/i.test(saved)) target = saved;
+                        sessionStorage.setItem('app-table-force-restore', target);
+                    } catch (e) { }
+                    location.href = target;
+                    return;
+                }
                 location.href = location.pathname; // recarga sin ?created=true
             } finally {
                 submit.disabled = false;

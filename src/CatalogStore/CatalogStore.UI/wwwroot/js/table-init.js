@@ -33,6 +33,14 @@
     // Entrar de nuevo a la lista con un enlace empieza en la 1.
     function wasReloaded() {
         try {
+            // Una pantalla puede pedir que la lista vuelva a como estaba (ej. el detalle de una venta, al pagarla por completo).
+            var force = sessionStorage.getItem('app-table-force-restore');
+            if (force) {
+                sessionStorage.removeItem('app-table-force-restore');
+                if (force === location.pathname + location.search) return true;
+            }
+        } catch (e) { }
+        try {
             var nav = performance.getEntriesByType('navigation')[0];
             return !!nav && (nav.type === 'reload' || nav.type === 'back_forward');
         } catch (e) {

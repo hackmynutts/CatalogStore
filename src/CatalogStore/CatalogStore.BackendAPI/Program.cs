@@ -17,6 +17,7 @@ using CatalogStore.BackendAPI.Repository.ProductImage;
 using CatalogStore.BackendAPI.Repository.Sales;
 using CatalogStore.BackendAPI.Repository.Status;
 using CatalogStore.BackendAPI.Services.Auth;
+using CatalogStore.BackendAPI.Services.Security;
 using CatalogStore.BackendAPI.Services.Client;
 using CatalogStore.BackendAPI.Services.Client.Hacienda;
 using CatalogStore.BackendAPI.Services.DateManagement;
@@ -62,6 +63,8 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(CatalogStore.BackendAPI.Controllers.PublicCatalogController.PublicCatalogPolicy, _ => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
         "all", _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
+// Límites por usuario para el resto de la API (ver Services/Security/ApiRateLimiting.cs).
+builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -187,8 +190,18 @@ builder.Services.AddAuthentication(options =>
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
+        // Un token firmado vale hasta que vence: aquí se revisa además que el usuario exista, siga activo y tenga los mismos roles.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                if (context.Principal is null || !await UserSessionGuard.IsCurrentAsync(context.Principal, context.HttpContext.RequestServices))
+                    context.Fail("La sesión ya no es vigente (usuario inactivo, eliminado o con otro rol).");
+            }
+        };
     });
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<LoginThrottle>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -214,6 +227,10 @@ if (app.Environment.IsDevelopment())
     if(!await roleManager.RoleExistsAsync("Vendedor"))
     {
         await roleManager.CreateAsync(new ApplicationRole { Name = "Vendedor" });
+    }
+    if(!await roleManager.RoleExistsAsync("Bodega"))
+    {
+        await roleManager.CreateAsync(new ApplicationRole { Name = "Bodega" });
     }
 
     if (existingAdmin == null)
@@ -247,8 +264,9 @@ app.UseRequestLocalization(new RequestLocalizationOptions()
     .AddSupportedUICultures(culture));
 
 app.UseStaticFiles(); // Habilitar el uso de archivos estáticos como imagenes
-app.UseRateLimiter();
+// El limitador va DESPUÉS de autenticar: así sabe quién llama y cuenta por usuario, no por IP.
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();

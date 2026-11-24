@@ -10,6 +10,8 @@
     string voidInvoiceState = mainInvoice is null || creditNote?.Status == InvoiceUi.Accepted ? "ok" : creditNote is null ? "needs-credit-note" : "credit-pending";
     ViewData["Title"] = $"Venta {Model.SaleNumber}";
     bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    // Facturación electrónica (emitir, nota de crédito, estado, XML, correo): administración y Bodega.
+    bool canInvoice = isAdmin || User.IsInRole("Bodega");
     bool justCreated = ViewData["JustCreated"] as bool? == true;
     bool canPay = Model.Balance > 0 && !Model.IsVoided;
     bool canVoidSale = isAdmin && !Model.IsVoided;
@@ -36,7 +38,7 @@
         <i class="fa-solid fa-ban" aria-hidden="true"></i>
         <span>
             <strong>Venta anulada</strong> por @Model.VoidedBy el @Model.VoidedOn?.ToString("dd/MM/yyyy HH:mm"). Motivo: @Model.VoidedReason
-            <span class="d-block">Los productos volvieron al inventario y la orden <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderID">@Model.OrderNumber</a> quedó retornada.</span>
+            <span class="d-block">Los productos volvieron al inventario y la orden @if (User.IsInRole("Bodega")) { @Model.OrderNumber } else { <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderID">@Model.OrderNumber</a> } quedó retornada.</span>
         </span>
     </div>
 }
@@ -52,7 +54,7 @@
                 {
                     <span class="badge badge-overdue">@(Model.DaysOverdue == 1 ? "1 día vencida" : $"{Model.DaysOverdue} días vencida")</span>
                 }
-                <span>@Model.SaleDate.ToString("dd/MM/yyyy HH:mm") · Orden <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderID">@Model.OrderNumber</a></span>
+                <span>@Model.SaleDate.ToString("dd/MM/yyyy HH:mm") · Orden @if (User.IsInRole("Bodega")) { @Model.OrderNumber } else { <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderID">@Model.OrderNumber</a> }</span>
             </div>
         </div>
     </div>
@@ -254,6 +256,11 @@
                     <a asp-action="ReceiptPdf" asp-route-id="@Model.SalesHeaderID" class="btn btn-sm btn-outline-secondary" download>
                         <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Descargar PDF
                     </a>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-action="receipt-email" data-sale-id="@Model.SalesHeaderID" data-email="@Model.ClientEmail"
+                                @(string.IsNullOrWhiteSpace(Model.ClientEmail) ? "disabled" : "")
+                                title="@(string.IsNullOrWhiteSpace(Model.ClientEmail) ? "El cliente no tiene correo registrado." : "Enviar al correo registrado del cliente")">
+                            <i class="fa-regular fa-envelope" aria-hidden="true"></i> Enviar al cliente
+                        </button>
                     <span class="invoice-hint">Esta venta es sin IVA: no se factura electrónicamente. El comprobante es un documento <strong>no fiscal</strong>.</span>
                 </div>
             </div>
@@ -332,7 +339,7 @@
                                         @* El PDF oficial que genera el proveedor, además del de la casa. *@
                                         <a class="btn btn-sm btn-outline-secondary" href="@inv.PdfUrl" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> PDF del proveedor</a>
                                     }
-                                    @if (isAdmin)
+                                    @if (canInvoice)
                                     {
                                         @if (inv.HasXml)
                                         {
@@ -344,7 +351,7 @@
                                         }
                                         @if (inv.Status == InvoiceUi.Accepted && !string.IsNullOrEmpty(inv.PdfUrl))
                                         {
-                                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="invoice-email" data-id="@inv.Id" data-email="@Model.ClientEmail" data-doc="@inv.DocumentTypeName.ToLowerInvariant()"><i class="fa-regular fa-envelope" aria-hidden="true"></i> @(inv.IsCreditNote ? "Enviar nota de crédito al cliente" : "Enviar al cliente")</button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="invoice-email" data-id="@inv.Id" data-email="@Model.ClientEmail" data-doc="@inv.DocumentTypeName.ToLowerInvariant()"><i class="fa-regular fa-envelope" aria-hidden="true"></i> @(inv.IsCreditNote ? "Reenviar nota de crédito al cliente" : "Reenviar al cliente")</button>
                                         }
                                         @if (inv.Status == InvoiceUi.Uncertain || InvoiceUi.IsStuck(inv))
                                         {
@@ -361,7 +368,7 @@
                     </ul>
                 }
 
-                @if (isAdmin && mainInvoice is null && !Model.IsVoided)
+                @if (canInvoice && mainInvoice is null && !Model.IsVoided)
                 {
                     <div class="invoice-start">
                         <button type="button" class="btn btn-sm btn-brand btn-brand-auto" data-action="invoice-start" data-doc="@(Model.ApplyIva ? "factura" : "tiquete")">
@@ -395,7 +402,14 @@
             <div class="info-field-grid order-client-grid">
                 <div>
                     <span class="info-field-label">Nombre</span>
-                    <a class="info-field-value order-client-link" asp-controller="Client" asp-action="Details" asp-route-id="@Model.ClientID">@Model.ClientName</a>
+                    @if (User.IsInRole("Bodega"))
+                    {
+                        <span class="info-field-value">@Model.ClientName</span>
+                    }
+                    else
+                    {
+                        <a class="info-field-value order-client-link" asp-controller="Client" asp-action="Details" asp-route-id="@Model.ClientID">@Model.ClientName</a>
+                    }
                     @if (!string.IsNullOrEmpty(Model.ClientCC))
                     {
                         <span class="payment-meta">Conocido como @Model.ClientCC</span>
@@ -502,4 +516,5 @@
 @section Scripts {
     <script src="~/js/sales-details.js" asp-append-version="true"></script>
     <script src="~/js/sales-invoice.js" asp-append-version="true"></script>
+    <script src="~/js/sales-receipt-email.js" asp-append-version="true"></script>
 }

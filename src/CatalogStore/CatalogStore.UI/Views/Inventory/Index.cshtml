@@ -1,9 +1,9 @@
 ﻿@model List<CatalogStore.UI.Models.Inventory.InventoryViewModel>
 @{
     ViewData["Title"] = "Inventarios";
-    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT");
-    bool canDelete = User.IsInRole("Admin") || User.IsInRole("AdminIT");
-    bool canSeeAll = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    bool canManage = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Bodega");
+    bool canDelete = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Bodega");
+    bool canSeeAll = User.IsInRole("Admin") || User.IsInRole("AdminIT") || User.IsInRole("Bodega");
     bool isAdminView = ViewContext.RouteData.Values["action"]?.ToString() == "IndexAdmin";
 
 }

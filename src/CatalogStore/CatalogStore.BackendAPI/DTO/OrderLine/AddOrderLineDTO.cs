@@ -14,5 +14,11 @@ namespace CatalogStore.BackendAPI.DTO.OrderLine
         [Display(Name = "Descuento")]
         [Range(0, 99.99, ErrorMessage = "El descuento debe estar entre 0 y 99.99 %.")]
         public decimal Discount { get; set; } = 0.0m;
+        // Solo se usa cuando este "agregar" crea la orden del cliente; en una orden que ya existía se ignora.
+        [Display(Name = "Notas")]
+        [StringLength(500, ErrorMessage = "Las notas no pueden exceder los 500 caracteres.")]
+        public string? Notes { get; set; }
+        // Igual que en StartOrderDTO: solo se usa al crear la orden y solo lo puede elegir un administrador.
+        public string? Seller { get; set; }
     }
 }

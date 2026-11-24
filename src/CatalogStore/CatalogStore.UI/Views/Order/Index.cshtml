@@ -6,6 +6,8 @@
     var clientId = ViewData["ClientId"] as int?;
     var clientName = ViewData["ClientName"] as string;
     bool isAdmin = User.IsInRole("Admin") || User.IsInRole("AdminIT");
+    // Bodega ve todas las órdenes, pero no las crea: solo pasa las pendientes a venta.
+    bool isBodega = User.IsInRole("Bodega");
 
     // Pestañas de estado: conservan el filtro de cliente si lo hay.
     var tabs = new (OrderStatus? Value, string Label)[]
@@ -21,7 +23,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
-        <h1 class="mb-0">@(isAdmin ? "Órdenes" : "Mis órdenes")</h1>
+        <h1 class="mb-0">@(isBodega ? "Órdenes pendientes" : isAdmin ? "Órdenes" : "Mis órdenes")</h1>
         @if (clientId.HasValue)
         {
             <div class="order-list-filter">
@@ -30,9 +32,14 @@
             </div>
         }
     </div>
-    <a asp-controller="Product" asp-action="Catalog" class="btn btn-brand btn-brand-auto"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Nueva orden desde el catálogo</a>
+    @if (!isBodega)
+    {
+        <a asp-controller="Product" asp-action="Catalog" class="btn btn-brand btn-brand-auto"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Nueva orden desde el catálogo</a>
+    }
 </div>
 
+@if (!isBodega)
+{
 <nav class="catalog-filter-pills mb-3" aria-label="Filtrar por estado">
     @foreach (var tab in tabs)
     {
@@ -41,6 +48,7 @@
            asp-action="Index" asp-route-status="@(tab.Value.HasValue ? (int?)tab.Value.Value : null)" asp-route-clientId="@clientId">@tab.Label</a>
     }
 </nav>
+}
 
 <div class="app-table-search-wrap">
     <i class="fa-solid fa-magnifying-glass app-table-search-icon"></i>
@@ -93,8 +101,13 @@
                 <td>@o.CreatedBy</td>
                 <td data-text="@o.CreatedOn.ToString("yyyy-MM-dd HH:mm")">@o.CreatedOn.ToString("g")</td>
                 <td class="text-end">
-                    <div class="action-buttons">
+                    <div class="row-actions">
                         <a class="btn btn-sm btn-outline-secondary" title="Ver detalle" aria-label="Ver detalle de @o.OrderNumber" asp-action="Details" asp-route-id="@o.OrderID"><i class="fa-solid fa-eye"></i></a>
+                        @* La proforma (cotización) existe mientras la orden está abierta y tiene productos; Bodega no la maneja. *@
+                        @if (!isBodega && (o.OrderStatus is OrderStatus.InProcess or OrderStatus.Pending) && o.LineCount > 0)
+                        {
+                            <a class="btn btn-sm btn-outline-secondary" title="Descargar proforma en PDF" aria-label="Descargar la proforma en PDF de @o.OrderNumber" asp-action="ProformaPdf" asp-route-id="@o.OrderID" download><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></a>
+                        }
                     </div>
                 </td>
             </tr>
